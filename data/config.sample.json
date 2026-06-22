@@ -1,0 +1,37 @@
+{
+  "candidate": {
+    "name": "Your Name",
+    "location": "City, ST ZIP",
+    "email": "you@example.com",
+    "website": "yoursite.com",
+    "linkedin": "linkedin.com/in/yourhandle"
+  },
+  "preferences": {
+    "titles": [
+      "Senior UX Designer",
+      "Director of Product Design",
+      "Head of Design"
+    ],
+    "seniority": ["senior", "lead", "director", "principal", "manager", "head", "vp"],
+    "salary": {
+      "min_fte": 140000,
+      "min_contract_hourly": 65,
+      "currency": "USD"
+    },
+    "locations": {
+      "remote": true,
+      "hybrid": true,
+      "hybrid_radius_miles": 25,
+      "hub_zip": "00000",
+      "hub_city": "Your City, ST"
+    }
+  },
+  "scraping": {
+    "schedule": "0 8 * * 1-5"
+  },
+  "ai": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "base_url": null
+  }
+}

@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+
+# Build artifacts
+build/
+dist/
+
+# Personal data — never commit these
+jobs.json
+data/jobs.json
+.env
+.env.local
+.env*.local
+
+# Personal documents — never commit these
+resumes/
+cover-letters/
+*.docx
+build-resume-*.mjs
+
+# Auth / secrets
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp

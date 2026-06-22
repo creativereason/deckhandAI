@@ -1,0 +1,60 @@
+{
+  "applied": [
+    {
+      "company": "Acme Corp",
+      "role": "Senior UX Designer",
+      "status": "screening",
+      "date": "2026-06-01",
+      "salary": "$140,000–$160,000",
+      "notes": "Phone screen scheduled for next week.",
+      "url": "https://acme.com/careers/senior-ux-designer"
+    }
+  ],
+  "prospect": [
+    {
+      "company": "Globex Corporation",
+      "role": "Director of Product Design",
+      "fit": "strong",
+      "salary": "$175,000–$210,000",
+      "notes": "Remote US. Strong match on design systems and team leadership scope.",
+      "url": "https://globex.com/careers/director-product-design"
+    },
+    {
+      "company": "Initech",
+      "role": "Head of Design",
+      "fit": "good",
+      "salary": "$160,000–$195,000",
+      "notes": "Hybrid, HQ within commute range. B2B SaaS, design team of 8.",
+      "url": "https://initech.com/careers/head-of-design"
+    }
+  ],
+  "local": [
+    {
+      "company": "Umbrella Technologies",
+      "role": "Principal UX Designer",
+      "fit": "good",
+      "salary": "$130,000–$155,000",
+      "notes": "Local hybrid. Enterprise software — strong domain match.",
+      "url": "https://umbrella.tech/jobs/principal-ux"
+    }
+  ],
+  "staffing": [
+    {
+      "company": "TalentBridge",
+      "role": "Senior UX Designer (Contract)",
+      "fit": "good",
+      "salary": "$75–$90/hr",
+      "notes": "6-month contract, potential conversion. Remote.",
+      "url": "https://talentbridge.com/jobs/ux-senior-contract"
+    }
+  ],
+  "passed": [
+    {
+      "company": "Soylent Digital",
+      "role": "UX Manager",
+      "salary": "$95,000–$115,000",
+      "notes": "Comp below minimum threshold.",
+      "url": "https://soylent.digital/careers"
+    }
+  ]
+}
