@@ -593,7 +593,7 @@ export default function Home() {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-              {displayName ? `${displayName} — Job Tracker` : "Job Tracker"}
+              {displayName ? `${displayName} — DeckhandAI Job Tracker` : "DeckhandAI Job Tracker"}
             </h1>
             <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">
               {jobs.applied.length} applied ·{" "}
