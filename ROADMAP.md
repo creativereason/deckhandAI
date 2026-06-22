@@ -68,10 +68,10 @@ The app currently reads `jobs.json` directly from GitHub by hardcoded path. Thes
 
 Users need a way to configure the app without editing JSON files directly.
 
-- [ ] `/settings` page — candidate profile + preferences form (name, email, location, target titles, salary floor, remote/hybrid toggle)
-- [ ] `/settings/scraping` — hub city, hub state, scrape schedule
-- [ ] `/settings/model` — AI provider dropdown, model field, base URL (for Ollama/custom), API key
-- [ ] Form writes back to `config.json` via `/api/config`
+- [x] `/settings` page — candidate profile + preferences form (name, email, location, target titles, salary floor, remote/hybrid toggle)
+- [x] `/settings/scraping` — hub city, hub state, scrape schedule
+- [x] `/settings/model` — AI provider dropdown, model field, base URL (for Ollama/custom), API key
+- [x] Form writes back to `config.json` via `/api/config`
 
 **Effort:** ~2 days
 
