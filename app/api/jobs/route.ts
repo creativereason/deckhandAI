@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readJobs, writeJobs, JobSection } from "@/lib/jobs";
+import { readJobs, writeJobs, JobSection, type JobsData } from "@/lib/jobs";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+const IS_DEMO = process.env.DEMO_MODE === "true";
+
+function readSampleJobs(): JobsData {
+  try {
+    const raw = readFileSync(resolve(process.cwd(), "data/jobs.sample.json"), "utf-8");
+    return { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [], ...JSON.parse(raw) };
+  } catch {
+    return { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
+  }
+}
+
+function demoReadOnly() {
+  return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
+}
 
 type AnyJob = Record<string, unknown>;
 
@@ -17,11 +34,12 @@ function normalizeJobForSection(job: AnyJob, targetSection: JobSection): AnyJob 
 }
 
 export async function GET() {
-  const jobs = await readJobs();
+  const jobs = IS_DEMO ? readSampleJobs() : await readJobs();
   return NextResponse.json(jobs);
 }
 
 export async function POST(req: NextRequest) {
+  if (IS_DEMO) return demoReadOnly();
   const body = await req.json();
   const { section, job } = body as { section: JobSection; job: Record<string, string> };
 
@@ -37,6 +55,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (IS_DEMO) return demoReadOnly();
   const body = await req.json();
   const { section, company, role, updates, targetSection } = body as {
     section: JobSection;
@@ -70,6 +89,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  if (IS_DEMO) return demoReadOnly();
   const body = await req.json();
   const { section, company, role, targetSection } = body as {
     section: JobSection;

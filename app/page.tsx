@@ -709,6 +709,13 @@ export default function Home() {
           )}
         </div>
 
+        {/* Demo mode banner */}
+        {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+          <div className="rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-5 py-3 text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+            <span className="font-semibold">Demo mode</span> — data is read-only. Clone the repo to set up your own tracker.
+          </div>
+        )}
+
         {/* Scrape review queue */}
         {(jobs.pending ?? []).length > 0 && (
           <ScrapeReviewQueue pending={jobs.pending} onUpdate={load} />

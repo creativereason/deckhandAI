@@ -1,11 +1,10 @@
-import { readJobs, writeJobs, ProspectJob, PendingJob } from "@/lib/jobs";
+import { readJobs, writeJobs, PendingJob } from "@/lib/jobs";
 import {
   buildLocalRegex,
   DEFAULT_SELECTORS,
   isLocalListing,
   isQualifyingAssumeLocal,
   isQualifyingRemoteOrLocal,
-  LEVEL_INCLUDE,
 } from "@/lib/scrape-filters";
 import type { ScrapeTargetConfig } from "@/lib/scrape-targets";
 
