@@ -1,0 +1,62 @@
+name: Scrape career pages
+
+on:
+  schedule:
+    # Weekdays at 8am CT (13:00 UTC). Adjust to your timezone.
+    - cron: "0 13 * * 1-5"
+  workflow_dispatch: # allow manual trigger from GitHub Actions UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Checkout data repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.GITHUB_DATA_REPO }}
+          token: ${{ secrets.DATA_REPO_TOKEN }}
+          path: data-repo
+
+      - name: Copy jobs.json into place
+        run: |
+          mkdir -p data
+          cp data-repo/jobs.json data/jobs.json 2>/dev/null || cp data/jobs.sample.json data/jobs.json
+
+      - name: Run scraper
+        run: node scripts/scrape-careers.mjs
+        env:
+          SCRAPE_OUTPUT_PATH: data/jobs.json
+
+      - name: Commit and push results
+        working-directory: data-repo
+        run: |
+          cp ../data/jobs.json jobs.json
+          git config user.name "deckhandAI"
+          git config user.email "deckhand@noreply"
+          git add jobs.json
+          git diff --cached --quiet || git commit -m "Scrape: $(date '+%Y-%m-%d %H:%M') UTC"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}

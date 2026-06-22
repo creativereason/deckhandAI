@@ -24,10 +24,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let targets = getTargetsForGroup(group);
+  let targets = await getTargetsForGroup(group);
 
   if (targetCompany && targetCompany !== "All") {
-    const match = findTarget(group, targetCompany);
+    const match = await findTarget(group, targetCompany);
     if (!match) {
       return NextResponse.json({ error: `Unknown company: ${targetCompany}` }, { status: 400 });
     }

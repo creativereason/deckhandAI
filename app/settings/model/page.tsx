@@ -20,13 +20,19 @@ export default function ModelSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<AppConfig>({});
+  const [aiKeyConfigured, setAiKeyConfigured] = useState(true);
 
   const ai = config.ai ?? {};
 
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
-      .then((data: AppConfig) => { setConfig(data); setLoading(false); })
+      .then((data: AppConfig & { ai_key_configured?: boolean }) => {
+        setAiKeyConfigured(data.ai_key_configured ?? false);
+        const { ai_key_configured: _, ...rest } = data;
+        setConfig(rest);
+        setLoading(false);
+      })
       .catch(() => { toast.error("Failed to load config"); setLoading(false); });
   }, []);
 
@@ -68,8 +74,63 @@ export default function ModelSettings() {
 
   const showBaseUrl = NEEDS_BASE_URL.includes(ai.provider);
 
+  type ProviderKey = NonNullable<AiConfig["provider"]>;
+  const providerDocs: Partial<Record<ProviderKey, { label: string; url: string; note?: string }>> = {
+    anthropic: {
+      label: "Anthropic Console",
+      url: "https://console.anthropic.com",
+      note: "Separate from a Claude.ai subscription — requires credits loaded in the Console.",
+    },
+    openai: {
+      label: "OpenAI platform",
+      url: "https://platform.openai.com/api-keys",
+    },
+    custom: {
+      label: "your provider's dashboard",
+      url: "",
+      note: "For Gemini: aistudio.google.com. For Grok: console.x.ai. For Ollama: no key needed.",
+    },
+  };
+
+  const activeProvider: ProviderKey = ai.provider ?? "anthropic";
+  const currentProviderDocs = providerDocs[activeProvider];
+
   return (
     <div className="space-y-6">
+      {!aiKeyConfigured && ai.provider !== "ollama" && (
+        <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 px-5 py-4 space-y-2">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+            AI generation isn&apos;t configured yet
+          </p>
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            To enable cover letter and resume generation, add your API key as{" "}
+            <code className="text-xs bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded">AI_API_KEY</code>{" "}
+            in your environment variables.
+          </p>
+          <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1 list-disc list-inside">
+            <li>
+              <strong>Local:</strong> add <code className="text-xs bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded">AI_API_KEY=your-key</code> to{" "}
+              <code className="text-xs bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded">.env.local</code>, then restart the dev server
+            </li>
+            <li>
+              <strong>Vercel:</strong> add <code className="text-xs bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded">AI_API_KEY</code> in your project&apos;s Environment Variables settings, then redeploy
+            </li>
+          </ul>
+          {currentProviderDocs && (
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              {currentProviderDocs.url ? (
+                <>Get your key at <a href={currentProviderDocs.url} target="_blank" rel="noreferrer" className="underline">{currentProviderDocs.label}</a>.</>
+              ) : (
+                currentProviderDocs.note
+              )}
+              {currentProviderDocs.url && currentProviderDocs.note && (
+                <> {currentProviderDocs.note}</>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className={SECTION}>
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
           AI provider
@@ -124,13 +185,18 @@ export default function ModelSettings() {
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
           API key
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Set your API key in <code className="text-xs bg-p-linen dark:bg-p-dark-mid px-1.5 py-0.5 rounded">.env.local</code> as{" "}
-          <code className="text-xs bg-p-linen dark:bg-p-dark-mid px-1.5 py-0.5 rounded">AI_API_KEY</code>.
-          Keys are never stored in config.json — they stay server-side only.
-        </p>
+        <div className="flex items-center gap-2">
+          <span className={`inline-block w-2 h-2 rounded-full ${aiKeyConfigured || ai.provider === "ollama" ? "bg-green-500" : "bg-amber-400"}`} />
+          <span className="text-sm text-gray-600 dark:text-gray-300">
+            {ai.provider === "ollama"
+              ? "Ollama does not require an API key."
+              : aiKeyConfigured
+              ? "API key is configured."
+              : "API key is not set."}
+          </span>
+        </div>
         <p className="text-xs text-p-dusk dark:text-gray-400">
-          Ollama does not require an API key.
+          Keys are set via environment variable (<code className="bg-p-linen dark:bg-p-dark-mid px-1 rounded">AI_API_KEY</code>) and never stored in config — they stay server-side only.
         </p>
       </div>
 

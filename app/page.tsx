@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import AddJobModal from "@/components/AddJobModal";
 import JobFormModal from "@/components/JobFormModal";
+import OnboardingWizard from "@/components/OnboardingWizard";
+import ScrapeReviewQueue from "@/components/ScrapeReviewQueue";
 import ScrapePanel from "@/components/ScrapePanel";
 import GenericScrapePanel from "@/components/GenericScrapePanel";
 import SortableTh from "@/components/SortableTh";
@@ -526,6 +528,7 @@ export default function Home() {
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<EditState | null>(null);
   const [fitFilter, setFitFilter] = useState<FitFilter>("all");
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [openSections, setOpenSections] = useState<JobSection[]>(
     ALL_SECTIONS.map((s) => s.value)
   );
@@ -543,7 +546,11 @@ export default function Home() {
     ]);
     setJobs(await jobsRes.json());
     const config = await configRes.json();
-    if (config.candidate?.name) setDisplayName(config.candidate.name);
+    if (config.candidate?.name) {
+      setDisplayName(config.candidate.name);
+    } else {
+      setShowOnboarding(true);
+    }
     setShowLocal(config.preferences?.locations?.hybrid !== false);
     setShowStaffing(config.preferences?.open_to_contract !== false);
   }, []);
@@ -597,6 +604,16 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-p-light dark:bg-p-navy">
+      {showOnboarding && (
+        <OnboardingWizard
+          onComplete={(config) => {
+            setShowOnboarding(false);
+            if (config.candidate?.name) setDisplayName(config.candidate.name);
+            setShowLocal(config.preferences?.locations?.hybrid !== false);
+            setShowStaffing(config.preferences?.open_to_contract !== false);
+          }}
+        />
+      )}
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
 
         {/* Header */}
@@ -609,6 +626,9 @@ export default function Home() {
               {jobs.applied.length} applied ·{" "}
               {jobs.prospect.length + (showLocal ? jobs.local.length : 0)} prospects{showStaffing ? ` · ${jobs.staffing.length} staffing` : ""} ·{" "}
               {jobs.passed.length} passed
+              {(jobs.pending ?? []).length > 0 && (
+                <> · <span className="text-amber-600 dark:text-amber-400 font-medium">{jobs.pending.length} pending review</span></>
+              )}
               {totalNew > 0 && (
                 <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-orange-100 text-orange-700 border border-orange-200 leading-none">
                   {totalNew} new
@@ -661,6 +681,11 @@ export default function Home() {
             </span>
           )}
         </div>
+
+        {/* Scrape review queue */}
+        {(jobs.pending ?? []).length > 0 && (
+          <ScrapeReviewQueue pending={jobs.pending} onUpdate={load} />
+        )}
 
         {/* Accordion sections */}
         <Accordion

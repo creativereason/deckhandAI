@@ -1,6 +1,6 @@
 export type JobStatus = "applied" | "screening" | "interview" | "offer" | "declined";
 export type JobFit = "strong" | "good" | "caution" | "weak";
-export type JobSection = "applied" | "prospect" | "local" | "staffing" | "passed";
+export type JobSection = "applied" | "prospect" | "local" | "staffing" | "passed" | "pending";
 
 export interface AppliedJob {
   company: string;
@@ -30,19 +30,30 @@ export interface PassedJob {
   url: string;
 }
 
+export interface PendingJob {
+  company: string;
+  role: string;
+  url: string;
+  salary: string;
+  notes: string;
+  scrapeGroup: "remote" | "local";
+  scrapeDate: string;
+}
+
 export interface JobsData {
   applied: AppliedJob[];
   prospect: ProspectJob[];
   local: ProspectJob[];
   staffing: ProspectJob[];
   passed: PassedJob[];
+  pending: PendingJob[];
 }
 
 import { githubRead, githubWrite } from "@/lib/github";
 
 const JOBS_PATH = "data/jobs.json";
 
-const EMPTY_JOBS: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [] };
+const EMPTY_JOBS: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
 
 export async function readJobs(): Promise<JobsData> {
   try {

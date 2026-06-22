@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { label: "Profile", href: "/settings" },
   { label: "Scraping", href: "/settings/scraping" },
+  { label: "Scrape Targets", href: "/settings/scrape-targets" },
   { label: "AI Model", href: "/settings/model" },
 ];
 

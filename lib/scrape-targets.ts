@@ -62,22 +62,36 @@ export const LOCAL_TARGETS: ScrapeTargetConfig[] = [
 
 export type ScrapeGroup = "remote" | "local" | "all";
 
-export function getTargetsForGroup(group: ScrapeGroup): ScrapeTargetConfig[] {
-  if (group === "remote") return REMOTE_TARGETS;
-  if (group === "local") return LOCAL_TARGETS;
-  return [...REMOTE_TARGETS, ...LOCAL_TARGETS];
+// Runtime loader — reads from data/scrape-targets.json, falls back to static arrays
+export async function loadTargets(): Promise<{ remote: ScrapeTargetConfig[]; local: ScrapeTargetConfig[] }> {
+  try {
+    const { githubRead } = await import("@/lib/github");
+    const raw = await githubRead("data/scrape-targets.json");
+    return JSON.parse(raw);
+  } catch {
+    return { remote: REMOTE_TARGETS, local: LOCAL_TARGETS };
+  }
 }
 
-export function findTarget(
+export async function getTargetsForGroup(group: ScrapeGroup): Promise<ScrapeTargetConfig[]> {
+  const { remote, local } = await loadTargets();
+  if (group === "remote") return remote;
+  if (group === "local") return local;
+  return [...remote, ...local];
+}
+
+export async function findTarget(
   group: ScrapeGroup,
   company: string
-): ScrapeTargetConfig | undefined {
-  return getTargetsForGroup(group).find(
-    (t) => t.company.toLowerCase() === company.toLowerCase()
-  );
+): Promise<ScrapeTargetConfig | undefined> {
+  const targets = await getTargetsForGroup(group);
+  return targets.find((t) => t.company.toLowerCase() === company.toLowerCase());
 }
 
-export const ALL_COMPANY_OPTIONS = [
-  { group: "remote" as const, label: "Remote / National", companies: ["All", ...REMOTE_TARGETS.map((t) => t.company)] },
-  { group: "local" as const, label: "Local / Hybrid", companies: ["All", ...LOCAL_TARGETS.map((t) => t.company)] },
-];
+export async function getAllCompanyOptions() {
+  const { remote, local } = await loadTargets();
+  return [
+    { group: "remote" as const, label: "Remote / National", companies: ["All", ...remote.map((t) => t.company)] },
+    { group: "local" as const, label: "Local / Hybrid", companies: ["All", ...local.map((t) => t.company)] },
+  ];
+}

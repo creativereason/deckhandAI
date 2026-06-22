@@ -1,6 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
-import { ALL_COMPANY_OPTIONS, ScrapeGroup } from "@/lib/scrape-targets";
+import { useEffect, useState } from "react";
+import { ScrapeGroup } from "@/lib/scrape-targets";
 
 interface ScrapeLogEntry {
   company: string;
@@ -19,20 +19,19 @@ interface ScrapeResult {
   group?: ScrapeGroup;
 }
 
+interface GroupOption {
+  group: ScrapeGroup;
+  label: string;
+  companies: string[];
+}
+
 interface Props {
   onDone: () => void;
 }
 
 function formatLogEntry(entry: ScrapeLogEntry): string {
-  if (entry.status === "error") {
-    return `${entry.company}: failed — ${entry.error}`;
-  }
-  const parts = [
-    `${entry.listings} listing${entry.listings !== 1 ? "s" : ""}`,
-    `${entry.qualifying} qualifying`,
-    `${entry.added} new`,
-  ];
-  return `${entry.company}: ${parts.join(", ")}`;
+  if (entry.status === "error") return `${entry.company}: failed — ${entry.error}`;
+  return `${entry.company}: ${entry.listings} listings, ${entry.qualifying} qualifying, ${entry.added} new`;
 }
 
 export default function ScrapePanel({ onDone }: Props) {
@@ -40,11 +39,24 @@ export default function ScrapePanel({ onDone }: Props) {
   const [company, setCompany] = useState("All");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ScrapeResult | { error: string } | null>(null);
+  const [groupOptions, setGroupOptions] = useState<GroupOption[]>([
+    { group: "remote", label: "Remote / National", companies: ["All"] },
+    { group: "local", label: "Local / Hybrid", companies: ["All"] },
+  ]);
 
-  const groupConfig = useMemo(
-    () => ALL_COMPANY_OPTIONS.find((g) => g.group === group)!,
-    [group]
-  );
+  useEffect(() => {
+    fetch("/api/scrape-targets")
+      .then((r) => r.json())
+      .then((data: { remote: { company: string }[]; local: { company: string }[] }) => {
+        setGroupOptions([
+          { group: "remote", label: "Remote / National", companies: ["All", ...data.remote.map((t) => t.company)] },
+          { group: "local", label: "Local / Hybrid", companies: ["All", ...data.local.map((t) => t.company)] },
+        ]);
+      })
+      .catch(() => {});
+  }, []);
+
+  const groupConfig = groupOptions.find((g) => g.group === group)!;
 
   function onGroupChange(next: ScrapeGroup) {
     setGroup(next);
@@ -56,13 +68,10 @@ export default function ScrapePanel({ onDone }: Props) {
     setRunning(true);
     setResult(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/scrape`, {
+      const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          group,
-          company: company === "All" ? undefined : company,
-        }),
+        body: JSON.stringify({ group, company: company === "All" ? undefined : company }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -78,10 +87,7 @@ export default function ScrapePanel({ onDone }: Props) {
     }
   }
 
-  const targets =
-    company === "All"
-      ? groupConfig.companies.slice(1).join(", ")
-      : company;
+  const targets = company === "All" ? groupConfig.companies.slice(1).join(", ") || "all" : company;
 
   return (
     <div className="flex flex-col items-end gap-2">
@@ -128,7 +134,7 @@ export default function ScrapePanel({ onDone }: Props) {
         <div className="text-right max-w-md space-y-1">
           <p className={`text-sm ${result.added > 0 ? "text-green-700 dark:text-green-400" : "text-gray-600 dark:text-gray-400"}`}>
             {result.added > 0
-              ? `${result.added} new job${result.added !== 1 ? "s" : ""} added`
+              ? `${result.added} new job${result.added !== 1 ? "s" : ""} added to review queue`
               : "Scrape complete. No new qualifying jobs found."}
           </p>
           {result.log && result.log.length > 0 && (

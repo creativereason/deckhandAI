@@ -81,11 +81,11 @@ Users need a way to configure the app without editing JSON files directly.
 
 New users need a path from zero to running in under 10 minutes.
 
-- [ ] `scripts/setup.js` — interactive CLI: prompts for GitHub token, data repo, app password, candidate profile; generates `.env.local` and writes initial `config.json`
-- [ ] `profile.json` schema — structured work history used for AI generation (name, summary, experience array, strengths, writing rules)
-- [ ] Setup CLI scaffolds `profile.json` interactively from work history prompts
-- [ ] "Deploy to Vercel" button in README with env var mapping
-- [ ] `CONTRIBUTING.md`
+- [x] `scripts/setup.mjs` — interactive CLI: prompts for GitHub token, data repo, app password, candidate profile; generates `.env.local` and writes initial `config.json`
+- [x] `profile.json` schema — structured work history used for AI generation (name, summary, experience array, strengths, writing rules)
+- [x] Setup CLI scaffolds `profile.json` interactively from work history prompts
+- [x] "Deploy to Vercel" button in README with env var mapping
+- [x] `CONTRIBUTING.md`
 
 **Effort:** ~2 days
 
@@ -95,11 +95,11 @@ New users need a path from zero to running in under 10 minutes.
 
 Automated scraping via GitHub Actions is the zero-infrastructure path for users without a local Playwright setup.
 
-- [ ] `.github/workflows/scrape.yml` — scheduled cron workflow (runs `scripts/scrape-careers.mjs` in the data repo, commits results)
-- [ ] `.github/workflows/lint.yml` — ESLint + type-check on PR
-- [ ] Scrape review queue — results land in a pending state; user approves/rejects before they hit the board
-- [ ] Scrape targets UI — add/edit/delete targets in the app instead of editing `lib/scrape-targets.ts` directly; writes `data/scrape-targets.json`
-- [ ] `lib/scrape-targets.ts` reads from `data/scrape-targets.json` at runtime instead of static export
+- [x] `.github/workflows/scrape.yml` — scheduled cron workflow (runs `scripts/scrape-careers.mjs` in the data repo, commits results)
+- [x] `.github/workflows/lint.yml` — ESLint + type-check on PR
+- [x] Scrape review queue — results land in a pending state; user approves/rejects before they hit the board
+- [x] Scrape targets UI — add/edit/delete targets in the app instead of editing `lib/scrape-targets.ts` directly; writes `data/scrape-targets.json`
+- [x] `lib/scrape-targets.ts` reads from `data/scrape-targets.json` at runtime instead of static export
 
 **Effort:** ~3 days
 

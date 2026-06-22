@@ -21,42 +21,79 @@ git clone https://github.com/creativereason/deckhandAI.git
 cd deckhandAI
 pnpm install
 
-# 2. Set up your data file
-cp data/jobs.sample.json data/jobs.json
+# 2. Run the setup wizard
+node scripts/setup.mjs
+# Prompts for GitHub token, data repo, app password, candidate profile,
+# and AI provider — then writes .env.local, data/config.json, and data/profile.json
 
-# 3. Set up your config
-cp data/config.sample.json data/config.json
-# Edit config.json with your name, location, salary floor, and target titles
-
-# 4. Run locally
+# 3. Run locally
 pnpm dev   # http://localhost:3000
 ```
+
+**Prefer to configure manually?** Copy the sample files and edit them directly:
+
+```bash
+cp data/config.sample.json data/config.json
+cp data/profile.sample.json data/profile.json
+cp data/jobs.sample.json data/jobs.json
+```
+
+---
+
+## Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcreativereason%2FdeckhandAI&env=GITHUB_TOKEN,GITHUB_DATA_REPO,APP_PASSWORD,COOKIE_SECRET&envDescription=Required%20environment%20variables%20for%20deckhandAI&envLink=https%3A%2F%2Fgithub.com%2Fcreativereason%2FdeckhandAI%23environment-variables)
+
+Set these environment variables in your Vercel project settings:
+
+| Variable | Required | Description |
+|---|---|---|
+| `GITHUB_TOKEN` | Yes | Personal access token with `repo` scope |
+| `GITHUB_DATA_REPO` | Yes | `username/repo-name` of your private data repo |
+| `GITHUB_DATA_BRANCH` | No | Branch to read/write (default: `main`) |
+| `APP_PASSWORD` | Yes | Password to protect the tracker UI |
+| `COOKIE_SECRET` | Yes | Random 32+ character string for signing session cookies |
+| `AI_API_KEY` | No | API key for Anthropic, OpenAI, etc. |
+| `AI_PROVIDER` | No | `anthropic` \| `openai` \| `ollama` \| `custom` (default: `anthropic`) |
+| `AI_BASE_URL` | No | Ollama or custom endpoint base URL |
+| `DEMO_MODE` | No | `true` to enable read-only demo mode, bypasses auth |
+
+The setup wizard generates these values for you locally. For Vercel, copy the values from your `.env.local` into your project's environment variable settings.
 
 ---
 
 ## Configuration
 
-Edit `data/config.json` (copied from `data/config.sample.json`) to set:
+`data/config.json` controls your candidate profile, job filter preferences, and AI settings. The setup wizard writes this file for you, or copy from `data/config.sample.json` and edit manually.
 
-- Your name, location, and contact info
-- Target job titles and seniority levels
-- Salary minimum (FTE and contract/hourly)
-- Location preferences (remote, hybrid radius, hub city/ZIP)
-- AI provider and model (for document generation)
+Key fields:
 
-See `data/config.sample.json` for the full schema with all available options.
+- `candidate` — name, email, phone, website, LinkedIn
+- `preferences.titles` — target job titles used for scrape filtering
+- `preferences.salary` — minimum FTE base and contract hourly rate
+- `preferences.locations` — remote/hybrid flags, hub city, hybrid radius in miles
+- `ai` — provider, model, and optional base URL
+
+---
+
+## Profile (for AI generation)
+
+`data/profile.json` is your structured work history — the source material the AI uses to write cover letters and resume tailoring notes. The setup wizard creates an initial version; edit it directly to add your experience bullets, strengths, and writing style rules.
+
+See `data/profile.sample.json` for the full schema.
 
 ---
 
 ## Scraping
 
-Add your target companies to `scripts/scrape-careers.mjs`. The file includes several example targets to show the format. Run it directly or let GitHub Actions run it on a schedule.
+Add your target companies to `scripts/scrape-careers.mjs`. The file includes several example targets. Run it directly or let GitHub Actions run it on a schedule.
 
 ```bash
 node scripts/scrape-careers.mjs
 ```
 
 Requires Playwright with Chromium:
+
 ```bash
 npx playwright install chromium
 ```
@@ -65,7 +102,13 @@ npx playwright install chromium
 
 ## AI document generation
 
-Set your provider and model in `data/config.json`:
+deckhandAI supports several AI providers. Choose whichever fits your setup.
+
+### Option 1 — Anthropic (Claude)
+
+Requires an Anthropic Console account at [console.anthropic.com](https://console.anthropic.com). This is **separate from a Claude.ai subscription** — the API is pay-as-you-go with credits you add to your account. A standard Claude.ai plan does not include API access.
+
+Cost in practice: generating a cover letter with `claude-sonnet-4-6` costs a few cents per call. $5–10 in credits goes a long way for personal use.
 
 ```json
 {
@@ -77,24 +120,116 @@ Set your provider and model in `data/config.json`:
 }
 ```
 
-Add your API key to `.env.local`:
 ```
-AI_API_KEY=your-key-here
+AI_API_KEY=sk-ant-...
 ```
 
-Supported providers: `anthropic`, `openai`, `ollama`, `custom`. For Ollama or a custom endpoint, set `base_url` to your server address.
+### Option 2 — OpenAI
+
+Requires an OpenAI account at [platform.openai.com](https://platform.openai.com) with credits loaded. Same pay-as-you-go model.
+
+```json
+{
+  "ai": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "base_url": null
+  }
+}
+```
+
+```
+AI_API_KEY=sk-...
+```
+
+### Option 3 — Ollama (local, free)
+
+If you have [Ollama](https://ollama.com) running on your machine or local network, you can use it with no API key and no per-call cost. Good models for this use case: `llama3`, `mistral`, `phi3`.
+
+```bash
+ollama pull llama3   # one-time download
+ollama serve         # runs at http://localhost:11434
+```
+
+```json
+{
+  "ai": {
+    "provider": "ollama",
+    "model": "llama3",
+    "base_url": "http://localhost:11434/v1"
+  }
+}
+```
+
+No `AI_API_KEY` needed.
+
+### Option 4 — Gemini (Google, has a free tier)
+
+Google Gemini has a free tier with generous rate limits — a good starting point if you don't want to add a credit card. Get an API key at [aistudio.google.com](https://aistudio.google.com) (free, just needs a Google account).
+
+```json
+{
+  "ai": {
+    "provider": "custom",
+    "model": "gemini-2.0-flash",
+    "base_url": "https://generativelanguage.googleapis.com/openai/v1"
+  }
+}
+```
+
+```
+AI_API_KEY=your-google-ai-studio-key
+```
+
+`gemini-2.0-flash` is fast and capable for document generation. `gemini-1.5-pro` is stronger if quality matters more than speed.
+
+### Option 5 — Grok (xAI)
+
+Grok is OpenAI-compatible and tends to have competitive pricing. Get an API key at [console.x.ai](https://console.x.ai).
+
+```json
+{
+  "ai": {
+    "provider": "custom",
+    "model": "grok-3",
+    "base_url": "https://api.x.ai/v1"
+  }
+}
+```
+
+```
+AI_API_KEY=your-xai-key
+```
+
+### Option 6 — Other OpenAI-compatible endpoints
+
+Any OpenAI-compatible API works the same way — LM Studio, vLLM, or any other local server. Set `provider` to `custom`, point `base_url` at your server, and set the model name to whatever your server expects.
+
+```json
+{
+  "ai": {
+    "provider": "custom",
+    "model": "your-model-name",
+    "base_url": "http://your-server:port/v1"
+  }
+}
+```
 
 ---
 
-## Deployment
-
-Deploy to Vercel in one click. Set `AI_API_KEY` as an environment variable in your Vercel project settings.
+Set your provider via the setup wizard (`node scripts/setup.mjs`) or edit `data/config.json` directly. The API key goes in `.env.local` as `AI_API_KEY`.
 
 ---
 
 ## Data privacy
 
-`jobs.json` is gitignored by default. Your job search data, salary notes, and application history never leave your own deployment. AI generation happens server-to-model — your data is never sent to a third-party service beyond the AI provider you configure.
+`jobs.json`, `config.json`, and `profile.json` are gitignored by default. Your job search data, salary notes, application history, and work history never leave your own deployment. AI generation happens server-to-model — your data is not sent to any third party beyond the AI provider you configure.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

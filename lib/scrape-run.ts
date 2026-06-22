@@ -1,4 +1,4 @@
-import { readJobs, writeJobs, ProspectJob } from "@/lib/jobs";
+import { readJobs, writeJobs, ProspectJob, PendingJob } from "@/lib/jobs";
 import {
   buildLocalRegex,
   DEFAULT_SELECTORS,
@@ -138,17 +138,19 @@ export async function runScrape(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   playwright: any,
   options: RunScrapeOptions
-): Promise<{ added: ProspectJob[]; log: ScrapeLogEntry[] }> {
+): Promise<{ added: PendingJob[]; log: ScrapeLogEntry[] }> {
   const { targets, localOnly = false, localRegex = buildLocalRegex() } = options;
   const browser = await playwright.chromium.launch({ headless: true });
-  const added: ProspectJob[] = [];
+  const added: PendingJob[] = [];
   const log: ScrapeLogEntry[] = [];
   const jobs = await readJobs();
+  if (!jobs.pending) jobs.pending = [];
   const existingKeys = new Set([
     ...jobs.prospect.map((j) => `${j.company}|${j.role}`),
     ...jobs.local.map((j) => `${j.company}|${j.role}`),
     ...jobs.applied.map((j) => `${j.company}|${j.role}`),
     ...jobs.passed.map((j) => `${j.company}|${j.role}`),
+    ...jobs.pending.map((j) => `${j.company}|${j.role}`),
   ]);
 
   try {
@@ -224,21 +226,17 @@ export async function runScrape(
             localOnly ||
             isLocalListing(item.title, `${item.location} ${href}`, localRegex);
 
-          const job: ProspectJob = {
+          const job: PendingJob = {
             company: target.company,
             role: item.title,
-            fit: LEVEL_INCLUDE.test(item.title) ? "good" : "caution",
-            salary: "",
-            notes: `Scraped ${new Date().toISOString().split("T")[0]}`,
             url: href,
-            isNew: true,
+            salary: "",
+            notes: "",
+            scrapeGroup: isLocal ? "local" : "remote",
+            scrapeDate: new Date().toISOString().split("T")[0],
           };
 
-          if (isLocal) {
-            jobs.local.unshift(job);
-          } else {
-            jobs.prospect.unshift(job);
-          }
+          jobs.pending.unshift(job);
           existingKeys.add(key);
           added.push(job);
           addedForTarget++;

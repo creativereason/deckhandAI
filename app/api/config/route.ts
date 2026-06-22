@@ -4,7 +4,10 @@ import { readConfig, writeConfig } from "@/lib/config";
 export async function GET() {
   try {
     const config = await readConfig();
-    return NextResponse.json(config);
+    return NextResponse.json({
+      ...config,
+      ai_key_configured: !!process.env.AI_API_KEY,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });

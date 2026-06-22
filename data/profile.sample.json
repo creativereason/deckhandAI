@@ -1,0 +1,53 @@
+{
+  "name": "Your Name",
+  "title": "Senior UX Designer / Director of Product Design",
+  "summary": "2-3 sentence professional summary used as the foundation for cover letters and tailoring notes. Write in first person. Focus on your core strengths, domain expertise, and what you bring to an organization.",
+  "strengths": [
+    "Design Systems",
+    "DesignOps",
+    "Enterprise B2B",
+    "AI-powered UX",
+    "Cross-functional leadership"
+  ],
+  "experience": [
+    {
+      "company": "Current Company",
+      "role": "Senior UX Designer",
+      "start": "2024-01",
+      "end": null,
+      "bullets": [
+        "Led end-to-end design for [product], reducing user error rate by 30%.",
+        "Built and maintained a component library used across 4 product lines.",
+        "Partnered with PMs and engineers to ship [feature] on a 6-week timeline."
+      ]
+    },
+    {
+      "company": "Previous Company",
+      "role": "UX Designer",
+      "start": "2021-03",
+      "end": "2023-12",
+      "bullets": [
+        "Redesigned the onboarding flow, increasing activation rate from 40% to 67%.",
+        "Facilitated design sprints with stakeholders across 3 business units.",
+        "Established the team's first accessibility review process."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University Name",
+      "degree": "B.S. Your Major",
+      "graduated": "2020-05",
+      "honors": "Magna Cum Laude"
+    }
+  ],
+  "writing_rules": [
+    "No em dashes — rewrite the sentence instead.",
+    "No formal framing phrases ('This aligns directly with', 'This underscores').",
+    "No constructed parallel trios ('X, Y, and Z' as a rhetorical device).",
+    "Active voice. Vary sentence length. Concrete examples over abstractions.",
+    "Direct declarative sentences. First person in reflective writing."
+  ],
+  "portfolio_url": "https://yoursite.com",
+  "portfolio_password": ""
+}
