@@ -26,15 +26,14 @@ export async function githubWrite(
 ): Promise<void> {
   const url = `${BASE}/${path}`;
   const getRes = await fetch(url, { headers: HEADERS, cache: "no-store" });
-  if (!getRes.ok)
-    throw new Error(`GitHub read error ${getRes.status}: ${await getRes.text()}`);
-  const { sha } = await getRes.json();
+  // 404 means the file doesn't exist yet — create it without a sha
+  const sha = getRes.ok ? (await getRes.json()).sha : undefined;
 
   const encoded = Buffer.from(content).toString("base64");
   const putRes = await fetch(url, {
     method: "PUT",
     headers: { ...HEADERS, "Content-Type": "application/json" },
-    body: JSON.stringify({ message, content: encoded, sha, branch: BRANCH }),
+    body: JSON.stringify({ message, content: encoded, ...(sha ? { sha } : {}), branch: BRANCH }),
   });
   if (!putRes.ok)
     throw new Error(`GitHub write error ${putRes.status}: ${await putRes.text()}`);

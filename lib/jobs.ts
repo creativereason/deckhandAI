@@ -42,9 +42,15 @@ import { githubRead, githubWrite } from "@/lib/github";
 
 const JOBS_PATH = "data/jobs.json";
 
+const EMPTY_JOBS: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [] };
+
 export async function readJobs(): Promise<JobsData> {
-  const raw = await githubRead(JOBS_PATH);
-  return JSON.parse(raw) as JobsData;
+  try {
+    const raw = await githubRead(JOBS_PATH);
+    return JSON.parse(raw) as JobsData;
+  } catch {
+    return { ...EMPTY_JOBS };
+  }
 }
 
 export async function writeJobs(data: JobsData): Promise<void> {
