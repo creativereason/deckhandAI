@@ -534,14 +534,15 @@ export default function Home() {
   }
 
   const load = useCallback(async () => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/jobs`);
+    const res = await fetch(`/api/jobs`);
     setJobs(await res.json());
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   async function moveJob(fromSection: JobSection, company: string, role: string, toSection: JobSection) {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/jobs`, {
+    await fetch(`/api/jobs`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ section: fromSection, company, role, targetSection: toSection }),
@@ -550,7 +551,7 @@ export default function Home() {
   }
 
   async function dismissNew(section: JobSection, company: string, role: string) {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/jobs`, {
+    await fetch(`/api/jobs`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ section, company, role, updates: { isNew: false } }),
@@ -609,8 +610,8 @@ export default function Home() {
               </button>
               <button
                 onClick={async () => {
-                  await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth/logout`, { method: "POST" });
-                  window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/login`;
+                  await fetch(`/api/auth/logout`, { method: "POST" });
+                  window.location.href = `/login`;
                 }}
                 className="text-sm text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1 transition-colors"
                 title="Sign out"
@@ -620,7 +621,7 @@ export default function Home() {
             </div>
             <ScrapePanel onDone={load} />
             <GenericScrapePanel onDone={load} />
-            <a href={`${process.env.NEXT_PUBLIC_BASE_PATH}/scrape-sources`}
+            <a href={`/scrape-sources`}
               className="text-xs text-p-dusk dark:text-p-accent-inv hover:text-p-blue dark:hover:opacity-80">
               Scraper coverage →
             </a>

@@ -20,7 +20,7 @@ import { chromium } from "playwright";
 import { readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 
-const JOBS_PATH = resolve(process.cwd(), "jobs.json");
+const JOBS_PATH = resolve(process.cwd(), "data/jobs.json");
 
 const DESIGN_KEYWORDS = [
   "ux", "user experience", "design director", "design manager", "design lead",

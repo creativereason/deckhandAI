@@ -39,7 +39,7 @@ export default function ScrapeSourcesPage() {
         <InfoRow>
           <strong>Local targets:</strong> Set{" "}
           <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">assumeLocal: true</code> for
-          employers in your metro where the URL doesn't filter by city. Set{" "}
+          employers in your metro where the URL doesn&apos;t filter by city. Set{" "}
           <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">trustLocationFilter: true</code>{" "}
           when the URL already scopes to your city and you want to skip the per-row location check.
         </InfoRow>

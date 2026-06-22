@@ -1,5 +1,6 @@
 import { readJobs, writeJobs, ProspectJob } from "@/lib/jobs";
 import {
+  buildLocalRegex,
   DEFAULT_SELECTORS,
   isLocalListing,
   isQualifyingAssumeLocal,
@@ -130,6 +131,7 @@ async function getListingPage(
 export type RunScrapeOptions = {
   targets: ScrapeTargetConfig[];
   localOnly?: boolean;
+  localRegex?: RegExp;
 };
 
 export async function runScrape(
@@ -137,7 +139,7 @@ export async function runScrape(
   playwright: any,
   options: RunScrapeOptions
 ): Promise<{ added: ProspectJob[]; log: ScrapeLogEntry[] }> {
-  const { targets, localOnly = false } = options;
+  const { targets, localOnly = false, localRegex = buildLocalRegex() } = options;
   const browser = await playwright.chromium.launch({ headless: true });
   const added: ProspectJob[] = [];
   const log: ScrapeLogEntry[] = [];
@@ -197,11 +199,12 @@ export async function runScrape(
             return isQualifyingAssumeLocal(
               title,
               location,
+              localRegex,
               href,
               target.trustLocationFilter
             );
           }
-          return isQualifyingRemoteOrLocal(title, location);
+          return isQualifyingRemoteOrLocal(title, location, localRegex);
         };
 
         for (const item of listings) {
@@ -219,7 +222,7 @@ export async function runScrape(
           const isLocal =
             target.assumeLocal ||
             localOnly ||
-            isLocalListing(item.title, `${item.location} ${href}`);
+            isLocalListing(item.title, `${item.location} ${href}`, localRegex);
 
           const job: ProspectJob = {
             company: target.company,

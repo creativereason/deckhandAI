@@ -5,6 +5,8 @@ import {
   getTargetsForGroup,
   ScrapeGroup,
 } from "@/lib/scrape-targets";
+import { readConfig } from "@/lib/config";
+import { buildLocalRegex } from "@/lib/scrape-filters";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
@@ -32,10 +34,17 @@ export async function POST(req: NextRequest) {
     targets = [match];
   }
 
+  const config = await readConfig();
+  const localRegex = buildLocalRegex(
+    config.candidate?.hub_city,
+    config.candidate?.hub_state
+  );
+
   try {
     const { added, log } = await runScrape(playwright, {
       targets,
       localOnly: group === "local",
+      localRegex,
     });
     return NextResponse.json({ added: added.length, jobs: added, log, group });
   } catch (err) {
