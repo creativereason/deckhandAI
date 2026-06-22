@@ -20,6 +20,7 @@ export interface ProspectJob {
   notes: string;
   url: string;
   isNew?: boolean;
+  scoreRationale?: string;
 }
 
 export interface PassedJob {
@@ -38,6 +39,7 @@ export interface PendingJob {
   notes: string;
   scrapeGroup: "remote" | "local";
   scrapeDate: string;
+  scoreRationale?: string;
 }
 
 export interface JobsData {

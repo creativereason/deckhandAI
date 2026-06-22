@@ -1,6 +1,59 @@
 import type { Profile } from "@/lib/profile";
+import type { AppConfig } from "@/lib/config";
 
 export type GenerationType = "cover-letter" | "tailoring-notes";
+export type JobFit = "strong" | "good" | "caution" | "weak";
+
+export interface ScoreJobContext {
+  company: string;
+  role: string;
+  salary?: string;
+  notes?: string;
+  jdText?: string;
+}
+
+export function buildScorePrompt(
+  job: ScoreJobContext,
+  config: AppConfig
+): { system: string; user: string } {
+  const prefs = config.preferences ?? {};
+  const salary = prefs.salary ?? {};
+  const loc = prefs.locations ?? {};
+  const titles = (prefs.titles ?? []).join(", ") || "Senior/Director/VP level UX or Product Design";
+  const minFte = salary.min_fte ? `$${salary.min_fte.toLocaleString()}` : "not specified";
+  const minHourly = salary.min_contract_hourly ? `$${salary.min_contract_hourly}/hr` : "not specified";
+  const locationPref = [
+    loc.remote ? "Remote" : null,
+    loc.hybrid ? `Hybrid within ${loc.hub_radius_miles ?? 25} miles of ${loc.hub_city ?? "hub"}` : null,
+  ]
+    .filter(Boolean)
+    .join(" or ") || "Remote preferred";
+
+  const system = `You are a job fit evaluator. Evaluate how well a job posting matches a candidate's stated preferences and seniority level. Return only valid JSON — no prose, no markdown, no code fences.`;
+
+  const jdSection = job.jdText
+    ? `\nJOB DESCRIPTION EXCERPT:\n${job.jdText.slice(0, 3000)}`
+    : "";
+
+  const user = `CANDIDATE PREFERENCES:
+Target titles: ${titles}
+Min salary (FTE): ${minFte}
+Min hourly (contract): ${minHourly}
+Location: ${locationPref}
+Open to contract: ${prefs.open_to_contract ? "yes" : "no"}
+
+JOB:
+Company: ${job.company}
+Role: ${job.role}
+Salary: ${job.salary || "not listed"}
+Notes: ${job.notes || "none"}${jdSection}
+
+Evaluate fit. Consider title seniority, compensation, location, and role focus.
+
+Return JSON: {"fit": "strong"|"good"|"caution"|"weak", "rationale": "one sentence explaining the score"}`;
+
+  return { system, user };
+}
 
 export interface JobContext {
   company: string;

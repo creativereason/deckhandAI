@@ -143,7 +143,7 @@ Users supply their own model and API key. Generation runs server-side — keys n
 
 - [x] Demo mode — `DEMO_MODE=true` bypasses auth, loads `data/jobs.sample.json` read-only
 - [x] Error states — empty tracker state, GitHub API errors, scrape failures surfaced cleanly in UI
-- [ ] Mobile-responsive layout pass
+- [x] Mobile-responsive layout pass
 - [x] Favicon / app icon (anchor emoji via Next.js ImageResponse)
 - [x] `robots.txt` — block indexing
 - [x] Middleware deprecation — confirmed current pattern is correct for Next.js 14+

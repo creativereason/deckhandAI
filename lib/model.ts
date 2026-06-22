@@ -52,6 +52,31 @@ function buildBody(config: AiConfig, messages: GenerateRequest["messages"], stre
   return JSON.stringify({ model, messages, stream, max_tokens: 2048 });
 }
 
+export async function fetchGenerate(
+  config: AiConfig,
+  messages: GenerateRequest["messages"]
+): Promise<string> {
+  const { url, headers } = resolveEndpoint(config);
+  const body = buildBody(config, messages, false);
+
+  const res = await fetch(url, { method: "POST", headers, body });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`AI provider error ${res.status}: ${text}`);
+  }
+
+  const provider = config.provider ?? "anthropic";
+  const json = await res.json();
+
+  if (provider === "anthropic") {
+    return (json.content as { type: string; text: string }[])
+      .filter((c) => c.type === "text")
+      .map((c) => c.text)
+      .join("");
+  }
+  return json.choices?.[0]?.message?.content ?? "";
+}
+
 export async function streamGenerate(
   config: AiConfig,
   messages: GenerateRequest["messages"]

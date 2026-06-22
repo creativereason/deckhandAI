@@ -4,12 +4,13 @@ import type { JobFit, ProspectJob } from "@/lib/jobs";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const { company, role, action, fit, notes } = body as {
+  const { company, role, action, fit, notes, scoreRationale } = body as {
     company: string;
     role: string;
     action: "approve" | "reject";
     fit?: JobFit;
     notes?: string;
+    scoreRationale?: string;
   };
 
   if (!company || !role || !action) {
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
       notes: notes ?? `Scraped ${pending.scrapeDate}`,
       url: pending.url,
       isNew: true,
+      ...(scoreRationale ? { scoreRationale } : {}),
     };
 
     if (pending.scrapeGroup === "local") {

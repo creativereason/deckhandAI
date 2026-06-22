@@ -98,8 +98,37 @@ export default function JobFormModal({
   const [form, setForm] = useState(() => jobToForm(initialSection, job));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scoring, setScoring] = useState(false);
+  const [scoreRationale, setScoreRationale] = useState<string>("");
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  async function scoreFit() {
+    if (!form.company || !form.role) return;
+    setScoring(true);
+    setScoreRationale("");
+    try {
+      const res = await fetch("/api/score-fit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company: form.company,
+          role: form.role,
+          salary: form.salary || undefined,
+          notes: form.notes || undefined,
+          url: form.url || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json() as { fit: JobFit; rationale: string };
+      set("fit", data.fit);
+      setScoreRationale(data.rationale ?? "");
+    } catch {
+      setScoreRationale("Could not score — check AI settings.");
+    } finally {
+      setScoring(false);
+    }
+  }
 
   function onSectionChange(next: JobSection) {
     setSection(next);
@@ -211,11 +240,26 @@ export default function JobFormModal({
             />
           </div>
 
-          {(section === "prospect" || section === "local") && (
-            <div>
-              <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Fit</label>
+          {(section === "prospect" || section === "local" || section === "staffing") && (
+            <div className="col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Fit</label>
+                <button
+                  type="button"
+                  onClick={scoreFit}
+                  disabled={scoring || !form.company || !form.role}
+                  className="text-xs text-p-accent dark:text-p-accent-inv hover:underline disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  {scoring ? (
+                    <>
+                      <span className="inline-block w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
+                      Scoring…
+                    </>
+                  ) : "AI score"}
+                </button>
+              </div>
               <select
-                className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+                className="w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
                 value={form.fit}
                 onChange={(e) => set("fit", e.target.value)}
               >
@@ -224,6 +268,9 @@ export default function JobFormModal({
                 <option value="caution">Caution</option>
                 <option value="weak">Weak</option>
               </select>
+              {scoreRationale && (
+                <p className="mt-1.5 text-xs text-p-dusk dark:text-gray-400 italic">{scoreRationale}</p>
+              )}
             </div>
           )}
 
