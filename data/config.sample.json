@@ -1,29 +1,31 @@
 {
   "candidate": {
-    "name": "Your Name",
-    "email": "you@example.com",
-    "phone": "555.000.0000",
-    "website": "yoursite.com",
-    "linkedin": "linkedin.com/in/yourhandle"
+    "name": "Alex Chen",
+    "email": "alex@alexchendesign.com",
+    "phone": "512.555.0182",
+    "website": "alexchendesign.com",
+    "linkedin": "linkedin.com/in/alexchenux"
   },
   "preferences": {
     "titles": [
-      "Senior UX Designer",
       "Director of Product Design",
-      "Head of Design"
+      "Head of Design",
+      "VP Design",
+      "Principal Product Designer",
+      "Head of Design Systems"
     ],
     "salary": {
-      "min_fte": 140000,
-      "min_contract_hourly": 65
+      "min_fte": 175000,
+      "min_contract_hourly": 85
     },
     "open_to_contract": true,
     "locations": {
       "remote": true,
       "hybrid": true,
-      "hub_city": "Your City",
-      "hub_state": "ST",
-      "hub_zip": "00000",
-      "hub_radius_miles": 25
+      "hub_city": "Austin",
+      "hub_state": "TX",
+      "hub_zip": "78701",
+      "hub_radius_miles": 30
     }
   },
   "scraping": {

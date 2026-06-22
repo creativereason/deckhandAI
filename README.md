@@ -2,6 +2,8 @@
 
 A self-hosted job search command center. Track prospects, scrape target company career pages, and generate cover letters with any AI model — no vendor lock-in, no database, no monthly fee.
 
+**[→ View live demo](https://deckhandai-demo.vercel.app)** — read-only, sample data, no login required.
+
 ---
 
 ## What it does
@@ -28,6 +30,14 @@ node scripts/setup.mjs
 
 # 3. Run locally
 pnpm dev   # http://localhost:3000
+```
+
+**Want sample data to start from?** Run the data repo init script:
+
+```bash
+node scripts/init-sample-repo.mjs
+# Creates a GitHub repo pre-populated with a realistic fictional candidate profile,
+# job tracker data, work history, and scrape targets.
 ```
 
 **Prefer to configure manually?** Copy the sample files and edit them directly:
@@ -59,6 +69,30 @@ Set these environment variables in your Vercel project settings:
 | `DEMO_MODE` | No | `true` to enable read-only demo mode, bypasses auth |
 
 The setup wizard generates these values for you locally. For Vercel, copy the values from your `.env.local` into your project's environment variable settings.
+
+---
+
+## Sample data repo
+
+The quickest way to get a data repo with realistic starter data:
+
+```bash
+node scripts/init-sample-repo.mjs
+```
+
+This creates a new GitHub repo under your account and uploads pre-filled `jobs.json`, `config.json`, `profile.json`, and `scrape-targets.json` based on a fictional candidate (Alex Chen, Director of Product Design in Austin, TX). Use it as a starting point — swap in your own details in Settings after first login.
+
+The same sample files power the [live demo](https://deckhandai-demo.vercel.app).
+
+**To host your own demo deployment:**
+
+1. Run `init-sample-repo.mjs` with a public repo
+2. Deploy deckhandAI to Vercel with:
+   ```
+   GITHUB_DATA_REPO=yourhandle/deckhandai-sample-data
+   DEMO_MODE=true
+   ```
+   No `APP_PASSWORD` needed — demo mode bypasses auth and makes all writes read-only.
 
 ---
 

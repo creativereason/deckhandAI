@@ -1,53 +1,75 @@
 {
-  "name": "Your Name",
-  "title": "Senior UX Designer / Director of Product Design",
-  "summary": "2-3 sentence professional summary used as the foundation for cover letters and tailoring notes. Write in first person. Focus on your core strengths, domain expertise, and what you bring to an organization.",
+  "name": "Alex Chen",
+  "title": "Director of Product Design",
+  "summary": "I lead design teams building complex, high-stakes software — enterprise tools, developer platforms, and AI-powered products. I work across the full arc from strategy to shipped component: building design systems, coaching teams, and closing the gap between research and production. I care about craft and operational rigor in equal measure.",
   "strengths": [
     "Design Systems",
     "DesignOps",
     "Enterprise B2B",
     "AI-powered UX",
-    "Cross-functional leadership"
+    "Design leadership and team scaling",
+    "Developer tooling",
+    "Cross-functional product strategy"
   ],
   "experience": [
     {
-      "company": "Current Company",
-      "role": "Senior UX Designer",
-      "start": "2024-01",
+      "company": "Meridian Software",
+      "role": "Director of Product Design",
+      "start": "2023-03",
       "end": null,
       "bullets": [
-        "Led end-to-end design for [product], reducing user error rate by 30%.",
-        "Built and maintained a component library used across 4 product lines.",
-        "Partnered with PMs and engineers to ship [feature] on a 6-week timeline."
+        "Lead a team of 11 designers across 3 product lines serving 4,000+ enterprise customers.",
+        "Rebuilt the design system from scratch — 240-component library adopted by 8 engineering squads, reducing design-to-dev handoff time by 40%.",
+        "Launched an AI-assisted search and summarization feature that became the product's highest-rated capability in NPS surveys within one quarter of release.",
+        "Established a DesignOps function: onboarding playbook, critique cadence, and contribution model that cut new-designer ramp time from 10 weeks to 4.",
+        "Partnered with CPO and CTO to define a 3-year platform consolidation roadmap, reducing the product surface from 7 apps to 2."
       ]
     },
     {
-      "company": "Previous Company",
-      "role": "UX Designer",
-      "start": "2021-03",
-      "end": "2023-12",
+      "company": "Lumen Analytics",
+      "role": "Senior Product Designer",
+      "start": "2020-06",
+      "end": "2023-02",
       "bullets": [
-        "Redesigned the onboarding flow, increasing activation rate from 40% to 67%.",
-        "Facilitated design sprints with stakeholders across 3 business units.",
-        "Established the team's first accessibility review process."
+        "Owned end-to-end design for a data pipeline builder used by 600+ data engineering teams — the company's core monetized product.",
+        "Shipped a zero-to-one dashboard builder that replaced a legacy reporting tool; adoption reached 70% of active accounts within 6 months.",
+        "Led a 5-person design sprint that surfaced 3 critical workflow blockers, directly informing a $2M product investment decision.",
+        "Built the team's first component library in Figma with auto-layout and variable support; cut design production time by half.",
+        "Conducted 80+ user interviews across engineering, operations, and executive personas to anchor product direction in behavioral evidence."
+      ]
+    },
+    {
+      "company": "Clearpath Digital",
+      "role": "UX Designer",
+      "start": "2017-08",
+      "end": "2020-05",
+      "bullets": [
+        "Designed responsive interfaces for financial services clients including two top-10 U.S. banks.",
+        "Established the agency's accessibility review process, bringing 4 client products into WCAG 2.1 AA compliance.",
+        "Facilitated discovery workshops with VP and C-suite stakeholders to define product scope and success criteria.",
+        "Mentored 3 junior designers; two were promoted within 18 months."
       ]
     }
   ],
   "education": [
     {
-      "institution": "University Name",
-      "degree": "B.S. Your Major",
-      "graduated": "2020-05",
-      "honors": "Magna Cum Laude"
+      "institution": "University of Texas at Austin",
+      "degree": "B.S. Communication Studies",
+      "graduated": "2017-05",
+      "honors": "Cum Laude"
     }
   ],
   "writing_rules": [
     "No em dashes — rewrite the sentence instead.",
-    "No formal framing phrases ('This aligns directly with', 'This underscores').",
-    "No constructed parallel trios ('X, Y, and Z' as a rhetorical device).",
+    "No dramatic colons for rhetorical effect.",
+    "No formal framing phrases ('This aligns directly with', 'This underscores', 'It is worth noting').",
+    "No paired synonymous adjectives ('clear and transparent').",
+    "No closing flourish or restatement sentences.",
+    "No stacked transitions ('Moreover', 'Furthermore', 'Additionally').",
+    "No 'crucial', 'pivotal', or 'one of the most significant'.",
     "Active voice. Vary sentence length. Concrete examples over abstractions.",
     "Direct declarative sentences. First person in reflective writing."
   ],
-  "portfolio_url": "https://yoursite.com",
-  "portfolio_password": ""
+  "portfolio_url": "https://alexchendesign.com/work",
+  "portfolio_password": "design2026"
 }

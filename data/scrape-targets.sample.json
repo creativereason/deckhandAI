@@ -1,0 +1,46 @@
+{
+  "remote": [
+    {
+      "company": "Figma",
+      "url": "https://figma.com/careers#open-positions",
+      "selector": "a[href*='/careers/']"
+    },
+    {
+      "company": "Notion",
+      "url": "https://notion.so/careers",
+      "selector": "a[href*='/careers/']"
+    },
+    {
+      "company": "Linear",
+      "url": "https://linear.app/careers",
+      "selector": "a[href*='careers']"
+    },
+    {
+      "company": "Vercel",
+      "url": "https://vercel.com/careers",
+      "selector": "a[href*='/careers/']"
+    },
+    {
+      "company": "Stripe",
+      "url": "https://stripe.com/jobs",
+      "selector": "a[href*='/jobs/listing/']"
+    }
+  ],
+  "local": [
+    {
+      "company": "Indeed (HQ)",
+      "url": "https://indeed.com/cmp/Indeed/jobs",
+      "selector": "a[href*='/viewjob']"
+    },
+    {
+      "company": "Dell Technologies",
+      "url": "https://dell.com/en-us/dt/corporate/careers/careers-overview.htm",
+      "selector": "a[href*='jobs.dell.com']"
+    },
+    {
+      "company": "Oracle (Austin)",
+      "url": "https://careers.oracle.com/jobs",
+      "selector": "a[href*='/jobs/']"
+    }
+  ]
+}
