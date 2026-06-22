@@ -656,8 +656,8 @@ export default function Home() {
               )}
             </p>
           </div>
-          <div className="flex flex-col gap-2 items-start sm:items-end shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 items-start sm:items-end shrink-0 w-full sm:w-auto">
+            <div className="flex items-center gap-2 flex-wrap">
               <ThemeToggle />
               <button onClick={() => setShowAdd(true)}
                 className="bg-p-blue dark:bg-p-accent-inv text-white dark:text-white rounded px-4 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 transition-colors">

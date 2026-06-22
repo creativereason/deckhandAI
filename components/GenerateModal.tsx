@@ -125,11 +125,11 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
   const hasOutput = output.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-p-dark-surface rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4">
+      <div className="bg-white dark:bg-p-dark-surface rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh]">
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-p-linen dark:border-p-dark-mid shrink-0">
+        <div className="flex items-start justify-between px-4 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-p-linen dark:border-p-dark-mid shrink-0">
           <div>
             <h2 className="text-base font-bold text-gray-900 dark:text-white">Generate document</h2>
             <p className="text-sm text-p-dusk dark:text-gray-400 mt-0.5">{role} — {company}</p>
@@ -144,7 +144,7 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
         </div>
 
         {/* Controls */}
-        <div className="px-6 py-4 space-y-4 shrink-0">
+        <div className="px-4 sm:px-6 py-4 space-y-4 shrink-0">
           {/* Type selector */}
           <div className="flex gap-3">
             {TYPE_OPTIONS.map((opt) => (
@@ -189,7 +189,7 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
 
         {/* Output */}
         {(hasOutput || error) && (
-          <div className="px-6 pb-2 flex-1 min-h-0 flex flex-col">
+          <div className="px-4 sm:px-6 pb-2 flex-1 min-h-0 flex flex-col">
             {error ? (
               <p className="text-sm text-red-600 dark:text-red-400 p-3 bg-red-50 dark:bg-red-950/30 rounded-xl">{error}</p>
             ) : (
@@ -205,8 +205,8 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
         )}
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-p-linen dark:border-p-dark-mid flex items-center justify-between gap-3 shrink-0">
-          <div className="flex gap-2">
+        <div className="px-4 sm:px-6 py-4 border-t border-p-linen dark:border-p-dark-mid flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="flex gap-2 flex-wrap">
             {hasOutput && done && (
               <>
                 <button onClick={copyToClipboard} className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors">

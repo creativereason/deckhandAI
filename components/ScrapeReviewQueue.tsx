@@ -117,12 +117,12 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
           const loading = busy[k];
 
           return (
-            <div key={k} className="px-5 py-4 flex items-start gap-4">
-              <div className="flex-1 min-w-0">
+            <div key={k} className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+              <div className="flex-1 min-w-0 w-full">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm text-gray-800 dark:text-gray-200">{j.company}</span>
                   <span className="text-p-dusk dark:text-gray-400 text-xs">—</span>
-                  <span className="text-sm text-gray-600 dark:text-gray-300 truncate">{j.role}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">{j.role}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${j.scrapeGroup === "local" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}>
                     {j.scrapeGroup}
                   </span>
@@ -136,6 +136,9 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
                   <span className="text-xs text-p-dusk dark:text-gray-500">{j.scrapeDate}</span>
                 </div>
               </div>
+
+              {/* Fit + actions row on mobile */}
+              <div className="flex items-center justify-between gap-2 w-full sm:w-auto sm:flex-col sm:items-end">
 
               {/* Fit selector */}
               <div className="flex items-center gap-1 shrink-0">
@@ -167,6 +170,8 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
                   {loading ? "…" : "Approve"}
                 </button>
               </div>
+
+              </div>{/* end mobile fit+actions wrapper */}
             </div>
           );
         })}

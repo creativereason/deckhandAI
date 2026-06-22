@@ -29,7 +29,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           </div>
         </div>
 
-        <nav className="flex gap-1 border-b border-p-linen dark:border-p-dark-mid pb-0">
+        <nav className="flex flex-wrap gap-1 border-b border-p-linen dark:border-p-dark-mid pb-0 overflow-x-auto">
           {TABS.map((tab) => {
             const active = tab.href === "/settings"
               ? pathname === "/settings"
@@ -39,7 +39,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "px-4 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors",
+                  "px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors whitespace-nowrap",
                   active
                     ? "border-p-accent dark:border-p-accent-inv text-p-accent dark:text-p-accent-inv bg-white dark:bg-p-dark-surface"
                     : "border-transparent text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
