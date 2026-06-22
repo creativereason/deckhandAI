@@ -521,6 +521,8 @@ function PassedTable({ jobs, otherSections, onEdit, onMove }: {
 export default function Home() {
   const [jobs, setJobs] = useState<JobsData | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
+  const [showLocal, setShowLocal] = useState(true);
+  const [showStaffing, setShowStaffing] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<EditState | null>(null);
   const [fitFilter, setFitFilter] = useState<FitFilter>("all");
@@ -542,6 +544,8 @@ export default function Home() {
     setJobs(await jobsRes.json());
     const config = await configRes.json();
     if (config.candidate?.name) setDisplayName(config.candidate.name);
+    setShowLocal(config.preferences?.locations?.hybrid !== false);
+    setShowStaffing(config.preferences?.open_to_contract !== false);
   }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -571,7 +575,13 @@ export default function Home() {
     );
   }
 
-  const otherSections = (from: JobSection) => ALL_SECTIONS.filter((s) => s.value !== from);
+  const visibleSections = ALL_SECTIONS.filter((s) => {
+    if (s.value === "local" && !showLocal) return false;
+    if (s.value === "staffing" && !showStaffing) return false;
+    return true;
+  });
+
+  const otherSections = (from: JobSection) => visibleSections.filter((s) => s.value !== from);
 
   const filterByFit = (list: ProspectJob[]) =>
     fitFilter === "all" ? list : list.filter((j) => j.fit === fitFilter);
@@ -582,8 +592,8 @@ export default function Home() {
 
   const totalNew =
     jobs.prospect.filter((j) => j.isNew).length +
-    jobs.local.filter((j) => j.isNew).length +
-    jobs.staffing.filter((j) => j.isNew).length;
+    (showLocal ? jobs.local.filter((j) => j.isNew).length : 0) +
+    (showStaffing ? jobs.staffing.filter((j) => j.isNew).length : 0);
 
   return (
     <div className="min-h-screen bg-p-light dark:bg-p-navy">
@@ -597,8 +607,7 @@ export default function Home() {
             </h1>
             <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">
               {jobs.applied.length} applied ·{" "}
-              {jobs.prospect.length + jobs.local.length} prospects ·{" "}
-              {jobs.staffing.length} staffing ·{" "}
+              {jobs.prospect.length + (showLocal ? jobs.local.length : 0)} prospects{showStaffing ? ` · ${jobs.staffing.length} staffing` : ""} ·{" "}
               {jobs.passed.length} passed
               {totalNew > 0 && (
                 <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-orange-100 text-orange-700 border border-orange-200 leading-none">
@@ -693,41 +702,45 @@ export default function Home() {
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="local"
-            className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <SectionHeader title="Local / Hybrid" count={jobs.local.length}
-                visibleCount={filteredLocal.length}
-                newCount={jobs.local.filter((j) => j.isNew).length}
-                fitFilter={fitFilter} />
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <div className="overflow-x-auto">
-                <ProspectTable jobs={filteredLocal} section="local" onMove={moveJob}
-                  onEdit={(job) => setEditing({ section: "local", job })}
-                  onDismiss={(job) => dismissNew("local", job.company, job.role)}
-                  otherSections={otherSections("local")} />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+          {showLocal && (
+            <AccordionItem value="local"
+              className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <SectionHeader title="Local / Hybrid" count={jobs.local.length}
+                  visibleCount={filteredLocal.length}
+                  newCount={jobs.local.filter((j) => j.isNew).length}
+                  fitFilter={fitFilter} />
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <div className="overflow-x-auto">
+                  <ProspectTable jobs={filteredLocal} section="local" onMove={moveJob}
+                    onEdit={(job) => setEditing({ section: "local", job })}
+                    onDismiss={(job) => dismissNew("local", job.company, job.role)}
+                    otherSections={otherSections("local")} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )}
 
-          <AccordionItem value="staffing"
-            className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <SectionHeader title="Staffing / Contract" count={jobs.staffing.length}
-                visibleCount={filteredStaffing.length}
-                newCount={jobs.staffing.filter((j) => j.isNew).length}
-                fitFilter={fitFilter} />
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <div className="overflow-x-auto">
-                <ProspectTable jobs={filteredStaffing} section="staffing" onMove={moveJob}
-                  onEdit={(job) => setEditing({ section: "staffing", job })}
-                  onDismiss={(job) => dismissNew("staffing", job.company, job.role)}
-                  otherSections={otherSections("staffing")} />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+          {showStaffing && (
+            <AccordionItem value="staffing"
+              className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <SectionHeader title="Staffing / Contract" count={jobs.staffing.length}
+                  visibleCount={filteredStaffing.length}
+                  newCount={jobs.staffing.filter((j) => j.isNew).length}
+                  fitFilter={fitFilter} />
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <div className="overflow-x-auto">
+                  <ProspectTable jobs={filteredStaffing} section="staffing" onMove={moveJob}
+                    onEdit={(job) => setEditing({ section: "staffing", job })}
+                    onDismiss={(job) => dismissNew("staffing", job.company, job.role)}
+                    otherSections={otherSections("staffing")} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )}
 
           <AccordionItem value="passed"
             className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">

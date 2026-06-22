@@ -28,6 +28,7 @@ export interface PreferencesConfig {
   titles?: string[];
   salary?: SalaryConfig;
   locations?: LocationsConfig;
+  open_to_contract?: boolean;
 }
 
 export interface ScrapingConfig {

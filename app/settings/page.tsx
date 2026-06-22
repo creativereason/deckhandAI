@@ -38,6 +38,13 @@ export default function ProfileSettings() {
     }));
   }
 
+  function updatePreference(key: string, value: boolean) {
+    setConfig((prev) => ({
+      ...prev,
+      preferences: { ...prev.preferences, [key]: value },
+    }));
+  }
+
   function updateSalary(key: string, value: number) {
     setConfig((prev) => ({
       ...prev,
@@ -161,7 +168,19 @@ export default function ProfileSettings() {
             onChange={(e) => updateLocation("hybrid", e.target.checked)}
           />
           <label htmlFor="hybrid" className="text-sm text-gray-700 dark:text-gray-300">
-            Open to hybrid roles (within commute range)
+            Open to hybrid roles — shows the Local / Hybrid section in the tracker
+          </label>
+        </div>
+        <div className="flex items-center gap-3">
+          <input
+            id="contract"
+            type="checkbox"
+            className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv"
+            checked={p.open_to_contract ?? true}
+            onChange={(e) => updatePreference("open_to_contract", e.target.checked)}
+          />
+          <label htmlFor="contract" className="text-sm text-gray-700 dark:text-gray-300">
+            Open to staffing / contract roles — shows the Staffing section in the tracker
           </label>
         </div>
       </div>

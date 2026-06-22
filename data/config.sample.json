@@ -16,6 +16,7 @@
       "min_fte": 140000,
       "min_contract_hourly": 65
     },
+    "open_to_contract": true,
     "locations": {
       "remote": true,
       "hybrid": true,
