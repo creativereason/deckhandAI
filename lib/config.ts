@@ -2,35 +2,48 @@ import { githubRead, githubWrite } from "@/lib/github";
 
 const CONFIG_PATH = "data/config.json";
 
-export interface LocationConfig {
-  city?: string;
-  state?: string;
-  zip?: string;
-}
-
 export interface CandidateConfig {
   name?: string;
   email?: string;
   phone?: string;
   website?: string;
-  location?: LocationConfig;
-  target_titles?: string[];
-  salary_floor_fte?: number;
-  salary_floor_contract?: number;
-  remote_preferred?: boolean;
+  linkedin?: string;
+}
+
+export interface SalaryConfig {
+  min_fte?: number;
+  min_contract_hourly?: number;
+}
+
+export interface LocationsConfig {
+  remote?: boolean;
+  hybrid?: boolean;
   hub_city?: string;
   hub_state?: string;
+  hub_zip?: string;
   hub_radius_miles?: number;
+}
+
+export interface PreferencesConfig {
+  titles?: string[];
+  salary?: SalaryConfig;
+  locations?: LocationsConfig;
+}
+
+export interface ScrapingConfig {
+  schedule?: string;
 }
 
 export interface AiConfig {
   provider?: "anthropic" | "openai" | "ollama" | "custom";
   model?: string;
-  base_url?: string;
+  base_url?: string | null;
 }
 
 export interface AppConfig {
   candidate?: CandidateConfig;
+  preferences?: PreferencesConfig;
+  scraping?: ScrapingConfig;
   ai?: AiConfig;
 }
 

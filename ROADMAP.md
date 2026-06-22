@@ -146,6 +146,7 @@ Users supply their own model and API key. Generation runs server-side — keys n
 - [ ] Mobile-responsive layout pass
 - [ ] Favicon / app icon
 - [ ] `robots.txt` — block indexing (personal tool, not meant to be crawled)
+- [ ] Migrate `middleware.ts` to `proxy` convention (Next.js deprecation warning — `middleware` file convention is deprecated; see [next.js docs](https://nextjs.org/docs/messages/middleware-to-proxy))
 
 **Effort:** ~2 days
 

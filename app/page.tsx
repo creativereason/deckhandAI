@@ -608,6 +608,13 @@ export default function Home() {
                 className="bg-p-blue dark:bg-p-accent-inv text-white dark:text-white rounded px-4 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 transition-colors">
                 + Add Job
               </button>
+              <a
+                href="/settings"
+                className="text-sm text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1 transition-colors"
+                title="Settings"
+              >
+                Settings
+              </a>
               <button
                 onClick={async () => {
                   await fetch(`/api/auth/logout`, { method: "POST" });

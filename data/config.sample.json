@@ -1,8 +1,8 @@
 {
   "candidate": {
     "name": "Your Name",
-    "location": "City, ST ZIP",
     "email": "you@example.com",
+    "phone": "555.000.0000",
     "website": "yoursite.com",
     "linkedin": "linkedin.com/in/yourhandle"
   },
@@ -12,18 +12,17 @@
       "Director of Product Design",
       "Head of Design"
     ],
-    "seniority": ["senior", "lead", "director", "principal", "manager", "head", "vp"],
     "salary": {
       "min_fte": 140000,
-      "min_contract_hourly": 65,
-      "currency": "USD"
+      "min_contract_hourly": 65
     },
     "locations": {
       "remote": true,
       "hybrid": true,
-      "hybrid_radius_miles": 25,
+      "hub_city": "Your City",
+      "hub_state": "ST",
       "hub_zip": "00000",
-      "hub_city": "Your City, ST"
+      "hub_radius_miles": 25
     }
   },
   "scraping": {

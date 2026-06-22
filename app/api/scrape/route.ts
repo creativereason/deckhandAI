@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
 
   const config = await readConfig();
   const localRegex = buildLocalRegex(
-    config.candidate?.hub_city,
-    config.candidate?.hub_state
+    config.preferences?.locations?.hub_city,
+    config.preferences?.locations?.hub_state
   );
 
   try {
