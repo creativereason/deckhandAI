@@ -5,6 +5,7 @@ import AddJobModal from "@/components/AddJobModal";
 import JobFormModal from "@/components/JobFormModal";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import ScrapeReviewQueue from "@/components/ScrapeReviewQueue";
+import GenerateModal from "@/components/GenerateModal";
 import ScrapePanel from "@/components/ScrapePanel";
 import GenericScrapePanel from "@/components/GenericScrapePanel";
 import SortableTh from "@/components/SortableTh";
@@ -128,8 +129,9 @@ function MoveMenu({ sections, onMove }: { sections: { value: JobSection; label: 
   );
 }
 
-function RowActions({ onEdit, moveSections, onMove, onDismiss }: {
+function RowActions({ onEdit, onGenerate, moveSections, onMove, onDismiss }: {
   onEdit: () => void;
+  onGenerate?: () => void;
   moveSections: { value: JobSection; label: string }[];
   onMove: (t: JobSection) => void;
   onDismiss?: () => void;
@@ -139,6 +141,9 @@ function RowActions({ onEdit, moveSections, onMove, onDismiss }: {
       {onDismiss && (
         <button onClick={onDismiss} title="Mark reviewed"
           className="text-sm text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 px-1 font-medium">✓</button>
+      )}
+      {onGenerate && (
+        <button onClick={onGenerate} className="text-xs text-p-accent dark:text-p-accent-inv hover:underline px-1">Generate</button>
       )}
       <button onClick={onEdit} className="text-sm text-p-dusk dark:text-p-accent-inv hover:text-p-accent dark:hover:text-p-accent-inv px-1">Edit</button>
       <MoveMenu sections={moveSections} onMove={onMove} />
@@ -333,12 +338,13 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove }: {
   );
 }
 
-function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, otherSections }: {
+function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, otherSections }: {
   jobs: ProspectJob[];
   section: JobSection;
   onMove: (from: JobSection, company: string, role: string, to: JobSection) => void;
   onEdit: (job: ProspectJob) => void;
   onDismiss: (job: ProspectJob) => void;
+  onGenerate: (job: ProspectJob) => void;
   otherSections: { value: JobSection; label: string }[];
 }) {
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
@@ -384,7 +390,7 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, otherSections
             {j.salary && <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{j.salary}</p>}
             {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed">{j.notes}</p>}
             <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
-              <RowActions onEdit={() => onEdit(j)} moveSections={otherSections}
+              <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
                 onMove={(t) => handleMove(t, j)}
                 onDismiss={j.isNew ? () => onDismiss(j) : undefined} />
             </div>
@@ -421,7 +427,7 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, otherSections
               <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[240px] text-xs leading-relaxed">{j.notes}</td>
               <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
               <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections}
+                <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
                   onMove={(t) => handleMove(t, j)}
                   onDismiss={j.isNew ? () => onDismiss(j) : undefined} />
               </td>
@@ -529,6 +535,8 @@ export default function Home() {
   const [editing, setEditing] = useState<EditState | null>(null);
   const [fitFilter, setFitFilter] = useState<FitFilter>("all");
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [generating, setGenerating] = useState<{ company: string; role: string; url?: string } | null>(null);
+  const [modelLabel, setModelLabel] = useState<string>("");
   const [openSections, setOpenSections] = useState<JobSection[]>(
     ALL_SECTIONS.map((s) => s.value)
   );
@@ -553,6 +561,10 @@ export default function Home() {
     }
     setShowLocal(config.preferences?.locations?.hybrid !== false);
     setShowStaffing(config.preferences?.open_to_contract !== false);
+    if (config.ai?.model) {
+      const provider = config.ai.provider ?? "anthropic";
+      setModelLabel(`${provider} / ${config.ai.model}`);
+    }
   }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -614,6 +626,14 @@ export default function Home() {
           }}
         />
       )}
+      {generating && (
+        <GenerateModal
+          company={generating.company}
+          role={generating.role}
+          url={generating.url}
+          onClose={() => setGenerating(null)}
+        />
+      )}
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
 
         {/* Header */}
@@ -663,10 +683,17 @@ export default function Home() {
             </div>
             <ScrapePanel onDone={load} />
             <GenericScrapePanel onDone={load} />
-            <a href={`/scrape-sources`}
-              className="text-xs text-p-dusk dark:text-p-accent-inv hover:text-p-blue dark:hover:opacity-80">
-              Scraper coverage →
-            </a>
+            <div className="flex items-center gap-3">
+              <a href={`/scrape-sources`}
+                className="text-xs text-p-dusk dark:text-p-accent-inv hover:text-p-blue dark:hover:opacity-80">
+                Scraper coverage →
+              </a>
+              {modelLabel && (
+                <a href="/settings/model" className="text-xs text-p-dusk dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors font-mono">
+                  ⚙ {modelLabel}
+                </a>
+              )}
+            </div>
           </div>
         </div>
 
@@ -722,6 +749,7 @@ export default function Home() {
                 <ProspectTable jobs={filteredProspect} section="prospect" onMove={moveJob}
                   onEdit={(job) => setEditing({ section: "prospect", job })}
                   onDismiss={(job) => dismissNew("prospect", job.company, job.role)}
+                  onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
                   otherSections={otherSections("prospect")} />
               </div>
             </AccordionContent>
@@ -741,6 +769,7 @@ export default function Home() {
                   <ProspectTable jobs={filteredLocal} section="local" onMove={moveJob}
                     onEdit={(job) => setEditing({ section: "local", job })}
                     onDismiss={(job) => dismissNew("local", job.company, job.role)}
+                    onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
                     otherSections={otherSections("local")} />
                 </div>
               </AccordionContent>
@@ -761,6 +790,7 @@ export default function Home() {
                   <ProspectTable jobs={filteredStaffing} section="staffing" onMove={moveJob}
                     onEdit={(job) => setEditing({ section: "staffing", job })}
                     onDismiss={(job) => dismissNew("staffing", job.company, job.role)}
+                    onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
                     otherSections={otherSections("staffing")} />
                 </div>
               </AccordionContent>

@@ -110,25 +110,25 @@ Automated scraping via GitHub Actions is the zero-infrastructure path for users 
 Users supply their own model and API key. Generation runs server-side — keys never reach the browser.
 
 **Profile setup**
-- [ ] `/api/profile` route — read/write `profile.json` from GitHub data repo
-- [ ] Profile editor in Settings — structured form for work history, strengths, writing rules
+- [x] `/api/profile` route — read/write `profile.json` from GitHub data repo
+- [x] Profile editor in Settings — structured form for work history, strengths, writing rules
 
 **Generation API**
-- [ ] `lib/model.ts` — OpenAI-compatible client with provider switching (Anthropic, OpenAI, Ollama, custom base URL)
-- [ ] `lib/prompts.ts` — system prompt (writing rules + candidate profile) + user prompt template (job details + JD text + optional angle)
-- [ ] `/api/generate` route — streaming server-side proxy; fetches JD from job URL, builds prompt, streams response
+- [x] `lib/model.ts` — OpenAI-compatible client with provider switching (Anthropic, OpenAI, Ollama, custom base URL)
+- [x] `lib/prompts.ts` — system prompt (writing rules + candidate profile) + user prompt template (job details + JD text + optional angle)
+- [x] `/api/generate` route — streaming server-side proxy; fetches JD from job URL, builds prompt, streams response
 
 **Generation UI**
-- [ ] `GenerateModal.tsx` — opens from job card "Generate" button
+- [x] `GenerateModal.tsx` — opens from job card "Generate" button
   - Pre-filled: company, role, JD URL from the job record
   - JD text fetched server-side on open
   - Optional "angle / emphasis" textarea for user direction
   - Streaming output panel (text appears token by token)
   - Inline editing after generation
   - Refine field + Regenerate button for iteration
-- [ ] Generation type selector: cover letter vs. resume tailoring notes
-- [ ] Export: copy to clipboard, print-to-PDF (browser `window.print()` with print stylesheet), download as `.txt`
-- [ ] `ModelBadge` — active provider + model shown in header
+- [x] Generation type selector: cover letter vs. resume tailoring notes
+- [x] Export: copy to clipboard, print-to-PDF (browser `window.print()` with print stylesheet), download as `.txt`
+- [x] `ModelBadge` — active provider + model shown in header
 
 **Providers to test**
 - [ ] Anthropic (claude-sonnet-4-6)
