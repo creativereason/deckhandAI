@@ -54,11 +54,11 @@ Beta means: a new user can clone, configure, deploy, and use the tracker without
 
 The app currently reads `jobs.json` directly from GitHub by hardcoded path. These items make the data layer generic and user-configurable.
 
-- [ ] `config.json` schema — candidate profile, preferences, locations, AI provider
-- [ ] `/api/config` route — read/write `config.json` from GitHub data repo
-- [ ] Standardize GitHub env vars: `GITHUB_DATA_REPO` (`owner/repo` format) replaces separate `GITHUB_REPO_OWNER` + `GITHUB_REPO_NAME`
-- [ ] Move `jobs.json` path to `data/jobs.json` in the GitHub data repo (update `lib/jobs.ts`)
-- [ ] Location filter in `scrape-filters.ts` reads `hub_city` / `hub_state` from `config.json` instead of hardcoded regex
+- [x] `config.json` schema — candidate profile, preferences, locations, AI provider
+- [x] `/api/config` route — read/write `config.json` from GitHub data repo
+- [x] Standardize GitHub env vars: `GITHUB_DATA_REPO` (`owner/repo` format) replaces separate `GITHUB_REPO_OWNER` + `GITHUB_REPO_NAME`
+- [x] Move `jobs.json` path to `data/jobs.json` in the GitHub data repo (update `lib/jobs.ts`)
+- [x] Location filter in `scrape-filters.ts` reads `hub_city` / `hub_state` from `config.json` instead of hardcoded regex
 
 **Effort:** ~1.5 days
 
