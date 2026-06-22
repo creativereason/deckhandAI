@@ -520,6 +520,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove }: {
 
 export default function Home() {
   const [jobs, setJobs] = useState<JobsData | null>(null);
+  const [displayName, setDisplayName] = useState<string>("");
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<EditState | null>(null);
   const [fitFilter, setFitFilter] = useState<FitFilter>("all");
@@ -534,8 +535,13 @@ export default function Home() {
   }
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/jobs`);
-    setJobs(await res.json());
+    const [jobsRes, configRes] = await Promise.all([
+      fetch(`/api/jobs`),
+      fetch(`/api/config`),
+    ]);
+    setJobs(await jobsRes.json());
+    const config = await configRes.json();
+    if (config.candidate?.name) setDisplayName(config.candidate.name);
   }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -587,7 +593,7 @@ export default function Home() {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-              Brian Schwartz — Job Tracker
+              {displayName ? `${displayName} — Job Tracker` : "Job Tracker"}
             </h1>
             <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">
               {jobs.applied.length} applied ·{" "}
