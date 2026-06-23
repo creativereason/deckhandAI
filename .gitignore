@@ -10,6 +10,7 @@ out/
 # Build artifacts
 build/
 dist/
+*.tsbuildinfo
 
 # Personal data — never commit these
 jobs.json
