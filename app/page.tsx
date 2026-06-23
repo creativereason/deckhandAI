@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
+import ChatDrawer from "@/components/ChatDrawer";
 
 // ─── Fit filter types ─────────────────────────────────────────────────────────
 
@@ -935,6 +936,7 @@ export default function Home() {
         )}
 
       </div>
+      <ChatDrawer onJobsChanged={load} />
     </div>
   );
 }
