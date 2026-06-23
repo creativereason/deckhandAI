@@ -2,7 +2,7 @@
 
 A self-hosted job search command center. Track prospects, scrape target company career pages, and generate cover letters with any AI model — no vendor lock-in, no database, no monthly fee.
 
-**[→ View live demo](https://deckhandai-demo.vercel.app)** — read-only, sample data, no login required.
+**[→ View live demo](https://deckhand-ai.vercel.app)** — read-only, sample data, no login required.
 
 ---
 
@@ -82,7 +82,7 @@ node scripts/init-sample-repo.mjs
 
 This creates a new GitHub repo under your account and uploads pre-filled `jobs.json`, `config.json`, `profile.json`, and `scrape-targets.json` based on a fictional candidate (Alex Chen, Director of Product Design in Austin, TX). Use it as a starting point — swap in your own details in Settings after first login.
 
-The same sample files power the [live demo](https://deckhandai-demo.vercel.app).
+The same sample files power the [live demo](https://deckhand-ai.vercel.app).
 
 **To host your own demo deployment:**
 
