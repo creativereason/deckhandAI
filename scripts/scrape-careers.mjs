@@ -14,6 +14,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const JOBS_PATH = resolve(__dirname, "../data/jobs.json");
+const CONFIG_PATH = resolve(__dirname, "../data/config.json");
 
 // ---------------------------------------------------------------------------
 // Filters (mirrors lib/scrape-filters.ts)
@@ -23,8 +24,21 @@ const LEVEL_EXCLUDE = /associate|junior|intern|entry|mid-level/i;
 const TITLE_INCLUDE =
   /\bux\b|\bui\b.{0,10}design|user experience|experience design|product design|product designer|design lead|design director|service design|design manager|design ops|designops|creative director|creative lead|head of design|design system|interaction design|\bdesigner\b|product director|director.{0,10}product|head of product/i;
 const LOCATION_REMOTE = /remote/i;
-const LOCATION_LOCAL =
-  /st\.? louis|chesterfield|o'?fallon|st\.? charles|wentzville|lake saint louis|creve coeur|maryland heights|ballwin|clayton|fenton|missouri|\bmo\b/i;
+
+function buildLocalRegex() {
+  try {
+    const config = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+    const city = config.preferences?.locations?.hub_city;
+    const state = config.preferences?.locations?.hub_state;
+    if (!city && !state) return /(?!)/;
+    const terms = [city, state].filter(Boolean).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    return new RegExp(terms.join("|"), "i");
+  } catch {
+    return /(?!)/; // no config — match nothing
+  }
+}
+
+const LOCATION_LOCAL = buildLocalRegex();
 
 const DEFAULT_SELECTORS = [
   ".job-title a",
