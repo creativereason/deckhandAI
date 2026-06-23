@@ -237,6 +237,12 @@ A floating chat interface that lets you manage the job board through natural lan
 
 ---
 
+## Technical Debt
+
+- [ ] Rename `middleware.ts` → `proxy.ts` — Next.js 16 deprecated the `middleware` file convention in favor of `proxy`; surfaced as a build warning on deploy
+
+---
+
 ## Deliberately Deferred (post-beta)
 
 - **Drag-and-drop kanban** — table view with status dropdown covers the workflow; DnD is high-risk for low incremental value in v1
