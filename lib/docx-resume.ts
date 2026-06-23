@@ -51,11 +51,16 @@ function formatDateRange(start: string, end: string | null): string {
   return `${fmt(start)} – ${end ? fmt(end) : "Present"}`;
 }
 
+function companySlug(company: string): string {
+  return company.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 export async function generateResumeDOCX(
   profile: ProfileData,
   candidate: CandidateConfig,
   styleOverride?: ExportStyle,
-  tailoredBullets?: Record<string, string[]>
+  tailoredBullets?: Record<string, string[]>,
+  company?: string
 ): Promise<Buffer> {
   const s = resolveExportStyle(styleOverride);
   const accent = hexToDocxColor(s.accentColor);
@@ -109,6 +114,13 @@ export async function generateResumeDOCX(
   if (candidate.email) contactParts.push(candidate.email);
   if (candidate.website) contactParts.push(candidate.website);
   if (candidate.linkedin) contactParts.push(candidate.linkedin);
+  if (profile.portfolio_url && company) {
+    const slug = companySlug(company);
+    const base = profile.portfolio_url.replace(/\/$/, "");
+    contactParts.push(`Portfolio: ${base}/${slug}`);
+  } else if (profile.portfolio_url) {
+    contactParts.push(`Portfolio: ${profile.portfolio_url}`);
+  }
 
   const headerParagraphs: Paragraph[] = [
     new Paragraph({

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const candidate = config.candidate ?? {};
     const style = config.export;
 
-    const buffer = await generateResumeDOCX(profile, candidate, style, body.tailoredBullets);
+    const buffer = await generateResumeDOCX(profile, candidate, style, body.tailoredBullets, body.company);
 
     const company = body.company ?? "company";
     const role = body.role ?? "role";
