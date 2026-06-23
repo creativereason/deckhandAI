@@ -3,32 +3,13 @@ import { readConfig } from "@/lib/config";
 import { githubRead } from "@/lib/github";
 import { fetchGenerate } from "@/lib/model";
 import { buildSystemPrompt } from "@/lib/prompts";
+import { fetchJdText } from "@/lib/fetch-jd";
 import type { Profile } from "@/lib/profile";
 
 export interface TailoredResume {
   title: string;
   profileBullets: string[];
   experience: { company: string; role: string; bullets: string[] }[];
-}
-
-async function fetchJdText(url: string): Promise<string> {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; deckhandAI/1.0)" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return "";
-    const html = await res.text();
-    return html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 8000);
-  } catch {
-    return "";
-  }
 }
 
 export async function POST(req: NextRequest) {
@@ -46,7 +27,7 @@ export async function POST(req: NextRequest) {
     ]);
 
     const profile = JSON.parse(profileRaw) as Profile;
-    const jdText = url ? await fetchJdText(url) : "";
+    const jdText = url ? await fetchJdText(url, company) : "";
 
     const systemPrompt = buildSystemPrompt(profile);
 

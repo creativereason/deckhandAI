@@ -3,29 +3,9 @@ import { readConfig } from "@/lib/config";
 import { githubRead } from "@/lib/github";
 import { streamGenerate } from "@/lib/model";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
+import { fetchJdText } from "@/lib/fetch-jd";
 import type { GenerationType, JobContext } from "@/lib/prompts";
 import type { Profile } from "@/lib/profile";
-
-async function fetchJdText(url: string): Promise<string> {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; deckhandAI/1.0)" },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return "";
-    const html = await res.text();
-    // Strip tags, collapse whitespace — rough but good enough for LLM context
-    return html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 8000);
-  } catch {
-    return "";
-  }
-}
 
 async function readProfile(): Promise<Profile> {
   try {
@@ -61,7 +41,7 @@ export async function POST(req: NextRequest) {
   const [config, profile] = await Promise.all([readConfig(), readProfile()]);
 
   // Fetch JD text server-side if not provided by client
-  const jdText = clientJd ?? (url ? await fetchJdText(url) : "");
+  const jdText = clientJd ?? (url ? await fetchJdText(url, company) : "");
 
   const job: JobContext = { company, role, url, jdText, angle };
   const systemPrompt = buildSystemPrompt(profile);
