@@ -50,6 +50,7 @@ export interface ExportStyle {
   marginBottomDxa?: number;
   marginLeftDxa?: number;
   marginRightDxa?: number;
+  includePortfolioPassword?: boolean;
 }
 
 export const DEFAULT_EXPORT_STYLE: Required<ExportStyle> = {
@@ -61,6 +62,7 @@ export const DEFAULT_EXPORT_STYLE: Required<ExportStyle> = {
   marginBottomDxa: 864,
   marginLeftDxa: 1080,
   marginRightDxa: 1080,
+  includePortfolioPassword: false,
 };
 
 export function resolveExportStyle(style?: ExportStyle): Required<ExportStyle> {

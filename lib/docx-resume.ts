@@ -34,6 +34,7 @@ export interface ProfileData {
   }[];
   awards?: string[];
   portfolio_url?: string;
+  portfolio_password?: string;
 }
 
 function hexToDocxColor(hex: string): string {
@@ -114,12 +115,13 @@ export async function generateResumeDOCX(
   if (candidate.email) contactParts.push(candidate.email);
   if (candidate.website) contactParts.push(candidate.website);
   if (candidate.linkedin) contactParts.push(candidate.linkedin);
-  if (profile.portfolio_url && company) {
-    const slug = companySlug(company);
+  if (profile.portfolio_url) {
     const base = profile.portfolio_url.replace(/\/$/, "");
-    contactParts.push(`Portfolio: ${base}/${slug}`);
-  } else if (profile.portfolio_url) {
-    contactParts.push(`Portfolio: ${profile.portfolio_url}`);
+    const url = company ? `${base}/${companySlug(company)}` : base;
+    const pw = s.includePortfolioPassword && profile.portfolio_password
+      ? `  pw: ${profile.portfolio_password}`
+      : "";
+    contactParts.push(`Portfolio: ${url}${pw}`);
   }
 
   const headerParagraphs: Paragraph[] = [

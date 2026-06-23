@@ -156,6 +156,25 @@ export default function ExportSettings() {
         </div>
       </div>
 
+      <div className={SECTION}>
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Portfolio</h2>
+        <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
+          <input
+            type="checkbox"
+            className="w-4 h-4 accent-p-blue dark:accent-p-accent-inv"
+            checked={(get("includePortfolioPassword") as boolean) ?? false}
+            onChange={(e) => updateExport("includePortfolioPassword", e.target.checked)}
+          />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            Include portfolio password in contact line
+          </span>
+        </label>
+        <p className="text-xs text-stone-400 dark:text-gray-500 ml-6 -mt-2">
+          Appends <code className="bg-p-linen dark:bg-p-dark-mid px-1 rounded">pw: [password]</code> next to your portfolio URL — useful if recipients may get locked out.
+          Password is read from <code className="bg-p-linen dark:bg-p-dark-mid px-1 rounded">profile.json</code>.
+        </p>
+      </div>
+
       <div className="flex justify-end">
         <button
           onClick={save}
