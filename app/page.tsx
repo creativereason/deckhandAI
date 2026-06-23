@@ -129,10 +129,11 @@ function MoveMenu({ sections, onMove }: { sections: { value: JobSection; label: 
   );
 }
 
-function RowActions({ onEdit, onGenerate, onExportResume, moveSections, onMove, onDismiss }: {
+function RowActions({ onEdit, onGenerate, onExportResume, onExportCoverLetter, moveSections, onMove, onDismiss }: {
   onEdit: () => void;
   onGenerate?: () => void;
   onExportResume?: () => void;
+  onExportCoverLetter?: () => void;
   moveSections: { value: JobSection; label: string }[];
   onMove: (t: JobSection) => void;
   onDismiss?: () => void;
@@ -145,6 +146,9 @@ function RowActions({ onEdit, onGenerate, onExportResume, moveSections, onMove, 
       )}
       {onGenerate && (
         <button onClick={onGenerate} className="text-xs text-p-accent dark:text-p-accent-inv hover:underline px-1">Generate</button>
+      )}
+      {onExportCoverLetter && (
+        <button onClick={onExportCoverLetter} className="text-xs text-p-dusk dark:text-gray-400 hover:text-p-accent dark:hover:text-p-accent-inv px-1">Cover letter</button>
       )}
       {onExportResume && (
         <button onClick={onExportResume} className="text-xs text-p-dusk dark:text-gray-400 hover:text-p-accent dark:hover:text-p-accent-inv px-1">Resume</button>
@@ -251,12 +255,13 @@ function FitFilterBar({ active, onChange }: { active: FitFilter; onChange: (f: F
 
 // ─── Table components ─────────────────────────────────────────────────────────
 
-function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume }: {
+function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onExportCoverLetter }: {
   jobs: AppliedJob[];
   otherSections: { value: JobSection; label: string }[];
   onEdit: (job: AppliedJob) => void;
   onMove: (target: JobSection, job: AppliedJob) => void;
   onExportResume?: (job: AppliedJob) => void;
+  onExportCoverLetter?: (job: AppliedJob) => void;
 }) {
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [exitingKey, setExitingKey] = useState<string | null>(null);
@@ -301,7 +306,9 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume }: {
             </div>
             {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed">{j.notes}</p>}
             <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
-              <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)} onExportResume={onExportResume ? () => onExportResume(j) : undefined} />
+              <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
             </div>
           </div>
           );
@@ -335,7 +342,9 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume }: {
               <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[220px] text-xs leading-relaxed">{j.notes}</td>
               <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
               <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)} onExportResume={onExportResume ? () => onExportResume(j) : undefined} />
+                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                  onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                  onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
               </td>
             </tr>
           ))}
@@ -345,7 +354,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume }: {
   );
 }
 
-function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, onExportResume, otherSections }: {
+function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, onExportResume, onExportCoverLetter, otherSections }: {
   jobs: ProspectJob[];
   section: JobSection;
   onMove: (from: JobSection, company: string, role: string, to: JobSection) => void;
@@ -353,6 +362,7 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
   onDismiss: (job: ProspectJob) => void;
   onGenerate: (job: ProspectJob) => void;
   onExportResume?: (job: ProspectJob) => void;
+  onExportCoverLetter?: (job: ProspectJob) => void;
   otherSections: { value: JobSection; label: string }[];
 }) {
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
@@ -401,7 +411,8 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
               <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
                 onMove={(t) => handleMove(t, j)}
                 onDismiss={j.isNew ? () => onDismiss(j) : undefined}
-                onExportResume={onExportResume ? () => onExportResume(j) : undefined} />
+                onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
             </div>
           </div>
           );
@@ -439,7 +450,8 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
                 <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
                   onMove={(t) => handleMove(t, j)}
                   onDismiss={j.isNew ? () => onDismiss(j) : undefined}
-                  onExportResume={onExportResume ? () => onExportResume(j) : undefined} />
+                  onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                  onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
               </td>
             </tr>
           ))}
@@ -449,12 +461,13 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
   );
 }
 
-function PassedTable({ jobs, otherSections, onEdit, onMove, onExportResume }: {
+function PassedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onExportCoverLetter }: {
   jobs: PassedJob[];
   otherSections: { value: JobSection; label: string }[];
   onEdit: (job: PassedJob) => void;
   onMove: (target: JobSection, job: PassedJob) => void;
   onExportResume?: (job: PassedJob) => void;
+  onExportCoverLetter?: (job: PassedJob) => void;
 }) {
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
   const [exitingKey, setExitingKey] = useState<string | null>(null);
@@ -495,7 +508,9 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onExportResume }: {
             {j.salary && <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{j.salary}</p>}
             {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed">{j.notes}</p>}
             <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
-              <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)} onExportResume={onExportResume ? () => onExportResume(j) : undefined} />
+              <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
             </div>
           </div>
           );
@@ -525,7 +540,9 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onExportResume }: {
               <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[280px] text-xs leading-relaxed">{j.notes}</td>
               <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
               <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)} onExportResume={onExportResume ? () => onExportResume(j) : undefined} />
+                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                  onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                  onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
               </td>
             </tr>
           ))}
@@ -611,6 +628,44 @@ export default function Home() {
       URL.revokeObjectURL(a.href);
     } catch {
       toast.error("Resume export failed");
+    }
+  }
+
+  async function exportCoverLetter(company: string, role: string, url?: string) {
+    const slug = `${company}-${role}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const toastId = toast.loading("Generating cover letter…");
+    try {
+      const genRes = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company, role, url, type: "cover-letter" }),
+      });
+      if (!genRes.ok) throw new Error("Generation failed");
+      if (!genRes.body) throw new Error("No response stream");
+      const reader = genRes.body.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+      toast.loading("Exporting…", { id: toastId });
+      const docxRes = await fetch("/api/export/cover-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, company, role }),
+      });
+      if (!docxRes.ok) throw new Error("Export failed");
+      const blob = await docxRes.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `cover-letter-${slug}.docx`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success("Cover letter downloaded", { id: toastId });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Cover letter export failed", { id: toastId });
     }
   }
 
@@ -776,7 +831,8 @@ export default function Home() {
                 <AppliedTable jobs={jobs.applied} otherSections={otherSections("applied")}
                   onEdit={(j) => setEditing({ section: "applied", job: j })}
                   onMove={(t, j) => moveJob("applied", j.company, j.role, t)}
-                  onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined} />
+                  onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
+                  onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined} />
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -796,6 +852,7 @@ export default function Home() {
                   onDismiss={(job) => dismissNew("prospect", job.company, job.role)}
                   onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
                   onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
+                  onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
                   otherSections={otherSections("prospect")} />
               </div>
             </AccordionContent>
@@ -817,6 +874,7 @@ export default function Home() {
                     onDismiss={(job) => dismissNew("local", job.company, job.role)}
                     onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
                     onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
+                    onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
                     otherSections={otherSections("local")} />
                 </div>
               </AccordionContent>
@@ -839,6 +897,7 @@ export default function Home() {
                     onDismiss={(job) => dismissNew("staffing", job.company, job.role)}
                     onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
                     onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
+                    onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
                     otherSections={otherSections("staffing")} />
                 </div>
               </AccordionContent>
@@ -855,7 +914,8 @@ export default function Home() {
                 <PassedTable jobs={jobs.passed} otherSections={otherSections("passed")}
                   onEdit={(j) => setEditing({ section: "passed", job: j })}
                   onMove={(t, j) => moveJob("passed", j.company, j.role, t)}
-                  onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined} />
+                  onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
+                  onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined} />
               </div>
             </AccordionContent>
           </AccordionItem>

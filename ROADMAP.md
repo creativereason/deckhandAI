@@ -178,27 +178,27 @@ Export a tailored cover letter and resume using a code-defined style generator b
 - A companion Claude skill file (`docs/export-style.skill.md`) documents all style tokens so users can prompt an AI to customize their output spec
 
 **Style settings** (`/settings/export`)
-- [ ] Font family (default: Calibri)
-- [ ] Accent color — used for name, section headers, and rules (default: `#1E3A8A`)
-- [ ] Body text color (default: `#374151`)
-- [ ] Page margins (default: 0.75" left/right, 0.60" top/bottom)
-- [ ] Settings write to `config.json` via existing `/api/config` route
+- [x] Font family (default: Calibri)
+- [x] Accent color — used for name, section headers, and rules (default: `#1E3A8A`)
+- [x] Body text color (default: `#374151`)
+- [x] Page margins (default: 0.75" left/right, 0.60" top/bottom)
+- [x] Settings write to `config.json` via existing `/api/config` route
 
 **Cover letter export**
-- [ ] Outputs both DOCX and PDF formats
-- [ ] Export button in Generate modal downloads the AI-generated cover letter text with a styled header block (name, contact line, rule, date, salutation)
-- [ ] Export action on job card triggers generation + download in one step
-- [ ] Filename: `cover-letter-[company]-[role].[ext]`
+- [x] Outputs DOCX; PDF via browser print from Generate modal
+- [x] Export button in Generate modal downloads the AI-generated cover letter text with a styled header block (name, contact line, rule, date, salutation)
+- [x] Export action on job card triggers generation + download in one step
+- [x] Filename: `cover-letter-[company]-[role].docx`
 
 **Resume export**
-- [ ] Base export renders `profile.json` work history into a styled DOCX — available from any job card without AI
-- [ ] "Tailor for this role" button runs AI against the job description and rewrites bullet points; user reviews a diff-style preview (original vs. suggested) before downloading
-- [ ] Outputs DOCX; PDF via browser print
-- [ ] Filename: `resume-[company]-[role].docx`
+- [x] Base export renders `profile.json` work history into a styled DOCX — available from any job card without AI
+- [x] "Tailor for this role" tab runs AI against the job description and rewrites bullets + title; user reviews a before/after diff preview before downloading
+- [x] Outputs DOCX; PDF via browser print
+- [x] Filename: `resume-[company]-[role].docx`
 
 **Trigger locations**
-- [ ] Generate modal — export buttons for cover letter and resume after generation/tailoring
-- [ ] Job card row actions — "Export" menu with "Cover Letter (DOCX)", "Cover Letter (PDF)", and "Resume" options
+- [x] Generate modal — export buttons for cover letter and resume after generation/tailoring
+- [x] Job card row actions — "Cover letter" (one-step generate + download) and "Resume" buttons
 
 **ATS compliance (built-in, not validated after the fact)**
 - Single-column layout only — no tables, text boxes, or columns
