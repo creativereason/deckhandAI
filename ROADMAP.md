@@ -131,7 +131,7 @@ Users supply their own model and API key. Generation runs server-side — keys n
 - [x] `ModelBadge` — active provider + model shown in header
 
 **Providers to test**
-- [ ] Anthropic (claude-sonnet-4-6)
+- [x] Anthropic (claude-sonnet-4-6)
 - [ ] OpenAI (gpt-4o)
 - [ ] Ollama local endpoint
 
