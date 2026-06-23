@@ -173,9 +173,9 @@ At a steady pace alongside other work, **6–8 calendar weeks** to beta.
 Export a cover letter and tailored resume as separate Word documents, using a user-provided DOCX template as the style base.
 
 **Template setup**
-- [ ] User uploads their own `.docx` template to the private data repo (`data/resume-template.docx`, `data/cover-letter-template.docx`)
-- [ ] `/api/config` validates uploaded templates for ATS safety on save (no text boxes, columns, tables, or embedded objects — surfaces a warning if detected)
-- [ ] Settings UI shows template upload + ATS validation status
+- [ ] User uploads their own `.docx` templates to the private data repo (`data/resume-template.docx`, `data/cover-letter-template.docx`)
+- [ ] Both templates validated for ATS safety on upload (no text boxes, columns, tables, or embedded objects — surfaces a warning if detected)
+- [ ] Settings UI shows template upload + ATS validation status for each template independently
 
 **Cover letter export**
 - [ ] Export button in Generate modal downloads the AI-generated cover letter text rendered into the cover letter template
