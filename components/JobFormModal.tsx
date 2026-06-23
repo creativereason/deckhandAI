@@ -150,7 +150,8 @@ export default function JobFormModal({
           body: JSON.stringify({ section, job: payload }),
         });
         if (!res.ok) {
-          const data = await res.json();
+          if (res.status === 403) { toast.info("Demo mode — changes are read-only"); onClose(); return; }
+          const data = await res.json().catch(() => ({})) as { error?: string };
           throw new Error(data.error ?? "Failed to add job");
         }
       } else {
@@ -166,7 +167,8 @@ export default function JobFormModal({
           }),
         });
         if (!res.ok) {
-          const data = await res.json();
+          if (res.status === 403) { toast.info("Demo mode — changes are read-only"); onClose(); return; }
+          const data = await res.json().catch(() => ({})) as { error?: string };
           throw new Error(data.error ?? "Failed to save job");
         }
       }

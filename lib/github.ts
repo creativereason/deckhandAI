@@ -25,7 +25,7 @@ export async function githubWrite(
   message: string
 ): Promise<void> {
   const url = `${BASE}/${path}`;
-  const getRes = await fetch(url, { headers: HEADERS, cache: "no-store" });
+  const getRes = await fetch(`${url}?ref=${BRANCH}`, { headers: HEADERS, cache: "no-store" });
   // 404 means the file doesn't exist yet — create it without a sha
   const sha = getRes.ok ? (await getRes.json()).sha : undefined;
 
