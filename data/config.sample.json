@@ -35,5 +35,15 @@
     "provider": "custom",
     "model": "gemini-2.0-flash",
     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+  },
+  "export": {
+    "font": "Calibri",
+    "accentColor": "#1E3A8A",
+    "bodyColor": "#374151",
+    "metaColor": "#6B7280",
+    "marginTopDxa": 864,
+    "marginBottomDxa": 864,
+    "marginLeftDxa": 1080,
+    "marginRightDxa": 1080
   }
 }

@@ -3,6 +3,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { GenerationType } from "@/lib/prompts";
 
+async function triggerDownload(url: string, body: Record<string, unknown>, filename: string) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(data.error ?? "Export failed");
+  }
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 interface Props {
   company: string;
   role: string;
@@ -22,8 +40,17 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
   const [streaming, setStreaming] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [hasProfile, setHasProfile] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const outputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    fetch("/api/profile", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: Record<string, unknown>) => setHasProfile(!!d?.name))
+      .catch(() => {});
+  }, []);
 
   // Scroll output to bottom as tokens arrive
   useEffect(() => {
@@ -121,6 +148,32 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
     win.print();
   }
 
+  const slug = `${company}-${role}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+  async function exportCoverLetterDocx() {
+    setExporting("cover-letter-docx");
+    try {
+      await triggerDownload("/api/export/cover-letter", { text: output, company, role }, `cover-letter-${slug}.docx`);
+      toast.success("Cover letter downloaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function exportResumeDocx() {
+    setExporting("resume-docx");
+    try {
+      await triggerDownload("/api/export/resume", { company, role }, `resume-${slug}.docx`);
+      toast.success("Resume downloaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
   const canGenerate = !streaming;
   const hasOutput = output.length > 0;
 
@@ -213,12 +266,30 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
                   Copy
                 </button>
                 <button onClick={downloadTxt} className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors">
-                  Download .txt
+                  .txt
                 </button>
                 <button onClick={printPdf} className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors">
                   Print / PDF
                 </button>
+                {hasProfile && type === "cover-letter" && (
+                  <button
+                    onClick={exportCoverLetterDocx}
+                    disabled={!!exporting}
+                    className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors disabled:opacity-40"
+                  >
+                    {exporting === "cover-letter-docx" ? "Exporting…" : "Cover letter .docx"}
+                  </button>
+                )}
               </>
+            )}
+            {hasProfile && (
+              <button
+                onClick={exportResumeDocx}
+                disabled={!!exporting}
+                className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors disabled:opacity-40"
+              >
+                {exporting === "resume-docx" ? "Exporting…" : "Resume .docx"}
+              </button>
             )}
           </div>
 

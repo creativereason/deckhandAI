@@ -9,6 +9,7 @@ const TABS = [
   { label: "Scrape Targets", href: "/settings/scrape-targets" },
   { label: "AI Profile", href: "/settings/profile-ai" },
   { label: "AI Model", href: "/settings/model" },
+  { label: "Export Style", href: "/settings/export" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
