@@ -239,7 +239,7 @@ A floating chat interface that lets you manage the job board through natural lan
 
 ## Technical Debt
 
-- [ ] Rename `middleware.ts` → `proxy.ts` — Next.js 16 deprecated the `middleware` file convention in favor of `proxy`; surfaced as a build warning on deploy
+- [x] Rename `middleware.ts` → `proxy.ts` — Next.js 16 deprecated the `middleware` file convention in favor of `proxy`; surfaced as a build warning on deploy
 
 ---
 
