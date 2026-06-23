@@ -17,13 +17,22 @@ const TOOL_LABELS: Record<string, string> = {
   move_job: "Moving job…",
   flag_ghost: "Flagging as ghost…",
   delete_job: "Deleting job…",
+  fetch_job_description: "Fetching job description…",
+  search_indeed: "Searching Indeed…",
 };
 
-const SUGGESTIONS = [
+const SUGGESTIONS_MOBILE = [
   "What have I applied to?",
-  "Show my strong prospects",
-  "Add Stripe, Head of Design, strong fit",
-  "Mark the Acme Corp role as a ghost",
+  "Show strong prospects",
+  "Add a job",
+];
+
+const SUGGESTIONS_DESKTOP = [
+  "What have I applied to?",
+  "Show strong prospects",
+  "Move all declined to passed",
+  "Add a job",
+  "Flag Acme Corp as a ghost",
 ];
 
 export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => void }) {
@@ -147,11 +156,14 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
           {messages.length === 0 && !pending && (
             <div className="pt-2 space-y-2">
               <p className="text-xs text-stone-400 dark:text-gray-500 text-center">Try asking:</p>
-              {SUGGESTIONS.map((s) => (
+              {SUGGESTIONS_DESKTOP.map((s, i) => (
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="block w-full text-left px-3 py-2 rounded-lg text-xs text-p-blue dark:text-p-accent-inv bg-p-linen/60 dark:bg-p-dark-mid/60 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
+                  className={cn(
+                    "block w-full text-left px-3 py-2 rounded-lg text-xs text-p-blue dark:text-p-accent-inv bg-p-linen/60 dark:bg-p-dark-mid/60 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors",
+                    i >= SUGGESTIONS_MOBILE.length && "hidden sm:block"
+                  )}
                 >
                   {s}
                 </button>
