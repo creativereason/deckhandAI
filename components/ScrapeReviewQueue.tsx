@@ -78,10 +78,14 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
             ...prev,
             [k]: { fit: data.fit, notes: "", rationale: data.rationale ?? "", scoring: false },
           }));
-        } catch {
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          // Try to parse JSON error body
+          let detail = msg;
+          try { detail = JSON.parse(msg).error ?? msg; } catch { /* use raw */ }
           setScores((prev) => ({
             ...prev,
-            [k]: { ...(prev[k] ?? { fit: "good", notes: "" }), rationale: "", scoring: false },
+            [k]: { ...(prev[k] ?? { fit: "good", notes: "" }), rationale: `Score unavailable: ${detail}`, scoring: false },
           }));
         }
       })
@@ -117,7 +121,14 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
           scoreRationale: score.rationale || undefined,
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        if (res.status === 403) {
+          toast.info("Demo mode — changes are read-only");
+          return;
+        }
+        throw new Error(body.error ?? `Error ${res.status}`);
+      }
       toast.success(action === "approve" ? `Added ${j.company} to tracker` : `Dismissed ${j.company}`);
       onUpdate();
     } catch (err) {

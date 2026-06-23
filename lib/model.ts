@@ -70,7 +70,7 @@ export async function fetchGenerate(
     throw new Error(`AI provider error ${res.status}: ${text}`);
   }
 
-  const provider = config.provider ?? "anthropic";
+  const provider = (process.env.AI_PROVIDER as AiConfig["provider"]) ?? config.provider ?? "anthropic";
   const json = await res.json();
 
   if (provider === "anthropic") {
@@ -96,7 +96,7 @@ export async function streamGenerate(
   }
   if (!res.body) throw new Error("No response body from AI provider");
 
-  const provider = config.provider ?? "anthropic";
+  const provider = (process.env.AI_PROVIDER as AiConfig["provider"]) ?? config.provider ?? "anthropic";
 
   // Pass through Anthropic SSE directly; normalize OpenAI-compat SSE to plain text chunks
   if (provider === "anthropic") {
@@ -122,8 +122,9 @@ function anthropicToTextStream(body: ReadableStream<Uint8Array>): ReadableStream
           buffer = lines.pop() ?? "";
           for (const line of lines) {
             if (!line.startsWith("data:")) continue;
+            const raw = line.slice(5).trim();
             try {
-              const json = JSON.parse(line.slice(5).trim());
+              const json = JSON.parse(raw);
               const text = json.delta?.text ?? "";
               if (text) controller.enqueue(encoder.encode(text));
             } catch { /* skip malformed */ }

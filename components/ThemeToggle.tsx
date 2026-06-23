@@ -2,16 +2,10 @@
 import { useEffect, useState } from "react";
 
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(() => {
-    if (typeof document === "undefined") return false;
-    return document.documentElement.classList.contains("dark");
-  });
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains("dark");
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (isDark !== dark) setDark(isDark);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setDark(document.documentElement.classList.contains("dark"));
   }, []);
 
   function toggle() {
