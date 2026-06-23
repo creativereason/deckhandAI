@@ -549,8 +549,8 @@ export default function Home() {
 
   const load = useCallback(async () => {
     const [jobsRes, configRes] = await Promise.all([
-      fetch(`/api/jobs`),
-      fetch(`/api/config`),
+      fetch(`/api/jobs`, { cache: "no-store" }),
+      fetch(`/api/config`, { cache: "no-store" }),
     ]);
     setJobs(await jobsRes.json());
     const config = await configRes.json();

@@ -45,7 +45,7 @@ function jobToForm(section: JobSection, job?: JobRecord) {
 
   if (section === "applied" && job) {
     const j = job as AppliedJob;
-    return { ...base, status: j.status ?? "applied", date: j.date || base.date };
+    return { ...base, status: j.status ?? "applied", date: j.date || base.date, isGhost: j.isGhost ?? false };
   }
   if ((section === "prospect" || section === "local" || section === "staffing") && job) {
     const j = job as ProspectJob;
@@ -54,7 +54,7 @@ function jobToForm(section: JobSection, job?: JobRecord) {
   return base;
 }
 
-function buildJobPayload(section: JobSection, form: ReturnType<typeof jobToForm>): Record<string, string> {
+function buildJobPayload(section: JobSection, form: ReturnType<typeof jobToForm>): Record<string, unknown> {
   if (section === "applied") {
     return {
       company: form.company,
@@ -64,6 +64,7 @@ function buildJobPayload(section: JobSection, form: ReturnType<typeof jobToForm>
       salary: form.salary,
       notes: form.notes,
       url: form.url,
+      isGhost: (form as { isGhost?: boolean }).isGhost ?? false,
     };
   }
   if (section === "passed") {
@@ -144,7 +145,7 @@ export default function JobFormModal({
 
     try {
       if (mode === "add") {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/jobs`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/jobs`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ section, job: payload }),
@@ -155,7 +156,7 @@ export default function JobFormModal({
           throw new Error(data.error ?? "Failed to add job");
         }
       } else {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/jobs`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/jobs`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -192,16 +193,16 @@ export default function JobFormModal({
             {mode === "add" ? "Add Job" : "Edit Job"}
           </h2>
           {(() => {
-            const icon =
-              section === "applied"
-                ? getAppliedIcon({ status: form.status, date: form.date, notes: form.notes })
-                : section === "prospect" || section === "local"
-                ? getProspectIcon({ fit: form.fit })
-                : "🔴";
+            const isProspect = section === "prospect" || section === "local" || section === "staffing";
+            const icon = section === "applied"
+              ? getAppliedIcon({ status: form.status, date: form.date, notes: form.notes })
+              : isProspect
+              ? getProspectIcon({ fit: form.fit })
+              : "🔴";
             return (
               <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
                 <span className="text-xl leading-none">{icon}</span>
-                <span>{getSignalLabel(icon)}</span>
+                <span>{getSignalLabel(icon, isProspect ? "prospect" : "applied")}</span>
               </span>
             );
           })()}
@@ -300,6 +301,20 @@ export default function JobFormModal({
                   value={form.date}
                   onChange={(e) => set("date", e.target.value)}
                 />
+              </div>
+              <div className="col-span-2">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-p-blue dark:accent-p-accent-inv"
+                    checked={(form as { isGhost?: boolean }).isGhost ?? false}
+                    onChange={(e) => setForm((f) => ({ ...f, isGhost: e.target.checked }))}
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    👻 Ghost job risk
+                  </span>
+                </label>
+                <p className="mt-0.5 ml-6 text-xs text-stone-400 dark:text-gray-500">Flag if this posting looks like a ghost job or has been reposted repeatedly.</p>
               </div>
             </>
           )}

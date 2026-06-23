@@ -12,9 +12,8 @@ export function iconSortKey(icon: string): string {
   return ICON_SORT[icon] ?? "9";
 }
 
-export function getAppliedIcon(job: Pick<AppliedJob, "status" | "date" | "notes">): string {
-  const notes = (job.notes ?? "").toLowerCase();
-  if (notes.includes("ghost") || notes.includes("closed —")) return "👻";
+export function getAppliedIcon(job: Pick<AppliedJob, "status" | "date" | "notes" | "isGhost">): string {
+  if (job.isGhost) return "👻";
   if (job.status === "declined") return "🔴";
   if (job.status === "screening" || job.status === "interview" || job.status === "offer") return "⚡";
   if (job.date) {
@@ -32,14 +31,22 @@ export function getProspectIcon(job: Pick<ProspectJob, "fit">): string {
   return "🟢";
 }
 
-const SIGNAL_LABELS: Record<string, string> = {
+const APPLIED_SIGNAL_LABELS: Record<string, string> = {
   "⚡": "Needs attention",
-  "🟢": "Active / good fit",
-  "🟡": "Caution / stale",
+  "🟢": "Active",
+  "🟡": "Stale",
   "👻": "Ghost job",
-  "🔴": "Declined / poor fit",
+  "🔴": "Declined",
 };
 
-export function getSignalLabel(icon: string): string {
-  return SIGNAL_LABELS[icon] ?? "";
+const PROSPECT_SIGNAL_LABELS: Record<string, string> = {
+  "⚡": "Strong fit",
+  "🟢": "Good fit",
+  "🟡": "Caution",
+  "🔴": "Poor fit",
+};
+
+export function getSignalLabel(icon: string, context: "applied" | "prospect" = "applied"): string {
+  const map = context === "prospect" ? PROSPECT_SIGNAL_LABELS : APPLIED_SIGNAL_LABELS;
+  return map[icon] ?? "";
 }

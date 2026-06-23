@@ -168,6 +168,33 @@ At a steady pace alongside other work, **6–8 calendar weeks** to beta.
 
 ---
 
+## M7 — AI Chat Assistant
+
+A floating chat interface that lets you manage the job board through natural language instead of the modal forms.
+
+**Chat UI**
+- [ ] Floating chat button (bottom-right) opens a drawer/panel
+- [ ] Streaming message display with tool call status indicators
+- [ ] Conversation history within the session
+
+**Tools (what the AI can do)**
+- [ ] `list_jobs(section?)` — read jobs across one or all sections
+- [ ] `add_job(section, fields)` — add a new job to the board
+- [ ] `update_job(section, company, role, updates)` — edit any field on a job
+- [ ] `move_job(company, role, from_section, to_section)` — move a job between sections
+- [ ] `flag_ghost(company, role)` — set `isGhost: true` on a job
+- [ ] `delete_job(section, company, role)` — remove a job
+
+**Example prompts**
+- "Mark the Acme Corp posting as a ghost job"
+- "Move all declined applications to passed"
+- "What have I applied to in the last two weeks?"
+- "Add a new prospect: Stripe, Head of Design, strong fit"
+
+**Effort:** ~2 days
+
+---
+
 ## Deliberately Deferred (post-beta)
 
 - **Drag-and-drop kanban** — table view with status dropdown covers the workflow; DnD is high-risk for low incremental value in v1

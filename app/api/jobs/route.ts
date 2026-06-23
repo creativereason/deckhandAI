@@ -3,6 +3,8 @@ import { readJobs, writeJobs, JobSection, type JobsData } from "@/lib/jobs";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
+export const dynamic = "force-dynamic";
+
 function isDemo() { return process.env.DEMO_MODE === "true"; }
 
 function readSampleJobs(): JobsData {

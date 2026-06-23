@@ -10,6 +10,7 @@ export interface AppliedJob {
   salary: string;
   notes: string;
   url: string;
+  isGhost?: boolean;
 }
 
 export interface ProspectJob {

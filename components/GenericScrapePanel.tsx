@@ -43,7 +43,7 @@ export default function GenericScrapePanel({ onDone }: Props) {
     setRunning(true);
     setResult(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/scrape/generic`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/scrape/generic`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

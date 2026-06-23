@@ -261,6 +261,12 @@ Set your provider via the setup wizard (`node scripts/setup.mjs`) or edit `data/
 
 ---
 
+## What's next
+
+See [ROADMAP.md](ROADMAP.md) for planned features including an AI chat assistant, ghost job detection, and more.
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
