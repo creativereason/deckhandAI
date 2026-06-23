@@ -36,7 +36,7 @@ export interface ScrapingConfig {
 }
 
 export interface AiConfig {
-  provider?: "anthropic" | "openai" | "ollama" | "custom";
+  provider?: "anthropic" | "openai" | "ollama" | "gemini" | "grok" | "custom";
   model?: string;
   base_url?: string | null;
 }

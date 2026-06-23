@@ -19,6 +19,7 @@ data/profile.json
 data/scrape-targets.json
 .env
 .env.local
+.env.demo.local
 .env*.local
 
 # Personal documents — never commit these
@@ -42,3 +43,4 @@ npm-debug.log*
 .vscode/
 .idea/
 *.swp
+.vercel

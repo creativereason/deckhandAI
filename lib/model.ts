@@ -7,7 +7,8 @@ export interface GenerateRequest {
 
 function resolveEndpoint(config: AiConfig): { url: string; headers: Record<string, string> } {
   const apiKey = process.env.AI_API_KEY ?? "";
-  const provider = config.provider ?? "anthropic";
+  // Env vars override config.json — useful for Vercel deployments without editing the data repo
+  const provider = (process.env.AI_PROVIDER as AiConfig["provider"]) ?? config.provider ?? "anthropic";
 
   if (provider === "anthropic") {
     return {
@@ -20,9 +21,13 @@ function resolveEndpoint(config: AiConfig): { url: string; headers: Record<strin
     };
   }
 
-  // OpenAI-compatible: openai, ollama, custom, grok, gemini, etc.
-  let baseUrl = config.base_url ?? "https://api.openai.com/v1";
-  if (provider === "openai") baseUrl = "https://api.openai.com/v1";
+  // OpenAI-compatible: openai, ollama, gemini, grok, custom, etc.
+  const BUILTIN_BASE: Partial<Record<string, string>> = {
+    openai: "https://api.openai.com/v1",
+    gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
+    grok: "https://api.x.ai/v1",
+  };
+  let baseUrl = process.env.AI_BASE_URL || config.base_url || BUILTIN_BASE[provider] || "https://api.openai.com/v1";
 
   return {
     url: `${baseUrl}/chat/completions`,
@@ -34,8 +39,8 @@ function resolveEndpoint(config: AiConfig): { url: string; headers: Record<strin
 }
 
 function buildBody(config: AiConfig, messages: GenerateRequest["messages"], stream: boolean): string {
-  const model = config.model ?? "claude-sonnet-4-6";
-  const provider = config.provider ?? "anthropic";
+  const model = process.env.AI_MODEL ?? config.model ?? "claude-sonnet-4-6";
+  const provider = (process.env.AI_PROVIDER as AiConfig["provider"]) ?? config.provider ?? "anthropic";
 
   if (provider === "anthropic") {
     const systemMsg = messages.find((m) => m.role === "system");

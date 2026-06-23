@@ -7,14 +7,16 @@ const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px
 const LABEL = "block text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-1";
 const SECTION = "bg-white dark:bg-p-dark-surface rounded-xl p-5 space-y-4 shadow-sm";
 
-const PROVIDERS: { value: AiConfig["provider"]; label: string; defaultModel: string }[] = [
+const PROVIDERS: { value: AiConfig["provider"]; label: string; defaultModel: string; baseUrl?: string }[] = [
   { value: "anthropic", label: "Anthropic (Claude)", defaultModel: "claude-sonnet-4-6" },
   { value: "openai", label: "OpenAI", defaultModel: "gpt-4o" },
-  { value: "ollama", label: "Ollama (local)", defaultModel: "llama3" },
+  { value: "gemini", label: "Google Gemini (free tier available)", defaultModel: "gemini-2.0-flash", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" },
+  { value: "grok", label: "Grok (xAI)", defaultModel: "grok-3", baseUrl: "https://api.x.ai/v1" },
+  { value: "ollama", label: "Ollama (local, free)", defaultModel: "llama3", baseUrl: "http://localhost:11434/v1" },
   { value: "custom", label: "Custom OpenAI-compatible endpoint", defaultModel: "" },
 ];
 
-const NEEDS_BASE_URL: Array<AiConfig["provider"]> = ["ollama", "custom"];
+const NEEDS_BASE_URL: Array<AiConfig["provider"]> = ["ollama", "gemini", "grok", "custom"];
 
 export default function ModelSettings() {
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ export default function ModelSettings() {
       provider,
       model: preset?.defaultModel || ai.model || "",
       base_url: NEEDS_BASE_URL.includes(provider)
-        ? (ai.base_url ?? (provider === "ollama" ? "http://localhost:11434/v1" : ""))
+        ? (preset?.baseUrl ?? ai.base_url ?? "")
         : null,
     });
   }
@@ -85,10 +87,19 @@ export default function ModelSettings() {
       label: "OpenAI platform",
       url: "https://platform.openai.com/api-keys",
     },
+    gemini: {
+      label: "Google AI Studio",
+      url: "https://aistudio.google.com/api-keys",
+      note: "Free tier available with a Google account. Keys start with AIza.",
+    },
+    grok: {
+      label: "xAI Console",
+      url: "https://console.x.ai",
+    },
     custom: {
       label: "your provider's dashboard",
       url: "",
-      note: "For Gemini: aistudio.google.com. For Grok: console.x.ai. For Ollama: no key needed.",
+      note: "Any OpenAI-compatible endpoint — LM Studio, vLLM, etc.",
     },
   };
 
@@ -173,7 +184,7 @@ export default function ModelSettings() {
             <label className={LABEL}>Base URL</label>
             <input
               className={INPUT}
-              placeholder={ai.provider === "ollama" ? "http://localhost:11434/v1" : "https://your-endpoint.example.com/v1"}
+              placeholder={PROVIDERS.find((p) => p.value === ai.provider)?.baseUrl ?? "https://your-endpoint.example.com/v1"}
               value={ai.base_url ?? ""}
               onChange={(e) => updateAi({ base_url: e.target.value })}
             />
