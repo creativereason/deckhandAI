@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Water line -->
+  <path d="M4 40 Q12 37 20 40 Q28 43 36 40 Q44 37 52 40 Q58 42 60 40" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+
+  <!-- Hull -->
+  <path d="M14 40 L18 48 Q32 52 46 48 L50 40 Z" fill="#1e293b"/>
+
+  <!-- Mast -->
+  <line x1="32" y1="40" x2="32" y2="12" stroke="#1e293b" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Main sail -->
+  <path d="M32 14 L32 38 L18 38 Z" fill="#2563eb" opacity="0.9"/>
+
+  <!-- Jib sail -->
+  <path d="M32 18 L32 36 L46 30 Z" fill="#60a5fa" opacity="0.8"/>
+
+  <!-- Fish jumping (below waterline, tail out) -->
+  <ellipse cx="22" cy="46" rx="7" ry="3" fill="#60a5fa" opacity="0.85" transform="rotate(-20 22 46)"/>
+  <!-- Fish tail -->
+  <path d="M15.5 49 L12 47 L14 52 Z" fill="#60a5fa" opacity="0.85"/>
+  <!-- Fish eye -->
+  <circle cx="26.5" cy="44.5" r="0.8" fill="#0f172a"/>
+
+  <!-- Boom -->
+  <line x1="32" y1="38" x2="46" y2="42" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
