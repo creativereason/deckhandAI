@@ -168,29 +168,43 @@ At a steady pace alongside other work, **6–8 calendar weeks** to beta.
 
 ---
 
-## M7 — DOCX Export (Cover Letter + Resume)
+## M7 — Document Export (Cover Letter + Resume)
 
-Export a cover letter and tailored resume as separate Word documents, using a user-provided DOCX template as the style base.
+Export a tailored cover letter and resume using a code-defined style generator built on the `docx` npm library. No template file to upload or manage — style is configured in Settings and baked into the output at generation time, ensuring ATS safety by construction.
 
-**Template setup**
-- [ ] User uploads their own `.docx` templates to the private data repo (`data/resume-template.docx`, `data/cover-letter-template.docx`)
-- [ ] Both templates validated for ATS safety on upload (no text boxes, columns, tables, or embedded objects — surfaces a warning if detected)
-- [ ] Settings UI shows template upload + ATS validation status for each template independently
+**Approach**
+- Documents are generated programmatically (not via template filling) using the same approach as the existing resume-tailoring Claude skill
+- Ships with neutral defaults (Calibri, standard spacing, accessible accent color) so export works immediately after setup
+- A companion Claude skill file (`docs/export-style.skill.md`) documents all style tokens so users can prompt an AI to customize their output spec
+
+**Style settings** (`/settings/export`)
+- [x] Font family (default: Calibri)
+- [x] Accent color — used for name, section headers, and rules (default: `#1E3A8A`)
+- [x] Body text color (default: `#374151`)
+- [x] Page margins (default: 0.75" left/right, 0.60" top/bottom)
+- [x] Settings write to `config.json` via existing `/api/config` route
 
 **Cover letter export**
-- [ ] Export button in Generate modal downloads the AI-generated cover letter text rendered into the cover letter template
-- [ ] Export action on job card triggers generation + download in one step (opens Generate modal pre-populated, or downloads silently if text was already generated)
-- [ ] Filename: `cover-letter-[company]-[role].docx`
+- [x] Outputs DOCX; PDF via browser print from Generate modal
+- [x] Export button in Generate modal downloads the AI-generated cover letter text with a styled header block (name, contact line, rule, date, salutation)
+- [x] Export action on job card triggers generation + download in one step
+- [x] Filename: `cover-letter-[company]-[role].docx`
 
 **Resume export**
-- [ ] Base export renders `profile.json` work history into the resume template — available from any job card without AI
-- [ ] "Tailor for this role" button in the Generate modal runs AI against the job description and rewrites bullet points; user reviews the tailored bullets before exporting
-- [ ] Tailored bullets shown as a diff-style preview (original vs. suggested) before download
-- [ ] Filename: `resume-[company]-[role].docx`
+- [x] Base export renders `profile.json` work history into a styled DOCX — available from any job card without AI
+- [x] "Tailor for this role" tab runs AI against the job description and rewrites bullets + title; user reviews a before/after diff preview before downloading
+- [x] Outputs DOCX; PDF via browser print
+- [x] Filename: `resume-[company]-[role].docx`
 
 **Trigger locations**
-- [ ] Generate modal — download buttons for cover letter and resume after generation/tailoring
-- [ ] Job card row actions — "Export" menu with "Cover Letter" and "Resume" options
+- [x] Generate modal — export buttons for cover letter and resume after generation/tailoring
+- [x] Job card row actions — "Cover letter" (one-step generate + download) and "Resume" buttons
+
+**ATS compliance (built-in, not validated after the fact)**
+- Single-column layout only — no tables, text boxes, or columns
+- Bullets via `docx` numbering API — never raw `•` characters
+- Phone number in a single unbroken XML run
+- Tab stops for date alignment — never spaced manually
 
 **Effort:** ~3 days
 
