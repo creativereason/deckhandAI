@@ -196,23 +196,25 @@ function SectionHeader({ title, count, visibleCount, newCount, fitFilter }: {
 
 // ─── Sections visibility dropdown ──────────────────────────────────────────────
 
-function SectionsDropdown({ open, onToggle }: {
+function SectionsDropdown({ open, onToggle, available }: {
   open: JobSection[];
   onToggle: (section: JobSection) => void;
+  available: { value: JobSection; label: string }[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const visibleOpen = open.filter((s) => available.some((a) => a.value === s));
   return (
     <div className="relative inline-block">
       <button onClick={() => setIsOpen((o) => !o)}
         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-white dark:bg-p-dark-mid text-stone-500 dark:text-gray-400 border-p-linen dark:border-p-dark-mid hover:border-p-dusk dark:hover:border-gray-500">
         Sections
-        <span className="text-stone-400 dark:text-gray-500">({open.length}/{ALL_SECTIONS.length})</span>
+        <span className="text-stone-400 dark:text-gray-500">({visibleOpen.length}/{available.length})</span>
       </button>
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
           <div className="absolute left-0 top-7 bg-white dark:bg-p-dark-surface border border-p-linen dark:border-p-dark-mid rounded-lg shadow-lg z-20 min-w-[160px] py-1">
-            {ALL_SECTIONS.map((s) => (
+            {available.map((s) => (
               <label key={s.value}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid cursor-pointer">
                 <input type="checkbox" checked={open.includes(s.value)}
@@ -736,7 +738,7 @@ export default function Home() {
         <div className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
           <FitFilterBar active={fitFilter} onChange={setFitFilter} />
           <div className="w-px h-4 bg-p-linen dark:bg-p-dark-mid shrink-0" />
-          <SectionsDropdown open={openSections} onToggle={toggleSection} />
+          <SectionsDropdown open={openSections} onToggle={toggleSection} available={visibleSections} />
           {fitFilter !== "all" && (
             <span className="text-xs text-p-dusk dark:text-gray-400 ml-auto shrink-0">
               Filtering prospects, local &amp; staffing
