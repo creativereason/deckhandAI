@@ -107,28 +107,7 @@ function JobLink({ url }: { url: string }) {
   );
 }
 
-// ─── Move menu ────────────────────────────────────────────────────────────────
-
-function MoveMenu({ sections, onMove }: { sections: { value: JobSection; label: string }[]; onMove: (t: JobSection) => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative inline-block">
-      <button onClick={() => setOpen((o) => !o)} className="text-sm text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white px-1">
-        Move
-      </button>
-      {open && (
-        <div className="absolute right-0 top-5 bg-white dark:bg-p-dark-surface border border-p-linen dark:border-p-dark-mid rounded-lg shadow-lg z-10 min-w-[140px]">
-          {sections.map((s) => (
-            <button key={s.value} onClick={() => { onMove(s.value); setOpen(false); }}
-              className="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid">
-              → {s.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// ─── Row actions ──────────────────────────────────────────────────────────────
 
 function RowActions({ onEdit, onGenerate, onExportResume, onExportCoverLetter, moveSections, onMove, onDismiss }: {
   onEdit: () => void;
@@ -139,23 +118,84 @@ function RowActions({ onEdit, onGenerate, onExportResume, onExportCoverLetter, m
   onMove: (t: JobSection) => void;
   onDismiss?: () => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const hasMenu = !!(onDismiss || onGenerate || onExportCoverLetter || onExportResume || moveSections.length);
+
   return (
     <div className="flex items-center justify-end gap-1">
-      {onDismiss && (
-        <button onClick={onDismiss} title="Mark reviewed"
-          className="text-sm text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 px-1 font-medium">✓</button>
+      <button
+        onClick={onEdit}
+        className="text-sm text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white px-1.5 py-0.5 rounded transition-colors"
+      >
+        Edit
+      </button>
+      {hasMenu && (
+        <div className="relative">
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="w-6 h-6 flex items-center justify-center rounded text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors text-base leading-none"
+          >
+            ⋮
+          </button>
+          {open && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+              <div className="absolute right-0 top-7 z-20 bg-white dark:bg-p-dark-surface border border-p-linen dark:border-p-dark-mid rounded-lg shadow-xl min-w-[160px] py-1">
+                {onDismiss && (
+                  <button
+                    onClick={() => { onDismiss(); setOpen(false); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-p-linen dark:hover:bg-p-dark-mid"
+                  >
+                    ✓ Mark reviewed
+                  </button>
+                )}
+                {onDismiss && (onGenerate || onExportCoverLetter || onExportResume) && (
+                  <div className="h-px bg-p-linen dark:bg-p-dark-mid my-1" />
+                )}
+                {onGenerate && (
+                  <button
+                    onClick={() => { onGenerate(); setOpen(false); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid"
+                  >
+                    Generate…
+                  </button>
+                )}
+                {onExportCoverLetter && (
+                  <button
+                    onClick={() => { onExportCoverLetter(); setOpen(false); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid"
+                  >
+                    Cover letter
+                  </button>
+                )}
+                {onExportResume && (
+                  <button
+                    onClick={() => { onExportResume(); setOpen(false); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid"
+                  >
+                    Resume
+                  </button>
+                )}
+                {moveSections.length > 0 && (
+                  <>
+                    <div className="h-px bg-p-linen dark:bg-p-dark-mid my-1" />
+                    <p className="px-3 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-gray-500">Move to</p>
+                    {moveSections.map((s) => (
+                      <button
+                        key={s.value}
+                        onClick={() => { onMove(s.value); setOpen(false); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid"
+                      >
+                        → {s.label}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       )}
-      {onGenerate && (
-        <button onClick={onGenerate} className="text-xs text-p-accent dark:text-p-accent-inv hover:underline px-1">Generate</button>
-      )}
-      {onExportCoverLetter && (
-        <button onClick={onExportCoverLetter} className="text-xs text-p-dusk dark:text-gray-400 hover:text-p-accent dark:hover:text-p-accent-inv px-1">Cover letter</button>
-      )}
-      {onExportResume && (
-        <button onClick={onExportResume} className="text-xs text-p-dusk dark:text-gray-400 hover:text-p-accent dark:hover:text-p-accent-inv px-1">Resume</button>
-      )}
-      <button onClick={onEdit} className="text-sm text-p-dusk dark:text-p-accent-inv hover:text-p-accent dark:hover:text-p-accent-inv px-1">Edit</button>
-      <MoveMenu sections={moveSections} onMove={onMove} />
     </div>
   );
 }

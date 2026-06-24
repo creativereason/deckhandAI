@@ -7,7 +7,9 @@
       "date": "2026-06-10",
       "salary": "$210,000–$260,000",
       "notes": "Second round scheduled. Panel includes VP Design and Head of Growth PM. Strong culture signal from recruiter.",
-      "url": "https://stripe.com/jobs/listing/director-design-growth"
+      "url": "https://stripe.com/jobs/listing/director-design-growth",
+      "fit": "strong",
+      "scoreRationale": "Candidate's senior design leadership experience, remote flexibility, contract openness, and salary expectations align well with the Director-level role at a top-tier company with clear advancement interest."
     },
     {
       "company": "Linear",
@@ -16,7 +18,9 @@
       "date": "2026-06-16",
       "salary": "$190,000–$230,000",
       "notes": "Intro call with hiring manager next week. Small team, high craft bar. Fully remote.",
-      "url": "https://linear.app/careers/head-of-design"
+      "url": "https://linear.app/careers/head-of-design",
+      "fit": "strong",
+      "scoreRationale": "Candidate's senior design leadership experience, salary expectations well within range, remote preference match, and openness to contract roles align excellently with Linear's Head of Design position."
     },
     {
       "company": "Vercel",
@@ -25,7 +29,9 @@
       "date": "2026-06-20",
       "salary": "$180,000–$215,000",
       "notes": "Applied via Greenhouse. Developer-tools design — strong portfolio angle.",
-      "url": "https://vercel.com/careers/principal-product-designer"
+      "url": "https://vercel.com/careers/principal-product-designer",
+      "fit": "strong",
+      "scoreRationale": "Senior experience matches principal level, salary expectation well below range, remote-eligible role, and developer-tools portfolio aligns with Vercel's needs."
     }
   ],
   "prospect": [
@@ -108,10 +114,11 @@
     {
       "company": "Apex Systems",
       "role": "UX Design Lead (Contract-to-Hire)",
-      "fit": "good",
+      "fit": "caution",
       "salary": "$90–$110/hr",
       "notes": "6-month CTH with Fortune 500 financial services client. Remote. Strong comp and potential conversion.",
-      "url": "https://apexsystems.com/jobs/ux-lead-cth-fintech"
+      "url": "https://apexsystems.com/jobs/ux-lead-cth-fintech",
+      "scoreRationale": "Contract role at $90–$110/hr falls significantly below candidate's $140k FTE minimum, and seniority level (Director) may be overqualified for a 'Lead' position despite remote flexibility and conversion potential."
     },
     {
       "company": "Slalom",
@@ -119,7 +126,8 @@
       "fit": "good",
       "salary": "$130,000–$155,000",
       "notes": "Permanent consulting role. Austin office. Healthcare and financial services clients align well.",
-      "url": "https://slalom.com/us/en/careers/senior-consultant-xd"
+      "url": "https://slalom.com/us/en/careers/senior-consultant-xd",
+      "scoreRationale": "Salary range and seniority level align well, and consulting leverages relevant design expertise, but Austin office conflicts with remote/hybrid requirement and permanent role differs from contract preference."
     },
     {
       "company": "Kforce",
@@ -127,7 +135,8 @@
       "fit": "caution",
       "salary": "$70–$80/hr",
       "notes": "3-month engagement. Hourly slightly below target. Legacy enterprise tooling — not a strong growth role.",
-      "url": "https://kforce.com/jobs/ux-architect-contract-atx"
+      "url": "https://kforce.com/jobs/ux-architect-contract-atx",
+      "scoreRationale": "Contract role aligns with flexibility but hourly rate ($70–$80/hr ≈ $145–$166K annualized) barely meets minimum, and legacy enterprise work mismatches senior designer's growth trajectory despite title-level match."
     }
   ],
   "passed": [
@@ -161,7 +170,9 @@
       "salary": "$185,000–$215,000",
       "notes": "",
       "scrapeGroup": "remote",
-      "scrapeDate": "2026-06-22"
+      "scrapeDate": "2026-06-22",
+      "fit": "strong",
+      "scoreRationale": "Candidate's senior design background and director-level experience align with GitHub's senior product designer role, salary expectations are well-met, and remote/hybrid flexibility matches the opportunity."
     },
     {
       "company": "Atlassian",
@@ -170,7 +181,9 @@
       "salary": "$190,000–$230,000",
       "notes": "",
       "scrapeGroup": "remote",
-      "scrapeDate": "2026-06-22"
+      "scrapeDate": "2026-06-22",
+      "fit": "strong",
+      "scoreRationale": "Candidate's senior design leadership experience, salary expectations well below range ceiling, and openness to contract work align excellently with Principal Designer role at premium compensation level."
     },
     {
       "company": "RetailMeNot",
@@ -179,7 +192,9 @@
       "salary": "$110,000–$135,000",
       "notes": "",
       "scrapeGroup": "local",
-      "scrapeDate": "2026-06-22"
+      "scrapeDate": "2026-06-22",
+      "fit": "caution",
+      "scoreRationale": "Candidate's senior-level experience and salary expectations ($140k minimum) exceed the UX Manager role's range ($110k-$135k), suggesting potential overqualification and compensation misalignment despite relevant expertise."
     }
   ]
 }
