@@ -183,6 +183,18 @@ export default function ProfileSettings() {
             Open to staffing / contract roles — shows the Staffing section in the tracker
           </label>
         </div>
+        <div className="flex items-center gap-3">
+          <input
+            id="hide_passed"
+            type="checkbox"
+            className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv"
+            checked={p.hide_passed ?? false}
+            onChange={(e) => updatePreference("hide_passed", e.target.checked)}
+          />
+          <label htmlFor="hide_passed" className="text-sm text-gray-700 dark:text-gray-300">
+            Hide the Passed / Skipped section — it will still be used to prevent duplicate imports
+          </label>
+        </div>
       </div>
 
       <div className="flex justify-end">

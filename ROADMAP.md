@@ -215,17 +215,17 @@ Export a tailored cover letter and resume using a code-defined style generator b
 A floating chat interface that lets you manage the job board through natural language instead of the modal forms.
 
 **Chat UI**
-- [ ] Floating chat button (bottom-right) opens a drawer/panel
-- [ ] Streaming message display with tool call status indicators
-- [ ] Conversation history within the session
+- [x] Floating chat button (bottom-right) opens a drawer/panel
+- [x] Streaming message display with tool call status indicators
+- [x] Conversation history within the session
 
 **Tools (what the AI can do)**
-- [ ] `list_jobs(section?)` — read jobs across one or all sections
-- [ ] `add_job(section, fields)` — add a new job to the board
-- [ ] `update_job(section, company, role, updates)` — edit any field on a job
-- [ ] `move_job(company, role, from_section, to_section)` — move a job between sections
-- [ ] `flag_ghost(company, role)` — set `isGhost: true` on a job
-- [ ] `delete_job(section, company, role)` — remove a job
+- [x] `list_jobs(section?)` — read jobs across one or all sections
+- [x] `add_job(section, fields)` — add a new job to the board
+- [x] `update_job(section, company, role, updates)` — edit any field on a job
+- [x] `move_job(company, role, from_section, to_section)` — move a job between sections
+- [x] `flag_ghost(company, role)` — set `isGhost: true` on a job
+- [x] `delete_job(section, company, role)` — remove a job
 
 **Example prompts**
 - "Mark the Acme Corp posting as a ghost job"
@@ -240,6 +240,13 @@ A floating chat interface that lets you manage the job board through natural lan
 ## Technical Debt
 
 - [x] Rename `middleware.ts` → `proxy.ts` — Next.js 16 deprecated the `middleware` file convention in favor of `proxy`; surfaced as a build warning on deploy
+
+---
+
+## Known Bugs
+
+- [ ] **Edit modal section change discards notes** — if a user edits the notes field then changes the section dropdown in the job edit modal, the notes changes are lost (section change re-initializes form state)
+- [ ] **Moved-to-Passed job shows "Declined" status** — when a job is moved from Applied to Passed via the kebab menu, it retains its Applied `status` value (e.g. "declined") and the Passed section renders it with that label instead of showing it as passed
 
 ---
 

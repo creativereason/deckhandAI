@@ -1,26 +1,78 @@
+"use client";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import type { ScrapeTargetConfig } from "@/lib/scrape-targets";
+
+interface TargetsData {
+  remote: ScrapeTargetConfig[];
+  local: ScrapeTargetConfig[];
+}
 
 export default function ScrapeSourcesPage() {
+  const [targets, setTargets] = useState<TargetsData | null>(null);
+
+  useEffect(() => {
+    fetch("/api/scrape-targets")
+      .then((r) => r.json())
+      .then(setTargets)
+      .catch(() => setTargets({ remote: [], local: [] }));
+  }, []);
+
+  const total = targets ? targets.remote.length + targets.local.length : null;
+
   return (
     <main className="max-w-3xl mx-auto px-6 py-10 space-y-10">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Scraper Coverage</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Configure your scrape targets in{" "}
-          <Code>lib/scrape-targets.ts</Code>.
-          This page reflects whatever targets are defined there.
-        </p>
+      {/* Header */}
+      <div className="space-y-1">
+        <Link
+          href="/"
+          className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+        >
+          ← Back to board
+        </Link>
+        <div className="flex items-start justify-between gap-4 pt-1">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Scraper Coverage</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Companies and career pages the scraper monitors for new roles.
+            </p>
+          </div>
+          <Link
+            href="/settings/scrape-targets"
+            className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border border-p-linen dark:border-p-dark-mid text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-p-dusk transition-colors"
+          >
+            Edit targets →
+          </Link>
+        </div>
       </div>
 
-      <Section title="Getting started" color="yellow">
-        <InfoRow>
-          Add your target companies to <Code>lib/scrape-targets.ts</Code>. Separate
-          remote/national targets from local/hybrid ones using the{" "}
-          <Code>REMOTE_TARGETS</Code> and <Code>LOCAL_TARGETS</Code> arrays. Each entry needs a
-          company name, career search URL, CSS selector, and optional config.
-        </InfoRow>
-      </Section>
+      {/* Configured targets */}
+      {targets === null ? (
+        <p className="text-sm text-p-dusk dark:text-gray-400">Loading…</p>
+      ) : total === 0 ? (
+        <div className="rounded-xl border border-dashed border-p-linen dark:border-p-dark-mid px-6 py-8 text-center space-y-2">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No scrape targets configured yet.</p>
+          <p className="text-xs text-p-dusk dark:text-gray-400">
+            Add companies to monitor in{" "}
+            <Link href="/settings/scrape-targets" className="text-p-blue dark:text-p-accent-inv hover:underline">
+              Settings → Scrape Targets
+            </Link>
+            .
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {targets.remote.length > 0 && (
+            <TargetGroup title="Remote / National" targets={targets.remote} />
+          )}
+          {targets.local.length > 0 && (
+            <TargetGroup title="Local / Hybrid" targets={targets.local} />
+          )}
+        </div>
+      )}
 
+      {/* Tips */}
       <Section title="Scraper tips" color="green">
         <InfoRow>
           <strong className="text-gray-800 dark:text-gray-100">Keyword filtering in URL:</strong>{" "}
@@ -53,6 +105,51 @@ export default function ScrapeSourcesPage() {
   );
 }
 
+function TargetGroup({ title, targets }: { title: string; targets: ScrapeTargetConfig[] }) {
+  return (
+    <div>
+      <h2 className="flex items-center gap-2 text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-2">
+        {title}
+        <span className="font-normal normal-case tracking-normal text-stone-400 dark:text-gray-500">
+          ({targets.length})
+        </span>
+      </h2>
+      <div className="divide-y divide-gray-100 dark:divide-p-dark-mid border border-gray-100 dark:border-p-dark-mid rounded-xl overflow-hidden">
+        {targets.map((t) => (
+          <div key={t.company} className="flex items-start justify-between gap-4 px-4 py-3 bg-white dark:bg-p-dark-surface">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{t.company}</p>
+              <a
+                href={t.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-p-dusk dark:text-gray-400 hover:underline truncate block max-w-sm"
+              >
+                {t.url}
+              </a>
+            </div>
+            <div className="shrink-0 flex flex-wrap gap-1 justify-end pt-0.5">
+              {t.selector && <Tag>{t.selector}</Tag>}
+              {t.assumeLocal && <Tag>local</Tag>}
+              {t.trustLocationFilter && <Tag>location filtered</Tag>}
+              {t.useIframe && <Tag>iframe</Tag>}
+              {t.waitMs && <Tag>{t.waitMs}ms</Tag>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Tag({ children }: { children: ReactNode }) {
+  return (
+    <span className="text-[10px] font-mono bg-p-linen dark:bg-p-dark-mid text-p-dusk dark:text-gray-400 px-1.5 py-0.5 rounded">
+      {children}
+    </span>
+  );
+}
+
 function Code({ children }: { children: ReactNode }) {
   return (
     <code className="text-xs bg-gray-100 dark:bg-p-dark-mid text-gray-700 dark:text-gray-300 px-1 py-0.5 rounded">
@@ -61,21 +158,8 @@ function Code({ children }: { children: ReactNode }) {
   );
 }
 
-function Section({
-  title,
-  color,
-  children,
-}: {
-  title: string;
-  color: "green" | "yellow" | "gray";
-  children: ReactNode;
-}) {
-  const dot = {
-    green: "bg-green-500",
-    yellow: "bg-yellow-400",
-    gray: "bg-gray-300 dark:bg-gray-600",
-  }[color];
-
+function Section({ title, color, children }: { title: string; color: "green" | "yellow" | "gray"; children: ReactNode }) {
+  const dot = { green: "bg-green-500", yellow: "bg-yellow-400", gray: "bg-gray-300 dark:bg-gray-600" }[color];
   return (
     <div>
       <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">

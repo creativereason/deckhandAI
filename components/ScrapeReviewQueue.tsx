@@ -87,6 +87,7 @@ function ActionButtons({ loading, onApprove, onReject }: { loading: boolean; onA
 export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
   const [scores, setScores] = useState<Record<string, ScoreState>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const scoredRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -138,7 +139,8 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
     );
   }, [pending]);
 
-  if (pending.length === 0) return null;
+  const visible = pending.filter((j) => !dismissed.has(jobKey(j)));
+  if (visible.length === 0) return null;
 
   function getScore(j: PendingJob): ScoreState {
     return scores[jobKey(j)] ?? { fit: "good", notes: "", rationale: j.scoreRationale ?? "", scoring: false };
@@ -171,6 +173,7 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
         throw new Error(body.error ?? `Error ${res.status}`);
       }
       toast.success(action === "approve" ? `Added ${j.company} to tracker` : `Dismissed ${j.company}`);
+      setDismissed((prev) => new Set([...prev, k]));
       onUpdate();
     } catch (err) {
       toast.error(`Failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -179,8 +182,8 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
     }
   }
 
-  async function approveAll() { for (const j of pending) await act(j, "approve"); }
-  async function rejectAll() { for (const j of pending) await act(j, "reject"); }
+  async function approveAll() { for (const j of visible) await act(j, "approve"); }
+  async function rejectAll() { for (const j of visible) await act(j, "reject"); }
 
   return (
     <div className="bg-white dark:bg-p-dark-surface rounded-xl shadow-sm border border-amber-200 dark:border-amber-700">
@@ -188,7 +191,7 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
       <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-amber-100 dark:border-amber-800 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold">
-            {pending.length}
+            {visible.length}
           </span>
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Scrape review queue</h2>
           <span className="text-xs text-p-dusk dark:text-gray-400 hidden sm:inline">— approve to add, dismiss to skip</span>
@@ -205,7 +208,7 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
 
       {/* Mobile cards */}
       <div className="lg:hidden divide-y divide-gray-50 dark:divide-gray-800">
-        {pending.map((j) => {
+        {visible.map((j) => {
           const score = getScore(j);
           const loading = busy[jobKey(j)];
           return (
@@ -246,7 +249,7 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
 
       {/* Desktop rows */}
       <div className="hidden lg:block divide-y divide-gray-50 dark:divide-gray-800">
-        {pending.map((j) => {
+        {visible.map((j) => {
           const score = getScore(j);
           const loading = busy[jobKey(j)];
           return (

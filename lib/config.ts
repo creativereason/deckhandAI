@@ -29,6 +29,7 @@ export interface PreferencesConfig {
   salary?: SalaryConfig;
   locations?: LocationsConfig;
   open_to_contract?: boolean;
+  hide_passed?: boolean;
 }
 
 export interface ScrapingConfig {

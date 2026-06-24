@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import AddJobModal from "@/components/AddJobModal";
 import JobFormModal from "@/components/JobFormModal";
@@ -119,7 +119,17 @@ function RowActions({ onEdit, onGenerate, onExportResume, onExportCoverLetter, m
   onDismiss?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const hasMenu = !!(onDismiss || onGenerate || onExportCoverLetter || onExportResume || moveSections.length);
+
+  function handleToggle() {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setOpen((o) => !o);
+  }
 
   return (
     <div className="flex items-center justify-end gap-1">
@@ -132,15 +142,19 @@ function RowActions({ onEdit, onGenerate, onExportResume, onExportCoverLetter, m
       {hasMenu && (
         <div className="relative">
           <button
-            onClick={() => setOpen((o) => !o)}
+            ref={triggerRef}
+            onClick={handleToggle}
             className="w-6 h-6 flex items-center justify-center rounded text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors text-base leading-none"
           >
             ⋮
           </button>
-          {open && (
+          {open && menuPos && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-              <div className="absolute right-0 top-7 z-20 bg-white dark:bg-p-dark-surface border border-p-linen dark:border-p-dark-mid rounded-lg shadow-xl min-w-[160px] py-1">
+              <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+              <div
+                className="fixed z-[101] bg-white dark:bg-p-dark-surface border border-p-linen dark:border-p-dark-mid rounded-lg shadow-xl min-w-[160px] py-1"
+                style={{ top: menuPos.top, right: menuPos.right }}
+              >
                 {onDismiss && (
                   <button
                     onClick={() => { onDismiss(); setOpen(false); }}
@@ -214,14 +228,13 @@ type EditState = { section: JobSection; job: AppliedJob | ProspectJob | PassedJo
 
 // ─── Accordion section header ─────────────────────────────────────────────────
 
-function SectionHeader({ title, count, visibleCount, newCount, fitFilter }: {
+function SectionHeader({ title, count, visibleCount, newCount }: {
   title: string;
   count: number;
   visibleCount?: number;
   newCount?: number;
-  fitFilter?: FitFilter;
 }) {
-  const filtered = fitFilter && fitFilter !== "all" && visibleCount !== undefined && visibleCount !== count;
+  const filtered = visibleCount !== undefined && visibleCount !== count;
   return (
     <div className="flex items-center gap-2.5 flex-1 min-w-0">
       <span className="text-xs font-semibold text-p-blue dark:text-p-accent-inv uppercase tracking-widest">{title}</span>
@@ -296,11 +309,12 @@ function FitFilterBar({ active, onChange }: { active: FitFilter; onChange: (f: F
 
 // ─── Table components ─────────────────────────────────────────────────────────
 
-function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onExportCoverLetter }: {
+function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExportResume, onExportCoverLetter }: {
   jobs: AppliedJob[];
   otherSections: { value: JobSection; label: string }[];
   onEdit: (job: AppliedJob) => void;
   onMove: (target: JobSection, job: AppliedJob) => void;
+  onGenerate?: (job: AppliedJob) => void;
   onExportResume?: (job: AppliedJob) => void;
   onExportCoverLetter?: (job: AppliedJob) => void;
 }) {
@@ -348,6 +362,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onE
             {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed">{j.notes}</p>}
             <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
               <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                onGenerate={onGenerate ? () => onGenerate(j) : undefined}
                 onExportResume={onExportResume ? () => onExportResume(j) : undefined}
                 onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
             </div>
@@ -384,6 +399,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onE
               <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
               <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                 <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                  onGenerate={onGenerate ? () => onGenerate(j) : undefined}
                   onExportResume={onExportResume ? () => onExportResume(j) : undefined}
                   onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
               </td>
@@ -516,11 +532,12 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
   );
 }
 
-function PassedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onExportCoverLetter }: {
+function PassedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExportResume, onExportCoverLetter }: {
   jobs: PassedJob[];
   otherSections: { value: JobSection; label: string }[];
   onEdit: (job: PassedJob) => void;
   onMove: (target: JobSection, job: PassedJob) => void;
+  onGenerate?: (job: PassedJob) => void;
   onExportResume?: (job: PassedJob) => void;
   onExportCoverLetter?: (job: PassedJob) => void;
 }) {
@@ -564,6 +581,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onEx
             {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed">{j.notes}</p>}
             <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
               <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                onGenerate={onGenerate ? () => onGenerate(j) : undefined}
                 onExportResume={onExportResume ? () => onExportResume(j) : undefined}
                 onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
             </div>
@@ -596,6 +614,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onEx
               <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
               <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                 <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                  onGenerate={onGenerate ? () => onGenerate(j) : undefined}
                   onExportResume={onExportResume ? () => onExportResume(j) : undefined}
                   onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
               </td>
@@ -614,9 +633,11 @@ export default function Home() {
   const [displayName, setDisplayName] = useState<string>("");
   const [showLocal, setShowLocal] = useState(true);
   const [showStaffing, setShowStaffing] = useState(true);
+  const [showPassed, setShowPassed] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<EditState | null>(null);
   const [fitFilter, setFitFilter] = useState<FitFilter>("all");
+  const [search, setSearch] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [generating, setGenerating] = useState<{ company: string; role: string; url?: string } | null>(null);
   const [modelLabel, setModelLabel] = useState<string>("");
@@ -648,6 +669,7 @@ export default function Home() {
     }
     setShowLocal(config.preferences?.locations?.hybrid !== false);
     setShowStaffing(config.preferences?.open_to_contract !== false);
+    setShowPassed(config.preferences?.hide_passed !== true);
     if (config.ai?.model) {
       const provider = config.ai.provider ?? "anthropic";
       setModelLabel(`${provider} / ${config.ai.model}`);
@@ -742,17 +764,31 @@ export default function Home() {
   const visibleSections = ALL_SECTIONS.filter((s) => {
     if (s.value === "local" && !showLocal) return false;
     if (s.value === "staffing" && !showStaffing) return false;
+    if (s.value === "passed" && !showPassed) return false;
     return true;
   });
 
-  const otherSections = (from: JobSection) => visibleSections.filter((s) => s.value !== from);
+  // Move targets always include "passed" even when hidden — job just disappears from board
+  const movableSections = ALL_SECTIONS.filter((s) => {
+    if (s.value === "local" && !showLocal) return false;
+    if (s.value === "staffing" && !showStaffing) return false;
+    return true;
+  });
+
+  const otherSections = (from: JobSection) => movableSections.filter((s) => s.value !== from);
 
   const filterByFit = (list: ProspectJob[]) =>
     fitFilter === "all" ? list : list.filter((j) => j.fit === fitFilter);
 
-  const filteredProspect = filterByFit(jobs.prospect);
-  const filteredLocal = filterByFit(jobs.local);
-  const filteredStaffing = filterByFit(jobs.staffing);
+  const searchQ = search.trim().toLowerCase();
+  const matchesSearch = (j: { company: string; role: string }) =>
+    !searchQ || j.company.toLowerCase().includes(searchQ) || j.role.toLowerCase().includes(searchQ);
+
+  const filteredProspect = filterByFit(jobs.prospect).filter(matchesSearch);
+  const filteredLocal = filterByFit(jobs.local).filter(matchesSearch);
+  const filteredStaffing = filterByFit(jobs.staffing).filter(matchesSearch);
+  const filteredApplied = jobs.applied.filter(matchesSearch);
+  const filteredPassed = jobs.passed.filter(matchesSearch);
 
   const totalNew =
     jobs.prospect.filter((j) => j.isNew).length +
@@ -768,6 +804,7 @@ export default function Home() {
             if (config.candidate?.name) setDisplayName(config.candidate.name);
             setShowLocal(config.preferences?.locations?.hybrid !== false);
             setShowStaffing(config.preferences?.open_to_contract !== false);
+            setShowPassed(config.preferences?.hide_passed !== true);
           }}
         />
       )}
@@ -850,10 +887,31 @@ export default function Home() {
           <div className="w-px h-4 bg-p-linen dark:bg-p-dark-mid shrink-0" />
           <SectionsDropdown open={openSections} onToggle={toggleSection} available={visibleSections} />
           {fitFilter !== "all" && (
-            <span className="text-xs text-p-dusk dark:text-gray-400 ml-auto shrink-0">
+            <span className="text-xs text-p-dusk dark:text-gray-400 shrink-0">
               Filtering prospects, local &amp; staffing
             </span>
           )}
+          <div className="ml-auto shrink-0 relative">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search…"
+              className="w-40 sm:w-52 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg pl-7 pr-6 py-1.5 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/30 dark:focus:ring-p-accent-inv/30 transition"
+            />
+            <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 dark:text-gray-500 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 leading-none"
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Demo mode banner */}
@@ -879,13 +937,14 @@ export default function Home() {
           <AccordionItem value="applied"
             className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
             <AccordionTrigger className="hover:no-underline py-4">
-              <SectionHeader title="Applied" count={jobs.applied.length} />
+              <SectionHeader title="Applied" count={jobs.applied.length} visibleCount={searchQ ? filteredApplied.length : undefined} />
             </AccordionTrigger>
             <AccordionContent className="pb-3">
               <div className="overflow-x-auto">
-                <AppliedTable jobs={jobs.applied} otherSections={otherSections("applied")}
+                <AppliedTable jobs={filteredApplied} otherSections={otherSections("applied")}
                   onEdit={(j) => setEditing({ section: "applied", job: j })}
                   onMove={(t, j) => moveJob("applied", j.company, j.role, t)}
+                  onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
                   onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
                   onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined} />
               </div>
@@ -897,8 +956,7 @@ export default function Home() {
             <AccordionTrigger className="hover:no-underline py-4">
               <SectionHeader title="Prospects — Remote" count={jobs.prospect.length}
                 visibleCount={filteredProspect.length}
-                newCount={jobs.prospect.filter((j) => j.isNew).length}
-                fitFilter={fitFilter} />
+                newCount={jobs.prospect.filter((j) => j.isNew).length} />
             </AccordionTrigger>
             <AccordionContent className="pb-3">
               <div className="overflow-x-auto">
@@ -919,8 +977,7 @@ export default function Home() {
               <AccordionTrigger className="hover:no-underline py-4">
                 <SectionHeader title="Local / Hybrid" count={jobs.local.length}
                   visibleCount={filteredLocal.length}
-                  newCount={jobs.local.filter((j) => j.isNew).length}
-                  fitFilter={fitFilter} />
+                  newCount={jobs.local.filter((j) => j.isNew).length} />
               </AccordionTrigger>
               <AccordionContent className="pb-3">
                 <div className="overflow-x-auto">
@@ -942,8 +999,7 @@ export default function Home() {
               <AccordionTrigger className="hover:no-underline py-4">
                 <SectionHeader title="Staffing / Contract" count={jobs.staffing.length}
                   visibleCount={filteredStaffing.length}
-                  newCount={jobs.staffing.filter((j) => j.isNew).length}
-                  fitFilter={fitFilter} />
+                  newCount={jobs.staffing.filter((j) => j.isNew).length} />
               </AccordionTrigger>
               <AccordionContent className="pb-3">
                 <div className="overflow-x-auto">
@@ -959,21 +1015,24 @@ export default function Home() {
             </AccordionItem>
           )}
 
-          <AccordionItem value="passed"
-            className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <SectionHeader title="Passed / Skipped" count={jobs.passed.length} />
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <div className="overflow-x-auto">
-                <PassedTable jobs={jobs.passed} otherSections={otherSections("passed")}
-                  onEdit={(j) => setEditing({ section: "passed", job: j })}
-                  onMove={(t, j) => moveJob("passed", j.company, j.role, t)}
-                  onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
-                  onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined} />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+          {showPassed && (
+            <AccordionItem value="passed"
+              className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <SectionHeader title="Passed / Skipped" count={jobs.passed.length} visibleCount={searchQ ? filteredPassed.length : undefined} />
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <div className="overflow-x-auto">
+                  <PassedTable jobs={filteredPassed} otherSections={otherSections("passed")}
+                    onEdit={(j) => setEditing({ section: "passed", job: j })}
+                    onMove={(t, j) => moveJob("passed", j.company, j.role, t)}
+                    onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
+                    onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
+                    onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )}
 
         </Accordion>
 
