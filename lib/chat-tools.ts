@@ -130,16 +130,18 @@ export const ANTHROPIC_TOOLS = [
     },
   },
   {
-    name: "search_indeed",
+    name: "search_remote_jobs",
     description:
-      "Search Indeed for job listings matching a query. Use as fallback when a direct JD URL is blocked. Returns up to 10 results with title, company, link, and snippet.",
+      "Search RemoteOK for remote job listings by keyword. Use as a fallback when a direct JD URL is blocked or gated. Returns up to 10 results with title, company, and link.",
     input_schema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search query, e.g. 'Head of Design Stripe'" },
-        location: { type: "string", description: "Location filter, e.g. 'remote' or 'New York, NY'. Defaults to remote." },
+        keywords: {
+          type: "string",
+          description: "Space-separated keywords to search, e.g. 'design ux product'. Maps to RemoteOK tags.",
+        },
       },
-      required: ["query"],
+      required: ["keywords"],
     },
   },
 ];
@@ -258,32 +260,26 @@ export async function executeTool(
         return JSON.stringify({ text: text.slice(0, 6000), thin });
       }
 
-      case "search_indeed": {
-        const { query, location = "remote" } = input as { query: string; location?: string };
-        const feedUrl = `https://www.indeed.com/rss?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}&limit=10`;
+      case "search_remote_jobs": {
+        const { keywords } = input as { keywords: string };
+        const tags = keywords.trim().toLowerCase().replace(/\s+/g, ",");
+        const url = `https://remoteok.com/api?tag=${encodeURIComponent(tags)}&limit=10`;
         try {
-          const res = await fetch(feedUrl, {
+          const res = await fetch(url, {
             headers: { "User-Agent": "Mozilla/5.0 (compatible; deckhandAI/1.0)" },
             signal: AbortSignal.timeout(8000),
           });
-          if (!res.ok) return JSON.stringify({ error: `Indeed returned ${res.status}` });
-          const xml = await res.text();
-          const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
-            const block = m[1];
-            const title =
-              block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ??
-              block.match(/<title>(.*?)<\/title>/)?.[1] ?? "";
-            const link = block.match(/<link>(.*?)<\/link>/)?.[1] ?? "";
-            const snippet = (
-              block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ?? ""
-            )
-              .replace(/<[^>]+>/g, " ")
-              .replace(/\s+/g, " ")
-              .trim()
-              .slice(0, 250);
-            return { title, link, snippet };
-          });
-          return JSON.stringify(items.slice(0, 10));
+          if (!res.ok) return JSON.stringify({ error: `RemoteOK returned ${res.status}` });
+          const json = await res.json() as unknown[];
+          // First element is metadata, rest are jobs
+          const jobs = json.slice(1).filter((j): j is Record<string, unknown> => typeof j === "object" && j !== null);
+          const results = jobs.slice(0, 10).map((j) => ({
+            title: j.position ?? "",
+            company: j.company ?? "",
+            url: j.url ?? "",
+            tags: Array.isArray(j.tags) ? (j.tags as string[]).slice(0, 5).join(", ") : "",
+          }));
+          return JSON.stringify(results);
         } catch (err) {
           return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
         }

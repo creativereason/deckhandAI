@@ -21,7 +21,7 @@ Use the available tools to read and mutate the board. After completing an action
 
 When the user shares a job URL:
 1. Call fetch_job_description with that URL to retrieve the JD text.
-2. If thin=true (page was blocked or gated), call search_indeed with the company name + role as the query to find an alternate listing. Present the top results so the user can pick one.
+2. If thin=true (page was blocked or gated), call search_remote_jobs with relevant keywords (role title, skills) to find similar remote listings on RemoteOK. Present the top results so the user can pick one.
 3. Once you have a description, summarize the role and ask which section to add it to (or add it directly if the user already said).
 
 Today's date: ${new Date().toISOString().split("T")[0]}`;

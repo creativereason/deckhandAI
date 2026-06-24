@@ -18,7 +18,7 @@ const TOOL_LABELS: Record<string, string> = {
   flag_ghost: "Flagging as ghost…",
   delete_job: "Deleting job…",
   fetch_job_description: "Fetching job description…",
-  search_indeed: "Searching Indeed…",
+  search_remote_jobs: "Searching RemoteOK…",
 };
 
 const SUGGESTIONS_MOBILE = [
