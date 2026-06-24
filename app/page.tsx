@@ -431,7 +431,7 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
             <SortableTh label="Fit" column="fit" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Salary" column="salary" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Notes" column="notes" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="AI" column="scoreRationale" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="hidden xl:table-cell text-left py-2 pr-4 font-medium" />
+            <SortableTh label="AI" column="scoreRationale" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="max-xl:hidden text-left py-2 pr-4 font-medium" />
             <SortableTh label="Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
             <th />
           </tr>
@@ -459,7 +459,7 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
               </td>
               <td className="py-2.5 pr-4 text-stone-500 dark:text-gray-400 max-w-[120px] text-xs">{j.salary || "—"}</td>
               <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[240px] text-xs leading-relaxed">{j.notes}</td>
-              <td className="hidden xl:table-cell py-2.5 pr-4 text-p-dusk dark:text-gray-500 max-w-[280px] text-xs italic leading-relaxed">{j.scoreRationale}</td>
+              <td className="max-xl:hidden py-2.5 pr-4 text-p-dusk dark:text-gray-500 max-w-[280px] text-xs italic leading-relaxed">{j.scoreRationale}</td>
               <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
               <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                 <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
