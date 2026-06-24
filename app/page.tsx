@@ -408,6 +408,7 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
             <p className="text-base text-gray-700 dark:text-gray-200 mt-1 leading-snug">{j.role}</p>
             {j.salary && <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{j.salary}</p>}
             {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed">{j.notes}</p>}
+            {j.scoreRationale && <p className="text-xs text-p-dusk dark:text-gray-500 italic mt-1 leading-relaxed">{j.scoreRationale}</p>}
             <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
               <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
                 onMove={(t) => handleMove(t, j)}
@@ -430,6 +431,7 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
             <SortableTh label="Fit" column="fit" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Salary" column="salary" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Notes" column="notes" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
+            <SortableTh label="AI" column="scoreRationale" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="hidden xl:table-cell text-left py-2 pr-4 font-medium" />
             <SortableTh label="Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
             <th />
           </tr>
@@ -443,9 +445,21 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
                 {j.company}{j.isNew && <NewChip />}
               </td>
               <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-200">{j.role}</td>
-              <td className="py-2.5 pr-4"><FitBadge label={j.fit} /></td>
+              <td className="py-2.5 pr-4">
+                {j.scoreRationale ? (
+                  <div className="relative group/fit inline-block">
+                    <FitBadge label={j.fit} />
+                    <div className="xl:hidden absolute left-0 top-full mt-1.5 z-20 w-64 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover/fit:opacity-100 pointer-events-none transition-opacity shadow-xl leading-relaxed">
+                      {j.scoreRationale}
+                    </div>
+                  </div>
+                ) : (
+                  <FitBadge label={j.fit} />
+                )}
+              </td>
               <td className="py-2.5 pr-4 text-stone-500 dark:text-gray-400 max-w-[120px] text-xs">{j.salary || "—"}</td>
               <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[240px] text-xs leading-relaxed">{j.notes}</td>
+              <td className="hidden xl:table-cell py-2.5 pr-4 text-p-dusk dark:text-gray-500 max-w-[280px] text-xs italic leading-relaxed">{j.scoreRationale}</td>
               <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
               <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                 <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
