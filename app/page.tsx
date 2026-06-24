@@ -367,7 +367,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onE
             <SortableTh label="Date" column="date" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Salary" column="salary" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Notes" column="notes" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
+            <SortableTh label="Job Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
             <th />
           </tr>
         </thead>
@@ -472,7 +472,7 @@ function ProspectTable({ jobs, section, onMove, onEdit, onDismiss, onGenerate, o
             <SortableTh label="Salary" column="salary" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Notes" column="notes" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="AI" column="scoreRationale" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="max-xl:hidden text-left py-2 pr-4 font-medium" />
-            <SortableTh label="Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
+            <SortableTh label="Job Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
             <th />
           </tr>
         </thead>
@@ -581,7 +581,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onExportResume, onEx
             <SortableTh label="Role" column="role" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Salary" column="salary" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
             <SortableTh label="Reason" column="notes" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
+            <SortableTh label="Job Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
             <th />
           </tr>
         </thead>
