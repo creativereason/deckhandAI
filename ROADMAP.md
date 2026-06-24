@@ -243,6 +243,35 @@ A floating chat interface that lets you manage the job board through natural lan
 
 ---
 
+## M9 — Automated Testing
+
+Establish a test baseline that catches regressions in the data layer, API routes, and critical UI flows before they reach production.
+
+**Unit / integration**
+- [ ] `lib/jobs.ts` — read/write round-trip, section moves, dedup logic
+- [ ] `lib/scrape-filters.ts` — title qualification, location matching edge cases
+- [ ] `lib/config.ts` + `lib/scrape-targets.ts` — config parsing, fallback behavior
+- [ ] `/api/jobs` — GET, POST, PATCH, DELETE happy paths and error cases
+- [ ] `/api/scrape/review` — approve and reject paths update correct sections
+- [ ] `/api/generate` — streaming response shape, provider switching
+
+**End-to-end (Playwright)**
+- [ ] Login flow
+- [ ] Add a job → appears in correct section
+- [ ] Edit a job → changes persist
+- [ ] Move a job between sections → appears in destination, removed from source
+- [ ] Scrape review queue — approve and dismiss items
+- [ ] Generate modal — opens, streams output, export buttons present
+- [ ] Settings — save profile, toggle preferences, reflect on board
+
+**CI**
+- [ ] Run unit/integration tests on every PR (`pnpm test`)
+- [ ] Run E2E suite on merge to main against a seeded demo dataset
+
+**Effort:** ~4 days
+
+---
+
 ## Known Bugs
 
 - [ ] **Edit modal section change discards notes** — if a user edits the notes field then changes the section dropdown in the job edit modal, the notes changes are lost (section change re-initializes form state)
