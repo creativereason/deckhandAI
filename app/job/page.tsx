@@ -12,6 +12,7 @@ import {
   type JobStatus,
 } from "@/lib/jobs";
 import { getAppliedIcon, getProspectIcon } from "@/lib/job-signal";
+import { SignalIcon } from "@/components/SignalIcon";
 import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import AIGenerationCard from "@/components/AIGenerationCard";
@@ -470,7 +471,7 @@ function JobDetailContent() {
         <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-6 py-5 mb-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
-              <span className="text-3xl leading-none mt-0.5 shrink-0">{icon}</span>
+              <span className="leading-none mt-0.5 shrink-0 flex items-center"><SignalIcon icon={icon} size={28} /></span>
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{foundJob.company}</h1>
                 <p className="text-base text-gray-500 dark:text-gray-400 mt-0.5">{foundJob.role}</p>

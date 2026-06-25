@@ -51,6 +51,7 @@ const PERSONAS = [
   {
     name: "design",
     label: "Alex Chen — Designer",
+    theme: "dark",
     env: { DEMO_PERSONA: "design" },
     appliedJob:  { company: "Stripe",    role: "Creative Director, Brand Experiences", section: "applied"  },
     prospectJob: { company: "Anthropic", role: "Head of Product Design",               section: "prospect" },
@@ -58,6 +59,7 @@ const PERSONAS = [
   {
     name: "dev",
     label: "Jordan Rivera — Staff Engineer",
+    theme: "light",
     env: { DEMO_PERSONA: "dev" },
     appliedJob:  { company: "Render",    role: "Staff Design Engineer",                section: "applied"  },
     prospectJob: { company: "Anthropic", role: "Software Engineer, Claude.ai Product", section: "prospect" },
@@ -65,6 +67,7 @@ const PERSONAS = [
   {
     name: "onboarding",
     label: "Onboarding (empty state)",
+    theme: "light",
     env: { DEMO_PERSONA: "onboarding" },
     appliedJob:  null,
     prospectJob: null,
@@ -195,8 +198,17 @@ async function shotDesktop(page, dir, name, { fullPage = false } = {}) {
   console.log(`    ${name}--desktop.png`);
 }
 
-async function newLoggedInPage(browser) {
+function applyTheme(ctx, theme) {
+  return ctx.addInitScript((t) => {
+    localStorage.setItem("theme", t);
+    if (t === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  }, theme);
+}
+
+async function newLoggedInPage(browser, theme = "light") {
   const ctx = await browser.newContext();
+  await applyTheme(ctx, theme);
   await ctx.request.post(`${BASE}/api/auth/login`, { data: { password: PASSWORD } });
   const page = await ctx.newPage();
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 90_000 });
@@ -206,27 +218,27 @@ async function newLoggedInPage(browser) {
 
 // ─── Individual screen captures ───────────────────────────────────────────────
 
-async function captureLogin(browser, dir) {
+async function captureLogin(browser, dir, theme = "light") {
   console.log("  → login");
   const ctx = await browser.newContext();
+  await applyTheme(ctx, theme);
   const page = await ctx.newPage();
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await shot(page, dir, "login");
   await ctx.close();
 }
 
-async function captureBoard(browser, dir) {
+async function captureBoard(browser, dir, theme = "light") {
   console.log("  → board");
-  const { page, ctx } = await newLoggedInPage(browser);
+  const { page, ctx } = await newLoggedInPage(browser, theme);
   await sleep(400);
   await shot(page, dir, "board", { fullPage: true });
   await ctx.close();
 }
 
-async function captureChat(browser, dir) {
+async function captureChat(browser, dir, theme = "light") {
   console.log("  → chat (open)");
-  const { page, ctx } = await newLoggedInPage(browser);
-  // Open the floating chat assistant
+  const { page, ctx } = await newLoggedInPage(browser, theme);
   await page.getByRole("button", { name: "Open assistant" }).click();
   await sleep(400);
   await shot(page, dir, "chat-open");
@@ -246,9 +258,9 @@ async function captureChat(browser, dir) {
   await ctx.close();
 }
 
-async function captureJobDetail(browser, dir, { company, role, section, label }) {
+async function captureJobDetail(browser, dir, { company, role, section, label }, theme = "light") {
   console.log(`  → job detail: ${company} (${label})`);
-  const { page, ctx } = await newLoggedInPage(browser);
+  const { page, ctx } = await newLoggedInPage(browser, theme);
   const url = `${BASE}/job?company=${encodeURIComponent(company)}&role=${encodeURIComponent(role)}&section=${section}`;
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(500);
@@ -256,45 +268,46 @@ async function captureJobDetail(browser, dir, { company, role, section, label })
   await ctx.close();
 }
 
-async function captureSettings(browser, dir) {
+async function captureSettings(browser, dir, theme = "light") {
   console.log("  → settings");
-  const { page, ctx } = await newLoggedInPage(browser);
+  const { page, ctx } = await newLoggedInPage(browser, theme);
   await page.goto(`${BASE}/settings`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(400);
   await shot(page, dir, "settings");
   await ctx.close();
 }
 
-async function captureSettingsModel(browser, dir) {
+async function captureSettingsModel(browser, dir, theme = "light") {
   console.log("  → settings / model");
-  const { page, ctx } = await newLoggedInPage(browser);
+  const { page, ctx } = await newLoggedInPage(browser, theme);
   await page.goto(`${BASE}/settings/model`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(400);
   await shot(page, dir, "settings-model");
   await ctx.close();
 }
 
-async function captureSettingsProfileAI(browser, dir) {
+async function captureSettingsProfileAI(browser, dir, theme = "light") {
   console.log("  → settings / profile & AI");
-  const { page, ctx } = await newLoggedInPage(browser);
+  const { page, ctx } = await newLoggedInPage(browser, theme);
   await page.goto(`${BASE}/settings/profile-ai`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(400);
   await shot(page, dir, "settings-profile-ai");
   await ctx.close();
 }
 
-async function captureSettingsExport(browser, dir) {
+async function captureSettingsExport(browser, dir, theme = "light") {
   console.log("  → settings / export style");
-  const { page, ctx } = await newLoggedInPage(browser);
+  const { page, ctx } = await newLoggedInPage(browser, theme);
   await page.goto(`${BASE}/settings/export`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(400);
   await shot(page, dir, "settings-export");
   await ctx.close();
 }
 
-async function captureLoginWithForgot(browser, dir) {
+async function captureLoginWithForgot(browser, dir, theme = "light") {
   console.log("  → login (forgot password open)");
   const ctx = await browser.newContext();
+  await applyTheme(ctx, theme);
   const page = await ctx.newPage();
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(600);
@@ -304,8 +317,9 @@ async function captureLoginWithForgot(browser, dir) {
   await ctx.close();
 }
 
-async function captureOnboardingSteps(browser, dir) {
+async function captureOnboardingSteps(browser, dir, theme = "light") {
   const ctx = await browser.newContext();
+  await applyTheme(ctx, theme);
   await ctx.request.post(`${BASE}/api/auth/login`, { data: { password: PASSWORD } });
   const page = await ctx.newPage();
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 90_000 });
@@ -361,32 +375,33 @@ async function captureOnboardingSteps(browser, dir) {
 
 async function runPersona(browser, persona) {
   const dir = join(OUT, persona.name);
+  const theme = persona.theme ?? "light";
   mkdirSync(dir, { recursive: true });
 
-  await captureLogin(browser, dir);
+  await captureLogin(browser, dir, theme);
 
   if (persona.name === "onboarding") {
-    await captureLoginWithForgot(browser, dir);
-    await captureOnboardingSteps(browser, dir);
+    await captureLoginWithForgot(browser, dir, theme);
+    await captureOnboardingSteps(browser, dir, theme);
     return;
   }
 
-  await captureBoard(browser, dir);
-  await captureChat(browser, dir);
+  await captureBoard(browser, dir, theme);
+  await captureChat(browser, dir, theme);
 
   if (persona.appliedJob) {
-    await captureJobDetail(browser, dir, { ...persona.appliedJob, label: "applied" });
+    await captureJobDetail(browser, dir, { ...persona.appliedJob, label: "applied" }, theme);
   }
   if (persona.prospectJob) {
-    await captureJobDetail(browser, dir, { ...persona.prospectJob, label: "prospect" });
+    await captureJobDetail(browser, dir, { ...persona.prospectJob, label: "prospect" }, theme);
   }
 
   // Settings pages — only needed once, use design persona
   if (persona.name === "design") {
-    await captureSettings(browser, dir);
-    await captureSettingsModel(browser, dir);
-    await captureSettingsProfileAI(browser, dir);
-    await captureSettingsExport(browser, dir);
+    await captureSettings(browser, dir, theme);
+    await captureSettingsModel(browser, dir, theme);
+    await captureSettingsProfileAI(browser, dir, theme);
+    await captureSettingsExport(browser, dir, theme);
   }
 }
 

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AppliedJob, ProspectJob, PassedJob, JobSection, JobType } from "@/lib/jobs";
 import { getAppliedIcon, getProspectIcon } from "@/lib/job-signal";
+import { SignalIcon } from "@/components/SignalIcon";
 
 type AnyJob = AppliedJob | ProspectJob | PassedJob;
 
@@ -106,7 +107,7 @@ export default function JobDetailPanel({
           <div className="px-6 pt-6 pb-5 border-b border-p-linen dark:border-p-dark-mid shrink-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
-                <span className="text-3xl leading-none mt-0.5 shrink-0">{icon}</span>
+                <span className="leading-none mt-0.5 shrink-0 flex items-center"><SignalIcon icon={icon} size={28} /></span>
                 <div className="min-w-0">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{job.company}</h2>
                   <p className="text-base text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{job.role}</p>
@@ -135,7 +136,7 @@ export default function JobDetailPanel({
                 <Chip label={effectiveType} cls={TYPE_STYLES[effectiveType]} />
               )}
               {isApplied && appliedJob!.isGhost && (
-                <Chip label="👻 ghost risk" cls="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300" />
+                <Chip label="ghost risk" cls="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300" />
               )}
               {isProspect && prospectJob!.isNew && (
                 <Chip label="new" cls="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300" />

@@ -21,6 +21,7 @@ import {
 } from "@/lib/jobs";
 import { nextSort, sortRows, type SortState } from "@/lib/table-sort";
 import { getAppliedIcon, getProspectIcon, iconSortKey } from "@/lib/job-signal";
+import { SignalIcon } from "@/components/SignalIcon";
 import {
   Accordion,
   AccordionContent,
@@ -125,7 +126,11 @@ function NewChip() {
 
 function RowIcon({ icon }: { icon: string }) {
   return (
-    <td className="py-2.5 pr-2 text-base leading-none w-6 text-center select-none">{icon}</td>
+    <td className="py-2.5 pr-2 w-6 text-center select-none">
+      <span className="flex items-center justify-center">
+        <SignalIcon icon={icon} size={14} />
+      </span>
+    </td>
   );
 }
 
@@ -341,7 +346,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
               )}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-base leading-none shrink-0">{getAppliedIcon(j)}</span>
+                  <span className="leading-none shrink-0 flex items-center"><SignalIcon icon={getAppliedIcon(j)} size={16} /></span>
                   <span className="font-semibold text-gray-900 dark:text-white text-base truncate">{j.company}</span>
                   <StatusBadge label={j.status} />
                   {j.type && <TypeBadge type={j.type} />}
@@ -456,7 +461,7 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
               )}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                  <span className="text-base leading-none shrink-0">{getProspectIcon(j)}</span>
+                  <span className="leading-none shrink-0 flex items-center"><SignalIcon icon={getProspectIcon(j)} size={16} /></span>
                   <span className="font-semibold text-gray-900 dark:text-white text-base truncate">{j.company}</span>
                   {j.isNew && <NewChip />}
                   <FitBadge label={j.fit} />
@@ -584,7 +589,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExport
               )}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-base leading-none shrink-0">🔴</span>
+                  <span className="leading-none shrink-0 flex items-center"><SignalIcon icon="🔴" size={16} /></span>
                   <span className="font-semibold text-gray-600 dark:text-gray-400 text-base truncate">{j.company}</span>
                 </div>
                 {j.url && <JobLink url={j.url} />}

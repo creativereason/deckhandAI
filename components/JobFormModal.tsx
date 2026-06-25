@@ -11,6 +11,7 @@ import {
   PassedJob,
 } from "@/lib/jobs";
 import { getAppliedIcon, getProspectIcon, getSignalLabel } from "@/lib/job-signal";
+import { SignalIcon } from "@/components/SignalIcon";
 
 type JobRecord = AppliedJob | ProspectJob | PassedJob;
 type Board = "applied" | "prospects" | "passed";
@@ -228,7 +229,7 @@ export default function JobFormModal({
               : "🔴";
             return (
               <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-                <span className="text-xl leading-none">{icon}</span>
+                <span className="leading-none flex items-center"><SignalIcon icon={icon} size={18} /></span>
                 <span>{getSignalLabel(icon, isProspect ? "prospect" : "applied")}</span>
               </span>
             );
@@ -351,7 +352,7 @@ export default function JobFormModal({
                     onChange={(e) => setForm((f) => ({ ...f, isGhost: e.target.checked }))}
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    👻 Ghost job risk
+                    Ghost job risk
                   </span>
                 </label>
                 <p className="mt-0.5 ml-6 text-xs text-stone-400 dark:text-gray-500">Flag if this posting looks like a ghost job or has been reposted repeatedly.</p>
