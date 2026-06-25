@@ -1,0 +1,49 @@
+{
+  "candidate": {
+    "name": "Jordan Rivera",
+    "email": "jordan@jordanrivera.dev",
+    "phone": "512.555.0247",
+    "website": "jordanrivera.dev",
+    "linkedin": "linkedin.com/in/jordanriveradev"
+  },
+  "preferences": {
+    "titles": [
+      "Staff Software Engineer",
+      "Senior Software Engineer",
+      "Principal Engineer",
+      "Engineering Manager",
+      "Staff Engineer, Frontend"
+    ],
+    "salary": {
+      "min_fte": 185000,
+      "min_contract_hourly": 95
+    },
+    "open_to_contract": true,
+    "locations": {
+      "remote": true,
+      "hybrid": true,
+      "hub_city": "Austin",
+      "hub_state": "TX",
+      "hub_zip": "78701",
+      "hub_radius_miles": 30
+    }
+  },
+  "scraping": {
+    "schedule": "0 8 * * 1-5"
+  },
+  "ai": {
+    "provider": "custom",
+    "model": "gemini-2.0-flash",
+    "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+  },
+  "export": {
+    "font": "Calibri",
+    "accentColor": "#0F172A",
+    "bodyColor": "#334155",
+    "metaColor": "#64748B",
+    "marginTopDxa": 864,
+    "marginBottomDxa": 864,
+    "marginLeftDxa": 1080,
+    "marginRightDxa": 1080
+  }
+}

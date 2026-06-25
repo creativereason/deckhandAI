@@ -1,0 +1,281 @@
+{
+  "applied": [
+    {
+      "company": "Render",
+      "role": "Staff Design Engineer",
+      "status": "interview",
+      "date": "2026-06-02",
+      "salary": "$218,000–$300,000",
+      "notes": "Second round with Head of Product scheduled 6/28. Role owns the full quality bar for user experience on Render's cloud platform — from interaction design through production-ready React/TypeScript code. Not a prototyping role: you ship in the codebase. Requires 8+ yrs at the design-engineering intersection, exceptional React/TypeScript/CSS depth, ability to design independently in Figma AND in code, and strong craft instincts (typography, motion, spacing). Nice to have: animation/spring physics experience, open-source contributions, AI coding agent fluency. 6M+ developers on platform, Series C ($257M total). The portfolio alignment here is very strong.",
+      "url": "https://to.indeed.com/aawbwjvxkl8p",
+      "type": "remote",
+      "fit": "strong",
+      "scoreRationale": "Comp ceiling ($300K) exceeds target, fully remote, and the design-engineer hybrid scope is an exact match for a frontend engineer with strong design sensibility. Render's dev-tools domain and craft culture are direct portfolio alignment."
+    },
+    {
+      "company": "Linear",
+      "role": "Senior Software Engineer, Product",
+      "status": "screening",
+      "date": "2026-06-09",
+      "salary": "$190,000–$240,000",
+      "notes": "Recruiter screen done, moving to technical interview with Karri (CEO). Linear is fully async-remote. Small eng team (~25). TypeScript + React stack, strong code review culture. They expect engineers to care deeply about craft — this isn't a ticket-factory environment.",
+      "url": "https://linear.app/careers",
+      "type": "remote",
+      "fit": "strong",
+      "scoreRationale": "Linear's tooling domain is a direct portfolio match. Comp in range, async-first remote, and the team's craft standards align with track record. High signal from early recruiter conversation."
+    },
+    {
+      "company": "Vercel",
+      "role": "Staff Engineer, Frontend Platform",
+      "status": "applied",
+      "date": "2026-06-15",
+      "salary": "$195,000–$245,000",
+      "notes": "Applied via referral from former colleague. Role owns frontend infrastructure for vercel.com and the Dashboard — Next.js App Router, design system, performance. Strong portfolio angle with component library and LLM integration work.",
+      "url": "https://vercel.com/careers",
+      "type": "remote",
+      "fit": "strong"
+    },
+    {
+      "company": "Trunk Tools",
+      "role": "Senior Full Stack Engineer",
+      "status": "interview",
+      "date": "2026-05-29",
+      "salary": "$166,500–$215,000",
+      "notes": "Third round — system design panel with two senior engineers on 6/27. Trunk Tools is the leading AI platform for construction ($40M Series B, Insight Partners). Stack is TypeScript + Node + Express + React. Feature squad ownership model — drive new capabilities from concept to production. LLM-enabled agentic product, real users, hypergrowth. Passed coding screen (TypeScript refactor) and full-stack interview (React component through DB). NYC and Austin offices; free lunch in ATX office.",
+      "url": "https://to.indeed.com/aaj68j7l2727",
+      "type": "hybrid",
+      "fit": "good",
+      "scoreRationale": "Real product impact and strong TypeScript/Node/React alignment. Comp ceiling ($215K) is below target but the agentic construction AI space is novel and the zero-to-one ownership model is compelling. Austin office is a commute bonus."
+    },
+    {
+      "company": "Shopify",
+      "role": "Senior Staff Engineer, Storefront",
+      "status": "applied",
+      "date": "2026-06-18",
+      "salary": "$200,000–$255,000",
+      "notes": "Applied via Greenhouse. Large-scale React/Node platform engineering. Storefront team owns the buyer experience for millions of merchants. Strong comp, remote, and the platform complexity (GraphQL, edge, internationalization) is a good stretch.",
+      "url": "https://www.shopify.com/careers",
+      "type": "remote",
+      "fit": "good"
+    },
+    {
+      "company": "Figma",
+      "role": "Staff Software Engineer, Editor",
+      "status": "declined",
+      "date": "2026-06-04",
+      "salary": "$225,000–$280,000",
+      "notes": "Declined after onsite — feedback was strong on system design but they prioritized a candidate with C++ / canvas rendering depth. Would reapply for an adjacent role (infra, design systems).",
+      "url": "https://www.figma.com/careers",
+      "type": "remote",
+      "fit": "strong"
+    },
+    {
+      "company": "Notion",
+      "role": "Staff Engineer, Developer Platform",
+      "status": "screening",
+      "date": "2026-06-17",
+      "salary": "$200,000–$250,000",
+      "notes": "First recruiter call done. Notion's Developer Platform team owns the public API, blocks SDK, and integrations. Strong TypeScript/Node depth required. They're building out MCP server and AI agent integrations — exactly aligned with current work.",
+      "url": "https://www.notion.so/careers",
+      "type": "remote",
+      "fit": "strong"
+    },
+    {
+      "company": "Stripe",
+      "role": "Senior Software Engineer, Dashboard",
+      "status": "offer",
+      "date": "2026-05-20",
+      "salary": "$210,000–$260,000",
+      "notes": "Offer received 6/21. Base $235K + equity. Deadline 6/29. Strong team and comp, but concerned about slow shipping cadence and heavy review culture at Stripe scale. Decision pending.",
+      "url": "https://stripe.com/jobs",
+      "type": "remote",
+      "fit": "strong",
+      "scoreRationale": "Top comp, great brand, strong engineering culture. Primary concern is Stripe's deliberate pace — may not match the shipping velocity preference."
+    }
+  ],
+  "prospect": [
+    {
+      "company": "Anthropic",
+      "role": "Software Engineer, Claude.ai Product",
+      "fit": "strong",
+      "salary": "$220,000–$300,000",
+      "notes": "Remote. Building the Claude.ai web product — one of the fastest-growing AI interfaces in history. TypeScript/React frontend, strong emphasis on AI-native UX patterns. Mission-driven environment with extreme craft bar.",
+      "url": "https://www.anthropic.com/careers",
+      "type": "remote",
+      "scoreRationale": "Top-of-market comp, mission-driven, and building AI products daily with Claude is a once-in-a-career opportunity. Strong TypeScript/React alignment and AI integration track record make this a top-priority prospect.",
+      "isNew": true
+    },
+    {
+      "company": "Deepgram",
+      "role": "Staff Software Engineer, Voice AI",
+      "fit": "strong",
+      "salary": "$246,000–$307,000",
+      "notes": "Remote. Deepgram is the leading Voice AI platform (50K+ developers, 200K+ orgs including Twilio and Cloudflare). Staff-level role on the Voice Agents team — ultra-robust ASR, real-time ordering agents, 3rd-party integrations (POS, loyalty, payments). Requires 7+ yrs, strong backend + cloud (Python/Go, AWS, Docker/K8s), AI/ML workflow comfort. Strong AI-first culture: AI tool use is measured and expected daily.",
+      "url": "https://to.indeed.com/aarbxzfmwwxp",
+      "type": "remote",
+      "scoreRationale": "Comp ceiling ($307K) is best in pipeline. Voice AI is a compelling technical domain. Backend + LLM integration focus is a strong portfolio match. AI-first operating rhythm aligns with current workflow. Very high priority.",
+      "isNew": true
+    },
+    {
+      "company": "Valon",
+      "role": "Staff Software Engineer",
+      "fit": "good",
+      "salary": "$255,000–$300,000",
+      "notes": "Remote (NYC HQ, new SF office). Valon is building the AI-native OS for regulated finance — $110B+ in mortgage servicing on their platform. Python + React + Docker + Kubernetes + GCP. Series C backed by a16z. Role requires 7+ yrs, strong system design, distributed systems experience. Fintech/regtech domain is adjacent but not a direct match.",
+      "url": "https://to.indeed.com/aafbtvc2ydgj",
+      "type": "remote",
+      "scoreRationale": "Comp is excellent ($255K–$300K). Regulated finance domain is a stretch but the engineering quality bar and a16z backing are strong signals. Worth a conversation to understand the actual day-to-day stack.",
+      "isNew": true
+    },
+    {
+      "company": "GitHub",
+      "role": "Staff Engineer, Copilot Platform",
+      "fit": "strong",
+      "salary": "$215,000–$265,000",
+      "notes": "Remote. Platform engineering for GitHub Copilot — the fastest-growing developer tool in history. TypeScript/Node + AI agent infrastructure. Direct alignment with AI-assisted dev workflow expertise.",
+      "url": "https://github.careers",
+      "type": "remote",
+      "scoreRationale": "AI coding tooling domain is a perfect match. Building the infrastructure other developers use to write code is exactly the right leverage point. Comp and remote flexibility both strong."
+    },
+    {
+      "company": "Loom",
+      "role": "Senior Staff Engineer, Core Product",
+      "fit": "good",
+      "salary": "$195,000–$235,000",
+      "notes": "Remote. Core product platform (video recording, sharing, commenting). Acquisition by Atlassian adds stability but may slow pace. TypeScript/React frontend focus. Good comp and interesting async-video product domain.",
+      "url": "https://www.loom.com/careers",
+      "type": "remote",
+      "scoreRationale": "Comp is solid and the video product infrastructure is technically interesting. Main risk is post-acquisition pace concerns — same flag as on the design persona tracker."
+    },
+    {
+      "company": "HubSpot",
+      "role": "Staff Engineer, CRM Platform",
+      "fit": "caution",
+      "salary": "$175,000–$210,000",
+      "notes": "Remote. Large Java + React codebase. Comp floor below target. Enterprise CRM platform has strong scale but the tech stack (legacy Java backend) is a mismatch with TypeScript/Node strength.",
+      "url": "https://www.hubspot.com/careers",
+      "type": "remote",
+      "scoreRationale": "Comp below minimum and the Java-heavy backend is a poor stack match. CRM product domain is not compelling enough to compensate. Lower priority."
+    }
+  ],
+  "local": [
+    {
+      "company": "Indeed",
+      "role": "Staff Software Engineer, Job Seeker",
+      "fit": "strong",
+      "salary": "$195,000–$240,000",
+      "notes": "Austin HQ, hybrid 2 days/week. Core product engineering for the job seeker experience — 350M monthly users. TypeScript/React frontend, Node.js backend, ML feature integrations. Large eng org with strong mentorship culture.",
+      "url": "https://indeed.com/cmp/Indeed/jobs",
+      "type": "hybrid",
+      "scoreRationale": "Local hybrid within easy commute, strong comp, and the scale of the product (350M MAU) is a compelling engineering challenge. TypeScript/React stack is a direct match.",
+      "isNew": true
+    },
+    {
+      "company": "LangChain",
+      "role": "Senior Engineer, Developer Experience",
+      "fit": "good",
+      "salary": "$165,000–$195,000",
+      "notes": "Austin office. LangChain is the leading open-source LLM framework (90M+ downloads). DX role owns SDKs, documentation tooling, and developer onboarding experience. Strong alignment with AI/LLM integration expertise and developer tooling background.",
+      "url": "https://to.indeed.com/aamsvyhkxc2h",
+      "type": "local",
+      "scoreRationale": "Local Austin role with strong LLM/AI platform alignment. Comp ($165K–$195K) is below top-of-market target but the product domain and open-source leverage are uniquely compelling. Worth a conversation."
+    },
+    {
+      "company": "Dell Technologies",
+      "role": "Staff Engineer, Developer Platform",
+      "fit": "caution",
+      "salary": "$155,000–$190,000",
+      "notes": "Round Rock — 18 miles. Hybrid 3 days/week. Large enterprise engineering org. Comp and pace both a mismatch. Good stability but not aligned with startup/product culture preference.",
+      "url": "https://jobs.dell.com",
+      "type": "hybrid",
+      "scoreRationale": "Comp below target and enterprise pace is a culture mismatch. Good fallback if nothing else closes, but not top priority."
+    }
+  ],
+  "staffing": [
+    {
+      "company": "Toptal",
+      "role": "Senior Full Stack Engineer — Contract",
+      "fit": "good",
+      "salary": "$100–$130/hr",
+      "notes": "Remote contract via Toptal network. TypeScript/React/Node engagements, typically 3-6 month terms with Series A-C product companies. Strong portfolio diversification and rate premium over FTE.",
+      "url": "https://www.toptal.com/developers",
+      "type": "contract",
+      "scoreRationale": "Hourly rate ($100–$130/hr ≈ $200–$270K annualized) exceeds FTE floor. Toptal network quality is high. Good fallback option with quick start times."
+    },
+    {
+      "company": "Braintrust",
+      "role": "Staff Engineer — AI Product Contract",
+      "fit": "good",
+      "salary": "$110–$140/hr",
+      "notes": "Decentralized talent network. AI-native product companies. Remote. Rate premium for LLM integration expertise. Current pipeline has 2 active matches in developer tooling space.",
+      "url": "https://www.usebraintrust.com",
+      "type": "contract",
+      "scoreRationale": "Strong rate for AI integration expertise, remote, and the AI-focused client base is a direct match. Contract flexibility preferred over long FTE onboarding timelines."
+    }
+  ],
+  "passed": [
+    {
+      "company": "Meta",
+      "role": "Staff Engineer, WhatsApp",
+      "salary": "$260,000–$310,000",
+      "notes": "Passed — PHP/Hack codebase and messaging-at-scale infrastructure is too far from product/DX focus. Layoff history in 2025 also a concern.",
+      "url": "https://metacareers.com/jobs"
+    },
+    {
+      "company": "Oracle",
+      "role": "Principal Engineer, Cloud",
+      "salary": "$165,000–$200,000",
+      "notes": "Comp below target. Java-heavy stack and enterprise culture mismatch. Passed.",
+      "url": "https://oracle.com/careers"
+    },
+    {
+      "company": "Salesforce",
+      "role": "Senior Software Engineer, Einstein Studio",
+      "salary": "$175,000–$215,000",
+      "notes": "IC comp floor. Java + Apex stack. Would revisit for a Staff-level opening in a TypeScript-forward team — domain overlap with enterprise AI is interesting.",
+      "url": "https://salesforce.com/careers"
+    },
+    {
+      "company": "Twitter / X",
+      "role": "Senior Engineer, Platform",
+      "salary": "Not listed",
+      "notes": "Passed — organizational instability, unclear technical direction, and culture post-acquisition are all concerns. Role has been reposted multiple times.",
+      "url": "https://careers.x.com"
+    }
+  ],
+  "pending": [
+    {
+      "company": "WorkOS",
+      "role": "Software Engineer",
+      "url": "https://to.indeed.com/aa9fwhzdlg6f",
+      "salary": "$150,000–$225,000",
+      "notes": "Remote. WorkOS powers auth and identity for 500+ enterprise SaaS companies (OpenAI, Cursor, Perplexity, Vercel, Plaid). Engineers own Dashboard, Admin Portal, AuthKit, and WorkDS design system (Radix-based). Role contributes to design system in Figma and code, ships improvements directly to production, and engages customers via Slack. Requires 7+ yrs with complex B2B/developer tools, systems thinking, front-end code depth, and AI workflow curiosity.",
+      "scrapeGroup": "remote",
+      "scrapeDate": "2026-06-25",
+      "fit": "strong",
+      "scoreRationale": "Developer infrastructure domain with direct TypeScript/React alignment. Customer list (OpenAI, Cursor, Vercel) is excellent signal quality. Comp ceiling ($225K) is slightly below top-of-market target but the scope and growth trajectory justify exploring."
+    },
+    {
+      "company": "Substack",
+      "role": "Product Engineer",
+      "url": "https://to.indeed.com/aaqplyxcnfts",
+      "salary": "$150,000–$215,000",
+      "notes": "Remote-friendly (SF or NYC preferred). Substack is looking for engineers with LLM fluency for prototyping and potentially owning front-end product surfaces. Fast, low-process environment; engineers collaborate directly with founders. TypeScript/React preferred, SwiftUI a bonus. Strong AI tool adoption expected.",
+      "scrapeGroup": "remote",
+      "scrapeDate": "2026-06-25",
+      "fit": "good",
+      "scoreRationale": "Unique startup role with strong TypeScript/React alignment and explicit LLM-fluency expectation. Comp below target but product mission (creator economy) and engineering culture are compelling. Worth a conversation."
+    },
+    {
+      "company": "RetailMeNot",
+      "role": "Software Engineer II",
+      "url": "https://www.retailmenot.com/corp/jobs",
+      "salary": "$115,000–$145,000",
+      "notes": "",
+      "scrapeGroup": "local",
+      "scrapeDate": "2026-06-25",
+      "fit": "caution",
+      "scoreRationale": "Comp ($115–145K) falls well below target and the consumer coupon product domain is a poor fit for developer tooling and AI integration track record."
+    }
+  ]
+}

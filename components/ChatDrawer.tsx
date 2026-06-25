@@ -1,6 +1,7 @@
 "use client";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { MarkdownContent } from "@/components/MarkdownContent";
 
 type ClientMsg = { role: "user" | "assistant"; content: string };
 
@@ -175,13 +176,16 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
             <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
               <div
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap",
+                  "max-w-[85%] rounded-2xl px-3.5 py-2",
                   m.role === "user"
                     ? "bg-p-blue dark:bg-p-accent-inv text-white rounded-tr-sm"
                     : "bg-p-linen dark:bg-p-dark-mid text-gray-900 dark:text-white rounded-tl-sm"
                 )}
               >
-                {m.content}
+                {m.role === "user"
+                  ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                  : <MarkdownContent text={m.content} />
+                }
               </div>
             </div>
           ))}

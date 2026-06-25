@@ -1,5 +1,6 @@
 export type JobStatus = "applied" | "screening" | "interview" | "offer" | "declined";
 export type JobFit = "strong" | "good" | "caution" | "weak";
+export type JobType = "remote" | "hybrid" | "local" | "contract";
 export type JobSection = "applied" | "prospect" | "local" | "staffing" | "passed" | "pending";
 
 export interface AppliedJob {
@@ -10,6 +11,7 @@ export interface AppliedJob {
   salary: string;
   notes: string;
   url: string;
+  type?: JobType;
   isGhost?: boolean;
 }
 
@@ -20,6 +22,7 @@ export interface ProspectJob {
   salary: string;
   notes: string;
   url: string;
+  type?: JobType;
   isNew?: boolean;
   scoreRationale?: string;
 }
@@ -30,6 +33,7 @@ export interface PassedJob {
   salary: string;
   notes: string;
   url: string;
+  type?: JobType;
 }
 
 export interface PendingJob {

@@ -1,0 +1,66 @@
+{
+  "name": "Jordan Rivera",
+  "title": "Staff Software Engineer",
+  "summary": "I build product-facing systems at the intersection of developer experience and user experience — TypeScript and React on the frontend, Node.js and Go on the backend, and increasingly LLM-powered features throughout. I've shipped production AI integrations, owned design systems in code, and led small engineering teams through zero-to-one builds. I care about code that ships fast, scales cleanly, and delights the people using it.",
+  "strengths": [
+    "TypeScript / React / Node.js",
+    "AI & LLM integrations",
+    "Developer tooling and DX",
+    "Design systems in code",
+    "Full-stack architecture",
+    "Technical mentorship",
+    "Startup velocity"
+  ],
+  "experience": [
+    {
+      "company": "Clarion Systems",
+      "role": "Staff Software Engineer",
+      "start": "2022-07",
+      "end": null,
+      "bullets": [
+        "Tech lead for the product's core workflow engine — a React/TypeScript frontend and Node.js backend serving 12,000 B2B users across 400 enterprise accounts.",
+        "Designed and shipped an LLM-powered document analysis feature that reduced manual data extraction by 70%; became the product's top sales differentiator within two quarters.",
+        "Built and maintained the internal component library (80+ components, Radix primitives, Tailwind CSS), cutting new feature UI development time by 35%.",
+        "Led a 3-engineer squad to replatform a legacy PHP monolith onto a Next.js App Router + PostgreSQL + tRPC stack; shipped in 14 weeks with zero downtime.",
+        "Established AI-assisted development standards across the engineering org: Claude Code + Cursor workflows that measurably improved individual output velocity."
+      ]
+    },
+    {
+      "company": "Beacon Labs",
+      "role": "Senior Software Engineer",
+      "start": "2019-04",
+      "end": "2022-06",
+      "bullets": [
+        "Built the core data visualization layer for a fintech analytics dashboard used by 2,000+ portfolio managers; shipped complex charting in React with real-time WebSocket updates.",
+        "Architected a Node.js microservices layer that decoupled 5 legacy integrations, reducing average API latency from 800ms to 95ms.",
+        "Shipped a zero-to-one mobile web experience in React that drove a 28% increase in monthly active users within the first 60 days.",
+        "Mentored 4 junior engineers through code review, pair programming, and architecture conversations; 3 were promoted to mid-level within 18 months."
+      ]
+    },
+    {
+      "company": "Trove Digital",
+      "role": "Software Engineer",
+      "start": "2016-08",
+      "end": "2019-03",
+      "bullets": [
+        "Full-stack development on React/Rails SaaS products for media and publishing clients.",
+        "Led migration of 3 client products from jQuery/PHP to modern React frontends.",
+        "Built an internal CMS tooling layer used across 12 active client projects; reduced content management ops time by 40%."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Texas at Austin",
+      "degree": "B.S. Computer Science",
+      "graduated": "2016-05",
+      "honors": ""
+    }
+  ],
+  "writing_rules": [
+    "Active voice. Concrete metrics over adjectives.",
+    "No closing flourish or restatement sentences."
+  ],
+  "portfolio_url": "https://jordanrivera.dev",
+  "portfolio_password": ""
+}

@@ -1,26 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <!-- Water line -->
-  <path d="M4 40 Q12 37 20 40 Q28 43 36 40 Q44 37 52 40 Q58 42 60 40" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.7"/>
-
   <!-- Hull -->
-  <path d="M14 40 L18 48 Q32 52 46 48 L50 40 Z" fill="#1e293b"/>
+  <path d="M12 42 L16 50 Q32 54 48 50 L52 42 Z" fill="#1e3a5f"/>
+
+  <!-- Hull highlight -->
+  <path d="M16 50 Q32 54 48 50 L46 52 Q32 56 18 52 Z" fill="#16304f"/>
 
   <!-- Mast -->
-  <line x1="32" y1="40" x2="32" y2="12" stroke="#1e293b" stroke-width="2" stroke-linecap="round"/>
+  <line x1="32" y1="42" x2="32" y2="10" stroke="#1e3a5f" stroke-width="2.5" stroke-linecap="round"/>
 
-  <!-- Main sail -->
-  <path d="M32 14 L32 38 L18 38 Z" fill="#2563eb" opacity="0.9"/>
+  <!-- Main sail — left, larger -->
+  <path d="M32 12 L32 40 L14 40 Z" fill="#2563eb"/>
 
-  <!-- Jib sail -->
-  <path d="M32 18 L32 36 L46 30 Z" fill="#60a5fa" opacity="0.8"/>
-
-  <!-- Fish jumping (below waterline, tail out) -->
-  <ellipse cx="22" cy="46" rx="7" ry="3" fill="#60a5fa" opacity="0.85" transform="rotate(-20 22 46)"/>
-  <!-- Fish tail -->
-  <path d="M15.5 49 L12 47 L14 52 Z" fill="#60a5fa" opacity="0.85"/>
-  <!-- Fish eye -->
-  <circle cx="26.5" cy="44.5" r="0.8" fill="#0f172a"/>
+  <!-- Jib sail — right, smaller -->
+  <path d="M32 17 L32 38 L50 33 Z" fill="#60a5fa"/>
 
   <!-- Boom -->
-  <line x1="32" y1="38" x2="46" y2="42" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="32" y1="40" x2="49" y2="44.5" stroke="#1e3a5f" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Water line — subtle waves -->
+  <path d="M6 43 Q13 40.5 20 43 Q27 45.5 34 43 Q41 40.5 48 43 Q54 44.5 58 43" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.6"/>
 </svg>

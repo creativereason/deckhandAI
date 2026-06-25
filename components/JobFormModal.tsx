@@ -5,6 +5,7 @@ import {
   JobSection,
   JobFit,
   JobStatus,
+  JobType,
   AppliedJob,
   ProspectJob,
   PassedJob,
@@ -12,14 +13,34 @@ import {
 import { getAppliedIcon, getProspectIcon, getSignalLabel } from "@/lib/job-signal";
 
 type JobRecord = AppliedJob | ProspectJob | PassedJob;
+type Board = "applied" | "prospects" | "passed";
 
-const SECTIONS: { value: JobSection; label: string }[] = [
-  { value: "prospect", label: "Prospect (remote)" },
-  { value: "local", label: "Local / Hybrid" },
-  { value: "staffing", label: "Staffing / Contract" },
-  { value: "applied", label: "Applied" },
-  { value: "passed", label: "Passed" },
+const JOB_TYPES: { value: JobType; label: string }[] = [
+  { value: "remote", label: "Remote" },
+  { value: "hybrid", label: "Hybrid" },
+  { value: "local", label: "Local" },
+  { value: "contract", label: "Contract" },
 ];
+
+function boardFromSection(section: JobSection): Board {
+  if (section === "applied") return "applied";
+  if (section === "passed") return "passed";
+  return "prospects";
+}
+
+function typeFromSection(section: JobSection): JobType {
+  if (section === "staffing") return "contract";
+  if (section === "local") return "hybrid";
+  return "remote";
+}
+
+function sectionFromBoardAndType(board: Board, jobType: JobType): JobSection {
+  if (board === "applied") return "applied";
+  if (board === "passed") return "passed";
+  if (jobType === "contract") return "staffing";
+  if (jobType === "hybrid" || jobType === "local") return "local";
+  return "prospect";
+}
 
 interface Props {
   mode: "add" | "edit";
@@ -95,7 +116,12 @@ export default function JobFormModal({
   onClose,
   onSaved,
 }: Props) {
-  const [section, setSection] = useState<JobSection>(initialSection);
+  const [board, setBoard] = useState<Board>(() => boardFromSection(initialSection));
+  const [jobType, setJobType] = useState<JobType>(() => {
+    const j = job as (ProspectJob & { type?: JobType }) | undefined;
+    return j?.type ?? typeFromSection(initialSection);
+  });
+  const section = sectionFromBoardAndType(board, jobType);
   const [form, setForm] = useState(() => jobToForm(initialSection, job));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +129,12 @@ export default function JobFormModal({
   const [scoreRationale, setScoreRationale] = useState<string>("");
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  function onBoardChange(next: Board) {
+    setBoard(next);
+    const nextSection = sectionFromBoardAndType(next, jobType);
+    setForm(jobToForm(nextSection, job));
+  }
 
   async function scoreFit() {
     if (!form.company || !form.role) return;
@@ -131,17 +163,12 @@ export default function JobFormModal({
     }
   }
 
-  function onSectionChange(next: JobSection) {
-    setSection(next);
-    setForm(jobToForm(next, job));
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
 
-    const payload = buildJobPayload(section, form);
+    const payload = { ...buildJobPayload(section, form), ...(board === "prospects" ? { type: jobType } : {}) };
 
     try {
       if (mode === "add") {
@@ -193,8 +220,8 @@ export default function JobFormModal({
             {mode === "add" ? "Add Job" : "Edit Job"}
           </h2>
           {(() => {
-            const isProspect = section === "prospect" || section === "local" || section === "staffing";
-            const icon = section === "applied"
+            const isProspect = board === "prospects";
+            const icon = board === "applied"
               ? getAppliedIcon({ status: form.status, date: form.date, notes: form.notes })
               : isProspect
               ? getProspectIcon({ fit: form.fit })
@@ -209,20 +236,33 @@ export default function JobFormModal({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Section</label>
+          <div className={board === "prospects" ? "col-span-1" : "col-span-2"}>
+            <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Board</label>
             <select
               className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
-              value={section}
-              onChange={(e) => onSectionChange(e.target.value as JobSection)}
+              value={board}
+              onChange={(e) => onBoardChange(e.target.value as Board)}
             >
-              {SECTIONS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
+              <option value="applied">Applied</option>
+              <option value="prospects">Prospects</option>
+              <option value="passed">Passed</option>
             </select>
           </div>
+
+          {board === "prospects" && (
+            <div>
+              <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Type</label>
+              <select
+                className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+                value={jobType}
+                onChange={(e) => setJobType(e.target.value as JobType)}
+              >
+                {JOB_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Company</label>
@@ -243,7 +283,7 @@ export default function JobFormModal({
             />
           </div>
 
-          {(section === "prospect" || section === "local" || section === "staffing") && (
+          {board === "prospects" && (
             <div className="col-span-2">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Fit</label>
@@ -277,7 +317,7 @@ export default function JobFormModal({
             </div>
           )}
 
-          {section === "applied" && (
+          {board === "applied" && (
             <>
               <div>
                 <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Status</label>

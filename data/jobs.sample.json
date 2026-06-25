@@ -2,199 +2,281 @@
   "applied": [
     {
       "company": "Stripe",
-      "role": "Director of Design, Growth",
+      "role": "Creative Director, Brand Experiences",
       "status": "interview",
-      "date": "2026-06-10",
-      "salary": "$210,000–$260,000",
-      "notes": "Second round scheduled. Panel includes VP Design and Head of Growth PM. Strong culture signal from recruiter.",
-      "url": "https://stripe.com/jobs/listing/director-design-growth",
+      "date": "2026-06-03",
+      "salary": "$194,900–$292,300",
+      "notes": "Panel round scheduled for 6/30. Role leads a team of brand and experiential designers across event systems, keynote concepting, digital/environmental graphics, and global brand activations. 10+ yrs design experience required, 3+ yrs managing designers. Strong overlap with systems-thinking and creative leadership background. Requires Figma, Adobe CC, Keynote, AI tools proficiency.",
+      "url": "https://stripe.com/jobs/listing/creative-director-brand-experiences/8001909",
+      "type": "remote",
       "fit": "strong",
-      "scoreRationale": "Candidate's senior design leadership experience, remote flexibility, contract openness, and salary expectations align well with the Director-level role at a top-tier company with clear advancement interest."
+      "scoreRationale": "Comp ceiling ($292K) exceeds target, remote-eligible, and the experiential + systems leadership scope aligns closely with track record. Strong portfolio match on global brand and design org building."
     },
     {
       "company": "Linear",
       "role": "Head of Design",
       "status": "screening",
-      "date": "2026-06-16",
+      "date": "2026-06-10",
       "salary": "$190,000–$230,000",
-      "notes": "Intro call with hiring manager next week. Small team, high craft bar. Fully remote.",
-      "url": "https://linear.app/careers/head-of-design",
+      "notes": "Intro call with Karri (CEO) on 6/29. Small team — 4 designers today, hiring to 8. Fully remote, async-first. They want someone who can raise the craft bar AND build process. Tool-category domain is a direct portfolio match.",
+      "url": "https://linear.app/careers",
+      "type": "remote",
       "fit": "strong",
-      "scoreRationale": "Candidate's senior design leadership experience, salary expectations well within range, remote preference match, and openness to contract roles align excellently with Linear's Head of Design position."
+      "scoreRationale": "Comp in range, fully remote, small team where a strong leader has high leverage. Design-tooling domain is a direct portfolio match."
     },
     {
       "company": "Vercel",
       "role": "Principal Product Designer",
       "status": "applied",
-      "date": "2026-06-20",
+      "date": "2026-06-14",
       "salary": "$180,000–$215,000",
-      "notes": "Applied via Greenhouse. Developer-tools design — strong portfolio angle.",
-      "url": "https://vercel.com/careers/principal-product-designer",
+      "notes": "Applied via Greenhouse. Developer-tools design — strong portfolio angle with design systems and component work. ATS confirmation received.",
+      "url": "https://vercel.com/careers",
+      "type": "remote",
+      "fit": "strong"
+    },
+    {
+      "company": "Loom",
+      "role": "Director of Product Design",
+      "status": "offer",
+      "date": "2026-05-28",
+      "salary": "$220,000–$265,000",
+      "notes": "Offer received 6/22. Base $235k + equity refresher. Deadline to decide is 6/30. Strong team, but concerned about Atlassian acquisition absorbing roadmap autonomy.",
+      "url": "https://www.loom.com/careers",
+      "type": "remote",
       "fit": "strong",
-      "scoreRationale": "Senior experience matches principal level, salary expectation well below range, remote-eligible role, and developer-tools portfolio aligns with Vercel's needs."
-    }
-  ],
-  "prospect": [
+      "scoreRationale": "Excellent comp, strong scope, remote. Primary concern is acquisition integration risk with Atlassian."
+    },
     {
       "company": "Figma",
-      "role": "Director of Product Design",
+      "role": "Director of Product Design, Editing",
+      "status": "interview",
+      "date": "2026-06-01",
+      "salary": "$230,000–$290,000",
+      "notes": "Third round. Presentation to design leadership on 6/27 — 45-min case study of a complex systems redesign. Portfolio feedback from panel has been very positive.",
+      "url": "https://www.figma.com/careers",
+      "type": "remote",
       "fit": "strong",
-      "salary": "$220,000–$270,000",
-      "notes": "Remote US. Design tools expertise is a direct match. Team of 12 reports to CPO.",
-      "url": "https://figma.com/careers/director-product-design",
-      "scoreRationale": "Title, compensation, and domain are all strong matches — remote and senior scope align with stated preferences."
+      "scoreRationale": "Best-fit role in the pipeline. Domain expertise in design tooling is a direct match. Comp is top of range and scope is exactly right."
     },
     {
       "company": "Notion",
       "role": "Head of Design Systems",
-      "fit": "strong",
+      "status": "screening",
+      "date": "2026-06-17",
       "salary": "$195,000–$235,000",
-      "notes": "Remote. Core strength match: design systems at scale, cross-functional governance, component library leadership.",
-      "url": "https://notion.so/careers/head-design-systems",
-      "scoreRationale": "Design systems leadership is a primary strength and the scope matches director-level expectations."
+      "notes": "Recruiter screen completed. Moving to hiring manager call with Head of Design next week. They're rebuilding their token architecture from scratch — exactly in my wheelhouse.",
+      "url": "https://www.notion.so/careers",
+      "type": "remote",
+      "fit": "strong"
     },
+    {
+      "company": "Dropbox",
+      "role": "Senior Staff Designer, Platform",
+      "status": "applied",
+      "date": "2026-06-19",
+      "salary": "$185,000–$220,000",
+      "notes": "Applied via referral from former colleague on the design team. IC role, not director — but scope is significant: owning design language and component library for 700M+ users.",
+      "url": "https://jobs.dropbox.com",
+      "type": "remote",
+      "fit": "good"
+    },
+    {
+      "company": "Shopify",
+      "role": "Design Director, Core Buyer",
+      "status": "declined",
+      "date": "2026-06-05",
+      "salary": "$200,000–$245,000",
+      "notes": "Recruiter declined after second round — went with an internal candidate. Good process, would reapply for the right opening.",
+      "url": "https://www.shopify.com/careers",
+      "type": "remote",
+      "fit": "strong"
+    }
+  ],
+  "prospect": [
     {
       "company": "Anthropic",
-      "role": "Senior Product Designer, Developer Experience",
-      "fit": "good",
-      "salary": "$175,000–$210,000",
-      "notes": "AI-native product context — great portfolio story. IC role, not director, but comp clears the bar.",
-      "url": "https://anthropic.com/careers/senior-product-designer-devex",
-      "scoreRationale": "Compensation and domain are compelling; seniority is IC rather than director, which is a modest step down from preferred scope."
-    },
-    {
-      "company": "Datadog",
-      "role": "VP of Design",
-      "fit": "good",
+      "role": "Head of Product Design",
+      "fit": "strong",
       "salary": "$240,000–$300,000",
-      "notes": "Stretch role — broader org scope than current experience. Enterprise B2B is a strength.",
-      "url": "https://datadoghq.com/careers/vp-design",
-      "scoreRationale": "Comp and title are excellent; VP scope may be a stretch but worth pursuing given the enterprise B2B alignment."
+      "notes": "Remote US. Brand new role — building the design function from near-zero. Huge opportunity to define how AI interfaces get built at the frontier. Strong portfolio angle.",
+      "url": "https://www.anthropic.com/careers",
+      "type": "remote",
+      "scoreRationale": "Top-of-market comp, mission-driven, and the scope of building a design org at an AI lab is a once-in-a-decade opportunity. Strong match on all vectors."
     },
     {
-      "company": "Intercom",
-      "role": "Design Manager, Platform",
+      "company": "GitHub",
+      "role": "Director of Design, Copilot",
+      "fit": "strong",
+      "salary": "$215,000–$265,000",
+      "notes": "Remote. Leading design for GitHub Copilot — the fastest-growing developer tool in history. Team of 6 today, growing to 12. Reports to VP Design.",
+      "url": "https://github.careers",
+      "type": "remote",
+      "scoreRationale": "AI-native product context, strong comp, and developer-tools domain are all direct matches. High-leverage role with clear organizational growth path.",
+      "isNew": true
+    },
+    {
+      "company": "Zillow",
+      "role": "Principal Design Technologist, AI Design Tools",
+      "fit": "strong",
+      "salary": "$169,300–$284,700",
+      "notes": "Remote. Owns Zillow's AI design tooling ecosystem for all of ZxD (Zillow Experience Design). Role unifies scattered AI workflows into a supported stack, evolves the Constellation design system as AI context (MCP server, Claude Code/Cursor skill bundle), and ships evaluation harness for AI-generated UI quality. 8+ yrs required across design and front-end engineering. Strong Figma, Claude Code/Cursor fluency, design systems depth, and track record shipping internal tooling with real adoption.",
+      "url": "https://to.indeed.com/aa2xyfks8zk4",
+      "type": "remote",
+      "scoreRationale": "Comp is strong ($169K–$285K), fully remote, and the AI design tooling + systems scope is an exact match. Requires both design sensibility and real code depth — a hybrid IC role with senior org influence. Very high priority.",
+      "isNew": true
+    },
+    {
+      "company": "WorkOS",
+      "role": "Product Design",
+      "fit": "good",
+      "salary": "$150,000–$225,000",
+      "notes": "Remote. WorkOS powers auth and identity for 500+ enterprise SaaS companies including OpenAI, Cursor, Perplexity, and Vercel. Design team owns Dashboard, Admin Portal, AuthKit, and WorkDS design system (built on Radix). Role leads greenfield initiatives end-to-end, contributes directly to design system in Figma and code, and engages customers in Slack channels. Requires 7+ yrs designing complex B2B/developer-facing products, systems thinking, front-end code familiarity, and AI workflow curiosity.",
+      "url": "https://to.indeed.com/aa9fwhzdlg6f",
+      "type": "remote",
+      "scoreRationale": "Developer infrastructure domain and design systems focus are strong matches. Comp ceiling ($225K) is below director-level targets but the scope, customer base, and Series C momentum make it worth a conversation.",
+      "isNew": true
+    },
+    {
+      "company": "Spotify",
+      "role": "Design Director, Creator Tools",
+      "fit": "good",
+      "salary": "$205,000–$250,000",
+      "notes": "Remote US. Leading design for the tools used by 10M+ podcasters and artists. Cross-platform (web, mobile, desktop) — complex systems design challenge.",
+      "url": "https://www.lifeatspotify.com/jobs",
+      "type": "remote",
+      "scoreRationale": "Compelling product domain and strong comp. Consumer-facing product is a slight departure from B2B focus but creator tools have strong DesignOps alignment."
+    },
+    {
+      "company": "HubSpot",
+      "role": "Director of UX, CRM Platform",
       "fit": "caution",
-      "salary": "$150,000–$175,000",
-      "notes": "Manager title and comp both below target. Could negotiate up; would need to clarify team size and growth path.",
-      "url": "https://intercom.com/careers/design-manager-platform",
-      "scoreRationale": "Title and compensation fall below minimum thresholds — worth a conversation only if scope or equity compensates."
+      "salary": "$175,000–$210,000",
+      "notes": "Cambridge HQ but role is remote-eligible. Comp floor is below target. CRM is a strong domain fit but the org structure (large, matrixed) may limit design influence.",
+      "url": "https://www.hubspot.com/careers",
+      "type": "remote",
+      "scoreRationale": "Domain fits but comp is below minimum and the matrixed structure historically limits design leadership leverage. Worth tracking but not top priority.",
+      "isNew": true
     }
   ],
   "local": [
     {
-      "company": "Indeed",
-      "role": "Director of Product Design",
-      "fit": "strong",
-      "salary": "$200,000–$240,000",
-      "notes": "Austin HQ, hybrid 2 days/week. Design org of 40+. Strong match on DesignOps and team scaling experience.",
-      "url": "https://indeed.com/cmp/Indeed/jobs/director-product-design",
-      "scoreRationale": "Local hybrid within commute range, title and comp both strong — DesignOps scope is a direct match."
-    },
-    {
       "company": "Dell Technologies",
-      "role": "Principal UX Designer, Commercial",
+      "role": "Principal UX Design Lead, Commercial",
       "fit": "good",
-      "salary": "$165,000–$195,000",
-      "notes": "Round Rock — 20 miles. Enterprise hardware/software UX. Large design org, good growth runway.",
-      "url": "https://dell.com/careers/principal-ux-commercial",
-      "scoreRationale": "Within hybrid range and comp clears the bar; enterprise B2B context is a match though hardware domain is less direct."
+      "salary": "$170,000–$205,000",
+      "notes": "Round Rock — 18 miles. Hybrid 3 days/week. Large enterprise UX org (~120 designers). Strong DesignOps infrastructure already in place. Good growth runway to Director.",
+      "url": "https://jobs.dell.com",
+      "type": "hybrid",
+      "scoreRationale": "Within commute range, comp clears the bar, and enterprise B2B context is a strong fit. Hybrid cadence is workable."
     },
     {
-      "company": "HomeAway (Vrbo)",
-      "role": "Senior Design Manager",
-      "fit": "caution",
-      "salary": "$140,000–$165,000",
-      "notes": "Austin. Consumer product — lower comp floor, less enterprise alignment.",
-      "url": "https://jobs.vrbo.com/senior-design-manager",
-      "scoreRationale": "Within commute range but comp is below target and consumer product context is a weaker fit than enterprise B2B."
+      "company": "Indeed",
+      "role": "Director of Product Design, Job Seeker",
+      "fit": "strong",
+      "salary": "$210,000–$255,000",
+      "notes": "Austin HQ, hybrid 2 days/week. Leading design for the job seeker experience — 350M monthly users. Design org of 50+. Direct reports: 4 design managers.",
+      "url": "https://indeed.com/cmp/Indeed/jobs",
+      "type": "hybrid",
+      "scoreRationale": "Local hybrid within easy commute, title and comp both strong, and the scale of the job seeker platform is a compelling challenge. DesignOps scope is a direct match.",
+      "isNew": true
+    },
+    {
+      "company": "Microsoft",
+      "role": "Senior Product Designer, AI Solutions",
+      "fit": "good",
+      "salary": "$119,800–$261,000",
+      "notes": "Remote or LA/hybrid. Industry Solutions Team — client-facing AI design work with Data Scientists, TPMs, and Engineers. Designs AI-enabled experiences for enterprise customers. Requires human-centred design expertise, AI/ML product fluency, Figma prototyping, and comfort in ambiguous enterprise problem spaces. 3+ yrs experience; strong preference for responsible AI design track record.",
+      "url": "https://to.indeed.com/aanzvnngzvpc",
+      "type": "hybrid",
+      "scoreRationale": "Real AI design work with enterprise clients, and the broad comp band ($120K–$261K) leaves room to negotiate. Less leadership scope than target roles but strong portfolio value in AI-native project work."
     }
   ],
   "staffing": [
     {
-      "company": "Apex Systems",
-      "role": "UX Design Lead (Contract-to-Hire)",
-      "fit": "caution",
-      "salary": "$90–$110/hr",
-      "notes": "6-month CTH with Fortune 500 financial services client. Remote. Strong comp and potential conversion.",
-      "url": "https://apexsystems.com/jobs/ux-lead-cth-fintech",
-      "scoreRationale": "Contract role at $90–$110/hr falls significantly below candidate's $140k FTE minimum, and seniority level (Director) may be overqualified for a 'Lead' position despite remote flexibility and conversion potential."
+      "company": "Aquent",
+      "role": "Sr. UX Design Lead — Contract (Fortune 100)",
+      "fit": "good",
+      "salary": "$120–$145/hr",
+      "notes": "6-month engagement, major financial services client (name withheld until NDA). Remote. Full design system overhaul — strong portfolio piece. Extension likely.",
+      "url": "https://aquent.com/find-work",
+      "type": "contract",
+      "scoreRationale": "Hourly rate ($120–$145/hr ≈ $250–$300K annualized) exceeds FTE targets, remote, and design systems scope is a direct strength. Staffing risk only."
     },
     {
       "company": "Slalom",
-      "role": "Senior Consultant, Experience Design",
+      "role": "Principal Consultant, Experience Design",
       "fit": "good",
-      "salary": "$130,000–$155,000",
-      "notes": "Permanent consulting role. Austin office. Healthcare and financial services clients align well.",
-      "url": "https://slalom.com/us/en/careers/senior-consultant-xd",
-      "scoreRationale": "Salary range and seniority level align well, and consulting leverages relevant design expertise, but Austin office conflicts with remote/hybrid requirement and permanent role differs from contract preference."
-    },
-    {
-      "company": "Kforce",
-      "role": "UX Architect (Contract)",
-      "fit": "caution",
-      "salary": "$70–$80/hr",
-      "notes": "3-month engagement. Hourly slightly below target. Legacy enterprise tooling — not a strong growth role.",
-      "url": "https://kforce.com/jobs/ux-architect-contract-atx",
-      "scoreRationale": "Contract role aligns with flexibility but hourly rate ($70–$80/hr ≈ $145–$166K annualized) barely meets minimum, and legacy enterprise work mismatches senior designer's growth trajectory despite title-level match."
+      "salary": "$155,000–$185,000",
+      "notes": "Austin office, project-based travel. Healthcare and financial services clients. Permanent consulting role — good stability. Strong culture reputation.",
+      "url": "https://www.slalom.com/us/en/careers",
+      "type": "contract",
+      "scoreRationale": "Salary and seniority align. Consulting leverages design expertise across clients. Austin office and occasional travel is workable."
     }
   ],
   "passed": [
     {
-      "company": "Shopify",
-      "role": "Staff Designer, Commerce",
-      "salary": "$160,000–$185,000",
-      "notes": "Comp below minimum for IC at this seniority. Passed.",
-      "url": "https://shopify.com/careers/staff-designer-commerce"
-    },
-    {
       "company": "Meta",
-      "role": "Product Design Manager, AR",
+      "role": "Design Manager, AR/VR",
       "salary": "Not listed",
-      "notes": "Declined to pursue — AR hardware context is too far from core enterprise/DesignOps strengths.",
-      "url": "https://metacareers.com/jobs/pdm-ar"
+      "notes": "Passed — AR hardware context is too far from core enterprise/SaaS strengths. Also concerned about layoff trajectory in Reality Labs.",
+      "url": "https://metacareers.com/jobs"
     },
     {
-      "company": "Pivotal Labs",
-      "role": "UX Design Lead",
-      "salary": "$120,000–$140,000",
-      "notes": "Confirmed closed 2026-06-15.",
-      "url": "https://pivotal.io/careers/ux-lead"
+      "company": "Twitter / X",
+      "role": "Head of Product Design",
+      "salary": "$200,000–$240,000",
+      "notes": "Passed — organizational instability and unclear design culture post-acquisition. Role has been reposted 4× in 6 months.",
+      "url": "https://careers.x.com"
+    },
+    {
+      "company": "Oracle",
+      "role": "Director, UX Design",
+      "salary": "$155,000–$185,000",
+      "notes": "Comp below minimum. Oracle's design culture reputation doesn't match target environment.",
+      "url": "https://oracle.com/careers"
+    },
+    {
+      "company": "Salesforce",
+      "role": "Principal Product Designer, Einstein AI",
+      "salary": "$175,000–$210,000",
+      "notes": "IC role at comp floor. Would revisit for a Director-level opening — strong domain alignment with enterprise AI.",
+      "url": "https://salesforce.com/careers"
     }
   ],
   "pending": [
     {
-      "company": "GitHub",
-      "role": "Senior Product Designer, Copilot",
-      "url": "https://github.careers/senior-product-designer-copilot",
-      "salary": "$185,000–$215,000",
-      "notes": "",
+      "company": "Substack",
+      "role": "Product Designer",
+      "url": "https://to.indeed.com/aaqplyxcnfts",
+      "salary": "$150,000–$215,000",
+      "notes": "Remote-friendly (SF or NYC preferred). Substack is looking for a product designer with engineering characteristics — specifically LLM fluency for prototyping and potentially owning front-end. Designs across web dashboards, iOS/Android, and email surfaces. Values designers who can ship code, use AI tools daily, and work without heavy process. Requires 3+ yrs software design experience, high Figma proficiency, and comfort with ambiguity. TypeScript/React and SwiftUI are a bonus.",
       "scrapeGroup": "remote",
-      "scrapeDate": "2026-06-22",
-      "fit": "strong",
-      "scoreRationale": "Candidate's senior design background and director-level experience align with GitHub's senior product designer role, salary expectations are well-met, and remote/hybrid flexibility matches the opportunity."
+      "scrapeDate": "2026-06-25",
+      "fit": "good",
+      "scoreRationale": "Unique role — Substack's model (creator-first, subscription-based) is compelling, and the LLM + engineering-characteristics angle matches current workflow. Comp ($150K–$215K) is below director targets but the scope and product ownership are strong."
     },
     {
-      "company": "Atlassian",
-      "role": "Principal Designer, Jira",
-      "url": "https://atlassian.com/company/careers/principal-designer-jira",
-      "salary": "$190,000–$230,000",
-      "notes": "",
+      "company": "Whatnot",
+      "role": "Product Designer",
+      "url": "https://to.indeed.com/aap7kwlqfyll",
+      "salary": "$153,000–$235,000",
+      "notes": "Remote US (hubs: LA, SF, NYC, Seattle). Whatnot is the largest livestream shopping platform in North America. Role leads end-to-end design across user-facing and internal tools — onboarding, discovery, live events, seller workflows, review systems. Reports to a Design leader. 5+ yrs required, strong Figma/Framer/Protopie skills, systems thinking, zero-to-one experience preferred. Forbes #1 Best Startup Employer in America 2026.",
       "scrapeGroup": "remote",
-      "scrapeDate": "2026-06-22",
-      "fit": "strong",
-      "scoreRationale": "Candidate's senior design leadership experience, salary expectations well below range ceiling, and openness to contract work align excellently with Principal Designer role at premium compensation level."
+      "scrapeDate": "2026-06-25",
+      "fit": "good",
+      "scoreRationale": "Fast-moving startup with real design leadership (reports to Design leader). Comp ceiling ($235K) is workable. Live commerce is an adjacent market — not enterprise B2B but high complexity and strong portfolio value."
     },
     {
       "company": "RetailMeNot",
       "role": "UX Manager",
-      "url": "https://retailmenot.com/careers/ux-manager",
+      "url": "https://www.retailmenot.com/corp/jobs",
       "salary": "$110,000–$135,000",
       "notes": "",
       "scrapeGroup": "local",
-      "scrapeDate": "2026-06-22",
+      "scrapeDate": "2026-06-25",
       "fit": "caution",
-      "scoreRationale": "Candidate's senior-level experience and salary expectations ($140k minimum) exceed the UX Manager role's range ($110k-$135k), suggesting potential overqualification and compensation misalignment despite relevant expertise."
+      "scoreRationale": "Comp ($110–135K) falls well below target and manager title is a step down. Consumer product context is also a weaker fit than enterprise B2B."
     }
   ]
 }

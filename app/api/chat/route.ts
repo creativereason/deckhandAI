@@ -83,7 +83,8 @@ type AnthropicMsg =
 async function runAnthropic(
   messages: ClientMsg[],
   ai: AiConfig,
-  onToolCall: (name: string) => void
+  onToolCall: (name: string) => void,
+  system = SYSTEM_PROMPT,
 ): Promise<string> {
   const { url, headers } = buildEndpoint(ai);
   const model = getModel(ai);
@@ -100,7 +101,7 @@ async function runAnthropic(
       body: JSON.stringify({
         model,
         max_tokens: 2048,
-        system: SYSTEM_PROMPT,
+        system,
         tools: ANTHROPIC_TOOLS,
         messages: thread,
       }),
@@ -150,12 +151,13 @@ type OpenAIMsg =
 async function runOpenAI(
   messages: ClientMsg[],
   ai: AiConfig,
-  onToolCall: (name: string) => void
+  onToolCall: (name: string) => void,
+  system = SYSTEM_PROMPT,
 ): Promise<string> {
   const { url, headers } = buildEndpoint(ai);
   const model = getModel(ai);
   const thread: OpenAIMsg[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: system },
     ...messages.map((m) => ({ role: m.role, content: m.content })),
   ];
   let finalText = "";
@@ -196,8 +198,9 @@ async function runOpenAI(
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({})) as { messages?: ClientMsg[] };
+  const body = await req.json().catch(() => ({})) as { messages?: ClientMsg[]; jobContext?: string };
   const messages = body.messages ?? [];
+  const jobContext = body.jobContext ?? "";
 
   const encoder = new TextEncoder();
 
@@ -217,9 +220,13 @@ export async function POST(req: NextRequest) {
       const emit = (event: NdjsonEvent) =>
         controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
 
+      const effectiveSystem = jobContext
+        ? SYSTEM_PROMPT + `\n\nThe user is currently viewing this specific job:\n${jobContext}`
+        : SYSTEM_PROMPT;
+
       const run = provider === "anthropic"
-        ? () => runAnthropic(messages, ai, (name) => emit({ type: "tool_call", name }))
-        : () => runOpenAI(messages, ai, (name) => emit({ type: "tool_call", name }));
+        ? () => runAnthropic(messages, ai, (name) => emit({ type: "tool_call", name }), effectiveSystem)
+        : () => runOpenAI(messages, ai, (name) => emit({ type: "tool_call", name }), effectiveSystem);
 
       run()
         .then((text) => {
