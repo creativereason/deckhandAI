@@ -23,6 +23,9 @@ data/scrape-targets.json
 .env.demo.local
 .env*.local
 
+# Screenshots (generated — not committed; curate manually before adding to README)
+screenshots/
+
 # Personal documents — never commit these
 resumes/
 cover-letters/

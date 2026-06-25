@@ -9,7 +9,9 @@ function isDemo() { return process.env.DEMO_MODE === "true"; }
 
 function readSampleJobs(): JobsData {
   const persona = process.env.DEMO_PERSONA ?? "design";
-  const file = persona === "dev" ? "data/jobs-dev.sample.json" : "data/jobs.sample.json";
+  const file = persona === "dev" ? "data/jobs-dev.sample.json"
+    : persona === "onboarding" ? "data/jobs-onboarding.sample.json"
+    : "data/jobs.sample.json";
   try {
     const raw = readFileSync(resolve(process.cwd(), file), "utf-8");
     return { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [], ...JSON.parse(raw) };

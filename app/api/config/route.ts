@@ -5,7 +5,9 @@ import { resolve } from "path";
 
 function readSampleConfig(): AppConfig {
   const persona = process.env.DEMO_PERSONA ?? "design";
-  const file = persona === "dev" ? "data/config-dev.sample.json" : "data/config.sample.json";
+  const file = persona === "dev" ? "data/config-dev.sample.json"
+    : persona === "onboarding" ? "data/config-onboarding.sample.json"
+    : "data/config.sample.json";
   try {
     const raw = readFileSync(resolve(process.cwd(), file), "utf-8");
     return JSON.parse(raw) as AppConfig;
