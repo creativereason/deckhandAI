@@ -132,7 +132,12 @@ See `data/profile.sample.json` for the full schema.
 
 ## Scraping
 
-Add your target companies to `scripts/scrape-careers.mjs`. The file includes several example targets. Run it directly or let GitHub Actions run it on a schedule.
+Add and manage scrape targets in two ways:
+
+- **Settings UI** — go to Settings → Scrape Sources to add, edit, or remove targets without touching any files. Changes are saved to `data/scrape-targets.json` in your data repo.
+- **Script** — edit `scripts/scrape-careers.mjs` directly for bulk setup or to define custom selectors. The script reads from `data/scrape-targets.json` at runtime if it exists, falling back to the targets defined in the file.
+
+Run the scraper manually or let GitHub Actions run it on a schedule:
 
 ```bash
 node scripts/scrape-careers.mjs
@@ -143,6 +148,8 @@ Requires Playwright with Chromium:
 ```bash
 npx playwright install chromium
 ```
+
+> **Vercel deployments cannot run the scraper.** Vercel's serverless environment does not support Chromium. To use automated scraping, run the scraper from your own machine or a self-hosted server — either on a schedule via cron or via the GitHub Actions workflow (`.github/workflows/scrape.yml`), which runs the script in a standard Ubuntu runner that supports Playwright.
 
 ---
 
