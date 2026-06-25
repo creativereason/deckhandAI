@@ -8,7 +8,7 @@ A self-hosted job search command center. Track prospects, scrape target company 
 
 ## What it does
 
-- **Kanban/table tracker** — prospects, applied, local, staffing, and passed buckets
+- **Personal job tracker** — manage everything from first look to final decision; track prospects you're watching, applications in flight, and roles you've passed on, all in one private board
 - **Automated scraping** — Playwright-based scraper hits target career pages on a schedule via GitHub Actions
 - **AI throughout** — chat assistant, job fit scoring, ATS-safe resume tailoring, and cover letter generation; bring your own model (Anthropic, OpenAI, Ollama, or any OpenAI-compatible endpoint)
 - **Zero infrastructure** — data lives in flat JSON files in your own private GitHub repo; deploy the UI to Vercel for free
