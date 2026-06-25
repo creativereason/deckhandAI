@@ -272,6 +272,21 @@ Establish a test baseline that catches regressions in the data layer, API routes
 
 ---
 
+## M10 — Scraper UX
+
+Improve the scraper panel so it's informative and usable while a run is in progress.
+
+- [ ] Live progress feed — stream per-target status (queued → running → found N / skipped / failed) as the scrape runs instead of a spinner
+- [ ] Elapsed time and per-target timing shown in the feed
+- [ ] Error detail inline — when a target fails, show the reason (timeout, selector miss, blocked) without leaving the panel
+- [ ] Cancel in-flight run — button to abort a running scrape and show partial results
+- [ ] Persist last-run summary — timestamp, targets hit, jobs found/skipped, shown on next open so the panel isn't blank between runs
+- [ ] Empty-state polish — clear call-to-action when no targets are configured, linking to the scrape sources config
+
+**Effort:** ~2 days
+
+---
+
 ## Known Bugs
 
 - [ ] **Edit modal section change discards notes** — if a user edits the notes field then changes the section dropdown in the job edit modal, the notes changes are lost (section change re-initializes form state)

@@ -73,6 +73,30 @@ const PERSONAS = [
 
 // ─── Server lifecycle ─────────────────────────────────────────────────────────
 
+async function killExistingDevServer() {
+  // Next.js 16 only allows one dev server per project — kill any existing instance first.
+  // Find pids running `next dev` under this project root, then wait for ports to clear.
+  try {
+    const { stdout } = await execAsync(
+      `pgrep -af "next dev" 2>/dev/null || true`
+    );
+    const pids = stdout
+      .split("\n")
+      .filter((line) => line.includes(ROOT) || line.includes("next dev"))
+      .map((line) => line.trim().split(/\s+/)[0])
+      .filter(Boolean);
+
+    if (pids.length) {
+      process.stdout.write(`  Stopping existing dev server (PIDs: ${pids.join(", ")})…`);
+      await execAsync(`kill ${pids.join(" ")} 2>/dev/null`).catch(() => {});
+      await sleep(3000);
+      process.stdout.write(" done\n");
+    }
+  } catch {
+    // no existing server — fine
+  }
+}
+
 function startServer(extraEnv = {}) {
   const env = {
     ...process.env,
@@ -369,11 +393,25 @@ async function runPersona(browser, persona) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
+  // Optional: filter by persona name(s) passed as args, e.g. `node scripts/screenshots.mjs onboarding design`
+  const filter = process.argv.slice(2);
+  const targets = filter.length
+    ? PERSONAS.filter((p) => filter.includes(p.name))
+    : PERSONAS;
+
+  if (filter.length && targets.length === 0) {
+    console.error(`No matching personas for: ${filter.join(", ")}`);
+    console.error(`Available: ${PERSONAS.map((p) => p.name).join(", ")}`);
+    process.exit(1);
+  }
+
   console.log("deckhandAI screenshot capture\n");
+
+  await killExistingDevServer();
 
   const browser = await chromium.launch({ headless: true });
 
-  for (const persona of PERSONAS) {
+  for (const persona of targets) {
     console.log(`\n── ${persona.label} (${persona.name}) ──`);
     const kill = startServer(persona.env);
     try {

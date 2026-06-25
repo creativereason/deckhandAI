@@ -15,6 +15,18 @@ A self-hosted job search command center. Track prospects, scrape target company 
 
 ---
 
+## Screenshots
+
+| Board | Job detail |
+|---|---|
+| ![Job tracker board](docs/screenshots/board--desktop.png) | ![Job detail page](docs/screenshots/job-detail-applied--desktop.png) |
+
+| AI chat assistant | Onboarding wizard |
+|---|---|
+| ![AI chat open](docs/screenshots/chat-open--desktop.png) | ![Onboarding step 1](docs/screenshots/onboarding-step1-filled--desktop.png) |
+
+---
+
 ## Quick start
 
 ```bash
