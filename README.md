@@ -1,6 +1,6 @@
 # deckhandAI
 
-A self-hosted job search command center. Track prospects, scrape target company career pages, and generate cover letters with any AI model — no vendor lock-in, no database, no monthly fee.
+A self-hosted job search command center. Track prospects, scrape target company career pages, and generate ATS-safe resumes and cover letters with any AI model — no vendor lock-in, no database, no monthly fee.
 
 **[→ View live demo](https://deckhand-ai.vercel.app)** — read-only, sample data, no login required.
 
@@ -10,7 +10,7 @@ A self-hosted job search command center. Track prospects, scrape target company 
 
 - **Kanban/table tracker** — prospects, applied, local, staffing, and passed buckets
 - **Automated scraping** — Playwright-based scraper hits target career pages on a schedule via GitHub Actions
-- **AI document generation** — bring your own model (Anthropic, OpenAI, Ollama, or any OpenAI-compatible endpoint) to draft cover letters and resume tailoring notes
+- **AI throughout** — chat assistant, job fit scoring, ATS-safe resume tailoring, and cover letter generation; bring your own model (Anthropic, OpenAI, Ollama, or any OpenAI-compatible endpoint)
 - **Zero infrastructure** — data lives in flat JSON files in your own private GitHub repo; deploy the UI to Vercel for free
 
 ---
@@ -153,8 +153,23 @@ npx playwright install chromium
 
 ---
 
-## AI document generation
+## AI features
 
+deckhandAI uses AI throughout the workflow — not just for document output. All features run through the same provider you configure, so one API key covers everything.
+
+**Chat assistant**
+A floating chat panel available on every page. Ask questions about your pipeline, get prioritization suggestions, or have it add, move, or update jobs through natural language.
+
+**Job fit evaluation**
+Each job in your tracker can be scored against your target titles, salary floor, and location preferences. The AI explains why a role is a strong fit or a caution, surfacing signal you'd otherwise have to read manually.
+
+**Cover letter generation**
+Drafts a tailored cover letter from your work history (`profile.json`) and the job description. Streamed in real time, editable inline, and exportable as a styled DOCX or print-to-PDF.
+
+**ATS-safe resume tailoring**
+Takes your base resume and rewrites the summary and experience bullets to match the specific role — single-column layout, no tables or text boxes, bullets via proper list markup so they survive every ATS parser. Outputs a ready-to-submit DOCX.
+
+**Provider options**
 deckhandAI supports several AI providers. Choose whichever fits your setup.
 
 ### Option 1 — Anthropic (Claude)
