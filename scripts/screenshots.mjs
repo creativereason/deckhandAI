@@ -160,6 +160,17 @@ async function shot(page, dir, name, { fullPage = false } = {}) {
   }
 }
 
+// Desktop-only screenshot — used for onboarding step walkthroughs
+async function shotDesktop(page, dir, name, { fullPage = false } = {}) {
+  mkdirSync(dir, { recursive: true });
+  await page.addStyleTag({ content: HIDE_DEV_UI }).catch(() => {});
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await sleep(250);
+  const file = join(dir, `${name}--desktop.png`);
+  await page.screenshot({ path: file, fullPage });
+  console.log(`    ${name}--desktop.png`);
+}
+
 async function newLoggedInPage(browser) {
   const ctx = await browser.newContext();
   await ctx.request.post(`${BASE}/api/auth/login`, { data: { password: PASSWORD } });
@@ -257,24 +268,68 @@ async function captureSettingsExport(browser, dir) {
   await ctx.close();
 }
 
-async function captureOnboarding(browser, dir) {
-  console.log("  → onboarding wizard");
-  const { page, ctx } = await newLoggedInPage(browser);
+async function captureLoginWithForgot(browser, dir) {
+  console.log("  → login (forgot password open)");
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(600);
-  await shot(page, dir, "onboarding-wizard");
+  await page.getByRole("button", { name: /forgot password/i }).click();
+  await sleep(300);
+  await shotDesktop(page, dir, "login-forgot-password");
   await ctx.close();
 }
 
-async function captureEmptyBoard(browser, dir) {
-  console.log("  → empty board");
-  const { page, ctx } = await newLoggedInPage(browser);
-  await sleep(600);
-  const skipBtn = page.getByRole("button", { name: /skip|close|later|dismiss/i }).first();
-  if (await skipBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await skipBtn.click();
-    await sleep(400);
-  }
-  await shot(page, dir, "empty-board");
+async function captureOnboardingSteps(browser, dir) {
+  const ctx = await browser.newContext();
+  await ctx.request.post(`${BASE}/api/auth/login`, { data: { password: PASSWORD } });
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+  await sleep(800);
+
+  // Step 1 — contact (empty, as first seen)
+  console.log("  → onboarding step 1 (empty)");
+  await shotDesktop(page, dir, "onboarding-step1-empty");
+
+  // Fill step 1 — inputs appear in order: first name, last name, email, phone, website, linkedin
+  const inp = (n) => page.locator('input').nth(n);
+  await inp(0).fill("Alex");
+  await inp(1).fill("Chen");
+  await inp(2).fill("alex@alexchen.design");
+  await inp(3).fill("(415) 555-0182");
+  await inp(4).fill("https://alexchen.design");
+  await inp(5).fill("https://linkedin.com/in/alexchenux");
+  await sleep(200);
+  console.log("  → onboarding step 1 (filled)");
+  await shotDesktop(page, dir, "onboarding-step1-filled");
+
+  // Step 2 — location: city, state, zip, radius (inputs 0–3 on this step)
+  await page.getByRole("button", { name: "Continue" }).click();
+  await sleep(400);
+  await page.locator('input').nth(0).fill("San Francisco");
+  await page.locator('input').nth(1).fill("CA");
+  await page.locator('input').nth(2).fill("94105");
+  // radius input (nth 3) already has "25" — leave it
+  await sleep(200);
+  console.log("  → onboarding step 2");
+  await shotDesktop(page, dir, "onboarding-step2");
+
+  // Step 3 — job preferences: textarea, min fte, min hourly
+  await page.getByRole("button", { name: "Continue" }).click();
+  await sleep(400);
+  await page.locator('textarea').fill("Head of Design\nDirector of Product Design\nPrincipal Designer\nDesign Lead");
+  await page.locator('input[type="number"]').nth(0).fill("180000");
+  await page.locator('input[type="number"]').nth(1).fill("90");
+  await sleep(200);
+  console.log("  → onboarding step 3");
+  await shotDesktop(page, dir, "onboarding-step3");
+
+  // Step 4 — you're all set
+  await page.getByRole("button", { name: "Continue" }).click();
+  await sleep(400);
+  console.log("  → onboarding step 4");
+  await shotDesktop(page, dir, "onboarding-step4");
+
   await ctx.close();
 }
 
@@ -287,8 +342,8 @@ async function runPersona(browser, persona) {
   await captureLogin(browser, dir);
 
   if (persona.name === "onboarding") {
-    await captureOnboarding(browser, dir);
-    await captureEmptyBoard(browser, dir);
+    await captureLoginWithForgot(browser, dir);
+    await captureOnboardingSteps(browser, dir);
     return;
   }
 
