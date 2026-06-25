@@ -19,7 +19,9 @@
  */
 
 import { chromium } from "playwright";
-import { spawn } from "child_process";
+import { spawn, exec } from "child_process";
+import { promisify } from "util";
+const execAsync = promisify(exec);
 import { mkdirSync } from "fs";
 import { resolve, join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -28,7 +30,7 @@ import { setTimeout as sleep } from "timers/promises";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 const OUT = join(ROOT, "screenshots");
-const PORT = 3000;
+const PORT = 3789;
 const BASE = `http://localhost:${PORT}`;
 const PASSWORD = "deckhandSample1233";
 
@@ -38,30 +40,33 @@ const VIEWPORTS = [
   { name: "mobile",  width: 390,  height: 844 },
 ];
 
-// Jobs to use for detail-page screenshots in each persona
+// Expected candidate name per persona — used to verify the right server is up
+const PERSONA_CANDIDATE = {
+  design:     "Alex Chen",
+  dev:        "Jordan Rivera",
+  onboarding: "",
+};
+
 const PERSONAS = [
   {
     name: "design",
     label: "Alex Chen — Designer",
     env: { DEMO_PERSONA: "design" },
-    appliedJob:  { company: "Stripe",       role: "Creative Director, Brand Experiences",  section: "applied"  },
-    offerJob:    { company: "Loom",          role: "Director of Product Design",             section: "applied"  },
-    prospectJob: { company: "Anthropic",     role: "Head of Product Design",                section: "prospect" },
+    appliedJob:  { company: "Stripe",    role: "Creative Director, Brand Experiences", section: "applied"  },
+    prospectJob: { company: "Anthropic", role: "Head of Product Design",               section: "prospect" },
   },
   {
     name: "dev",
     label: "Jordan Rivera — Staff Engineer",
     env: { DEMO_PERSONA: "dev" },
-    appliedJob:  { company: "Render",        role: "Staff Design Engineer",                 section: "applied"  },
-    offerJob:    { company: "Stripe",         role: "Senior Software Engineer, Dashboard",   section: "applied"  },
-    prospectJob: { company: "Anthropic",     role: "Software Engineer, Claude.ai Product",  section: "prospect" },
+    appliedJob:  { company: "Render",    role: "Staff Design Engineer",                section: "applied"  },
+    prospectJob: { company: "Anthropic", role: "Software Engineer, Claude.ai Product", section: "prospect" },
   },
   {
     name: "onboarding",
     label: "Onboarding (empty state)",
     env: { DEMO_PERSONA: "onboarding" },
     appliedJob:  null,
-    offerJob:    null,
     prospectJob: null,
   },
 ];
@@ -85,34 +90,67 @@ function startServer(extraEnv = {}) {
     detached: false,
   });
 
-  // Swallow output — we only care about readiness
   proc.stdout.resume();
   proc.stderr.resume();
 
   return async function kill() {
     proc.kill("SIGTERM");
-    await sleep(1500); // let port drain
+    await sleep(2000);
+    // Force-clear the port — pnpm child processes survive SIGTERM
+    await execAsync(`fuser -k ${PORT}/tcp 2>/dev/null`).catch(() => {});
+    // Poll until the port is confirmed free
+    const deadline = Date.now() + 15_000;
+    while (Date.now() < deadline) {
+      try {
+        await fetch(`${BASE}/api/config`, { signal: AbortSignal.timeout(500) });
+        await sleep(500);
+      } catch {
+        await sleep(800); // extra cushion for OS to release the port
+        return;
+      }
+    }
   };
 }
 
-async function waitForServer(timeoutMs = 90_000) {
+async function waitForServer(expectedPersona, timeoutMs = 120_000) {
+  const expectedName = PERSONA_CANDIDATE[expectedPersona] ?? "";
   const deadline = Date.now() + timeoutMs;
   process.stdout.write("  Waiting for server");
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${BASE}/login`);
-      if (res.status < 500) { process.stdout.write(" ready\n"); return; }
-    } catch { /* not up yet */ }
+      const res = await fetch(`${BASE}/api/config`, { signal: AbortSignal.timeout(2000) });
+      if (res.status < 500) {
+        const json = await res.json().catch(() => ({}));
+        const name = json.candidate?.name ?? "";
+        // Verify this is the correct persona server, not a leftover
+        if (name !== expectedName) {
+          throw new Error(
+            `Port ${PORT} is serving wrong persona (got "${name}", expected "${expectedName}"). ` +
+            `A stale server may still be running.`
+          );
+        }
+        process.stdout.write(" ready\n");
+        return;
+      }
+    } catch (err) {
+      if (err.message.includes("wrong persona")) throw err;
+    }
     process.stdout.write(".");
     await sleep(1000);
   }
-  throw new Error("Server did not start within timeout");
+  throw new Error(`Server (${expectedPersona}) did not start within timeout`);
 }
 
 // ─── Screenshot helpers ───────────────────────────────────────────────────────
 
+const HIDE_DEV_UI = `
+  nextjs-portal { display: none !important; }
+  #__next-build-watcher { display: none !important; }
+`;
+
 async function shot(page, dir, name, { fullPage = false } = {}) {
   mkdirSync(dir, { recursive: true });
+  await page.addStyleTag({ content: HIDE_DEV_UI }).catch(() => {});
   for (const vp of VIEWPORTS) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await sleep(250);
@@ -124,23 +162,20 @@ async function shot(page, dir, name, { fullPage = false } = {}) {
 
 async function newLoggedInPage(browser) {
   const ctx = await browser.newContext();
+  await ctx.request.post(`${BASE}/api/auth/login`, { data: { password: PASSWORD } });
   const page = await ctx.newPage();
-  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-  await page.fill('input[type="password"]', PASSWORD);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(`${BASE}/`, { timeout: 15_000 });
-  await page.waitForLoadState("networkidle");
-  await sleep(500);
+  await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+  await sleep(1000);
   return { page, ctx };
 }
 
-// ─── Screen captures ──────────────────────────────────────────────────────────
+// ─── Individual screen captures ───────────────────────────────────────────────
 
 async function captureLogin(browser, dir) {
   console.log("  → login");
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
-  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await shot(page, dir, "login");
   await ctx.close();
 }
@@ -148,51 +183,48 @@ async function captureLogin(browser, dir) {
 async function captureBoard(browser, dir) {
   console.log("  → board");
   const { page, ctx } = await newLoggedInPage(browser);
-  // Ensure all accordion sections are open — they default to open, just confirm
   await sleep(400);
   await shot(page, dir, "board", { fullPage: true });
   await ctx.close();
 }
 
-async function captureBoardFiltered(browser, dir) {
-  console.log("  → board (strong fit filter)");
+async function captureChat(browser, dir) {
+  console.log("  → chat (open)");
   const { page, ctx } = await newLoggedInPage(browser);
-  // Click the "Strong" fit filter chip
-  const strongBtn = page.getByRole("button", { name: /strong/i }).first();
-  if (await strongBtn.isVisible()) {
-    await strongBtn.click();
-    await sleep(300);
+  // Open the floating chat assistant
+  await page.getByRole("button", { name: "Open assistant" }).click();
+  await sleep(400);
+  await shot(page, dir, "chat-open");
+
+  // Desktop only: also capture with a typed question ready to send
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addStyleTag({ content: HIDE_DEV_UI }).catch(() => {});
+  const input = page.locator("input[placeholder*='job']").last();
+  if (await input.isVisible()) {
+    await input.fill("What roles should I prioritize this week?");
+    await sleep(200);
+    mkdirSync(dir, { recursive: true });
+    await page.screenshot({ path: join(dir, "chat-with-input--desktop.png") });
+    console.log("    chat-with-input--desktop.png");
   }
-  await shot(page, dir, "board-filtered-strong");
+
   await ctx.close();
 }
 
 async function captureJobDetail(browser, dir, { company, role, section, label }) {
-  console.log(`  → job detail: ${company}`);
+  console.log(`  → job detail: ${company} (${label})`);
   const { page, ctx } = await newLoggedInPage(browser);
   const url = `${BASE}/job?company=${encodeURIComponent(company)}&role=${encodeURIComponent(role)}&section=${section}`;
-  await page.goto(url, { waitUntil: "networkidle" });
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(500);
   await shot(page, dir, `job-detail-${label}`);
-
-  // Edit mode
-  const editBtn = page.getByRole("button", { name: /^edit$/i }).first();
-  if (await editBtn.isVisible()) {
-    await editBtn.click();
-    await sleep(300);
-    await shot(page, dir, `job-detail-${label}-edit`);
-    // Cancel back
-    const cancelBtn = page.getByRole("button", { name: /cancel/i }).first();
-    if (await cancelBtn.isVisible()) await cancelBtn.click();
-  }
-
   await ctx.close();
 }
 
 async function captureSettings(browser, dir) {
   console.log("  → settings");
   const { page, ctx } = await newLoggedInPage(browser);
-  await page.goto(`${BASE}/settings`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/settings`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(400);
   await shot(page, dir, "settings");
   await ctx.close();
@@ -201,26 +233,42 @@ async function captureSettings(browser, dir) {
 async function captureSettingsModel(browser, dir) {
   console.log("  → settings / model");
   const { page, ctx } = await newLoggedInPage(browser);
-  await page.goto(`${BASE}/settings/model`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/settings/model`, { waitUntil: "domcontentloaded", timeout: 90_000 });
   await sleep(400);
   await shot(page, dir, "settings-model");
+  await ctx.close();
+}
+
+async function captureSettingsProfileAI(browser, dir) {
+  console.log("  → settings / profile & AI");
+  const { page, ctx } = await newLoggedInPage(browser);
+  await page.goto(`${BASE}/settings/profile-ai`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+  await sleep(400);
+  await shot(page, dir, "settings-profile-ai");
+  await ctx.close();
+}
+
+async function captureSettingsExport(browser, dir) {
+  console.log("  → settings / export style");
+  const { page, ctx } = await newLoggedInPage(browser);
+  await page.goto(`${BASE}/settings/export`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+  await sleep(400);
+  await shot(page, dir, "settings-export");
   await ctx.close();
 }
 
 async function captureOnboarding(browser, dir) {
   console.log("  → onboarding wizard");
   const { page, ctx } = await newLoggedInPage(browser);
-  // The wizard auto-shows when candidate.name is missing — just wait for it
   await sleep(600);
   await shot(page, dir, "onboarding-wizard");
   await ctx.close();
 }
 
 async function captureEmptyBoard(browser, dir) {
-  console.log("  → empty board (dismiss wizard)");
+  console.log("  → empty board");
   const { page, ctx } = await newLoggedInPage(browser);
   await sleep(600);
-  // Dismiss wizard if present — look for a skip/close button
   const skipBtn = page.getByRole("button", { name: /skip|close|later|dismiss/i }).first();
   if (await skipBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await skipBtn.click();
@@ -230,7 +278,7 @@ async function captureEmptyBoard(browser, dir) {
   await ctx.close();
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Per-persona run ──────────────────────────────────────────────────────────
 
 async function runPersona(browser, persona) {
   const dir = join(OUT, persona.name);
@@ -245,24 +293,25 @@ async function runPersona(browser, persona) {
   }
 
   await captureBoard(browser, dir);
-  if (persona.prospectJob) await captureBoardFiltered(browser, dir);
+  await captureChat(browser, dir);
 
   if (persona.appliedJob) {
     await captureJobDetail(browser, dir, { ...persona.appliedJob, label: "applied" });
-  }
-  if (persona.offerJob) {
-    await captureJobDetail(browser, dir, { ...persona.offerJob, label: "offer" });
   }
   if (persona.prospectJob) {
     await captureJobDetail(browser, dir, { ...persona.prospectJob, label: "prospect" });
   }
 
-  // Settings only need one persona's pass
+  // Settings pages — only needed once, use design persona
   if (persona.name === "design") {
     await captureSettings(browser, dir);
     await captureSettingsModel(browser, dir);
+    await captureSettingsProfileAI(browser, dir);
+    await captureSettingsExport(browser, dir);
   }
 }
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log("deckhandAI screenshot capture\n");
@@ -271,19 +320,24 @@ async function main() {
 
   for (const persona of PERSONAS) {
     console.log(`\n── ${persona.label} (${persona.name}) ──`);
-
     const kill = startServer(persona.env);
     try {
-      await waitForServer();
+      await waitForServer(persona.name);
+      // Warm up JS bundles with a real browser page so later navigations don't cold-compile
+      process.stdout.write("  Compiling pages");
+      const warmCtx = await browser.newContext();
+      const warmPage = await warmCtx.newPage();
+      await warmPage.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 90_000 });
+      await warmPage.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 90_000 }).catch(() => {});
+      await warmCtx.close();
+      process.stdout.write(" done\n");
       await runPersona(browser, persona);
     } finally {
       await kill();
-      await sleep(2000); // ensure port 3000 is free before next server
     }
   }
 
   await browser.close();
-
   console.log(`\n✓ Done. Screenshots saved to screenshots/`);
   console.log("  Tip: open screenshots/ in Finder to browse them.");
 }
