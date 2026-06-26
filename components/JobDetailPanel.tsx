@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { AppliedJob, ProspectJob, PassedJob, JobSection, JobType } from "@/lib/jobs";
+import { AppliedJob, ProspectJob, PassedJob, JobSection, JobType, resolveJobType } from "@/lib/jobs";
 import { getAppliedIcon, getProspectIcon } from "@/lib/job-signal";
 import { SignalIcon } from "@/components/SignalIcon";
 
@@ -48,7 +48,6 @@ function MetaBlock({ label, children }: { label: string; children: React.ReactNo
 interface Props {
   job: AnyJob;
   section: JobSection;
-  jobType?: JobType;
   onClose: () => void;
   onEdit: () => void;
   onGenerate?: () => void;
@@ -60,7 +59,7 @@ interface Props {
 }
 
 export default function JobDetailPanel({
-  job, section, jobType, onClose, onEdit, onGenerate,
+  job, section, onClose, onEdit, onGenerate,
   onExportResume, onExportCoverLetter, moveSections, onMove, onDismiss,
 }: Props) {
   const [moveOpen, setMoveOpen] = useState(false);
@@ -85,7 +84,7 @@ export default function JobDetailPanel({
     ? getProspectIcon(prospectJob!)
     : "🔴";
 
-  const effectiveType: JobType | undefined = jobType ?? (job as ProspectJob | AppliedJob).type;
+  const effectiveType = resolveJobType(section, job as ProspectJob | AppliedJob);
 
   // Meta grid items — only populated ones
   const metaItems: { label: string; value: string }[] = [];

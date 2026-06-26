@@ -56,6 +56,28 @@ export interface JobsData {
   pending: PendingJob[];
 }
 
+type JobTypeSource = {
+  type?: JobType;
+  notes?: string;
+  role?: string;
+  salary?: string;
+};
+
+/** Resolve work arrangement when `type` is missing (legacy jobs.json). */
+export function resolveJobType(section: JobSection, job: JobTypeSource): JobType {
+  if (job.type) return job.type;
+  if (section === "staffing") return "contract";
+  if (section === "local") return "hybrid";
+
+  const text = `${job.notes ?? ""} ${job.role ?? ""} ${job.salary ?? ""}`.toLowerCase();
+  if (/\bcontract\b|\/hr\b|\bhourly\b|staffing/.test(text)) return "contract";
+  if (/\bhybrid\b/.test(text)) return "hybrid";
+  if (/\bon-?site\b|\bin-office\b/.test(text)) return "local";
+  if (/\bremote\b/.test(text)) return "remote";
+
+  return "remote";
+}
+
 import { githubRead, githubWrite } from "@/lib/github";
 
 const JOBS_PATH = "data/jobs.json";

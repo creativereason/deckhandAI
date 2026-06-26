@@ -12,6 +12,7 @@ type NdjsonEvent =
   | { type: "error"; message: string };
 
 const TOOL_LABELS: Record<string, string> = {
+  read_profile: "Reading your profile…",
   list_jobs: "Reading job board…",
   add_job: "Adding job…",
   update_job: "Updating job…",

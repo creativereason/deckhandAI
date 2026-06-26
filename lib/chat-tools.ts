@@ -1,9 +1,15 @@
 import { readJobs, writeJobs, type JobSection } from "@/lib/jobs";
+import { readProfile } from "@/lib/profile-server";
 import { fetchJdText } from "@/lib/fetch-jd";
 
 // ─── Anthropic tool definitions ───────────────────────────────────────────────
 
 export const ANTHROPIC_TOOLS = [
+  {
+    name: "read_profile",
+    description: "Read the candidate's full profile: name, title, summary, strengths, work history with bullets, education, and writing rules. Use this whenever assessing job fit, answering questions about the candidate's background, or comparing experience against a job description.",
+    input_schema: { type: "object", properties: {} },
+  },
   {
     name: "list_jobs",
     description: "List jobs from the board. Optionally filter by section.",
@@ -189,6 +195,11 @@ export async function executeTool(
     const jobs = await readJobs();
 
     switch (name) {
+      case "read_profile": {
+        const profile = await readProfile();
+        return JSON.stringify(profile, null, 2);
+      }
+
       case "list_jobs": {
         const section = input.section as string | undefined;
         if (!section || section === "all") return JSON.stringify(jobs, null, 2);

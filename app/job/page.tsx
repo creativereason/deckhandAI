@@ -10,6 +10,7 @@ import {
   type JobType,
   type JobFit,
   type JobStatus,
+  resolveJobType,
 } from "@/lib/jobs";
 import { getAppliedIcon, getProspectIcon } from "@/lib/job-signal";
 import { SignalIcon } from "@/components/SignalIcon";
@@ -82,7 +83,7 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
   const [status, setStatus] = useState((job as AppliedJob).status ?? "applied");
   const [date, setDate] = useState((job as AppliedJob).date ?? "");
   const [fit, setFit] = useState((job as ProspectJob).fit ?? "good");
-  const [jobType, setJobType] = useState<JobType>((job as ProspectJob).type ?? "remote");
+  const [jobType, setJobType] = useState<JobType>(() => resolveJobType(section, job));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -91,9 +92,9 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
     setSaving(true);
     setError("");
 
-    const updates: Record<string, unknown> = { company, role, salary, url, notes };
+    const updates: Record<string, unknown> = { company, role, salary, url, notes, type: jobType };
     if (isApplied) { updates.status = status; updates.date = date; }
-    if (isProspect) { updates.fit = fit; updates.type = jobType; }
+    if (isProspect) { updates.fit = fit; }
 
     const res = await fetch("/api/jobs", {
       method: "PATCH",
@@ -415,7 +416,7 @@ function JobDetailContent() {
   const isProspect = section === "prospect" || section === "local" || section === "staffing";
   const appliedJob = isApplied ? (foundJob as AppliedJob) : null;
   const prospectJob = isProspect ? (foundJob as ProspectJob) : null;
-  const effectiveType: JobType | undefined = (foundJob as ProspectJob | AppliedJob).type;
+  const effectiveType = resolveJobType(section, foundJob as ProspectJob | AppliedJob);
 
   const icon = isApplied
     ? getAppliedIcon(appliedJob!)

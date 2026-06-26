@@ -6,15 +6,23 @@ import { Fragment } from "react";
 
 function parseInline(text: string): React.ReactNode[] {
   const out: React.ReactNode[] = [];
-  // Patterns: code `...`, bold **...**, italic *...*, bold-italic ***...***
-  const re = /(`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
+  // Patterns: markdown link, code, bold-italic, bold, italic
+  const re = /(\[([^\]]+)\]\((https?:\/\/[^)]+)\)|`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
   let last = 0;
   let m: RegExpExecArray | null;
 
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const tok = m[0];
-    if (tok.startsWith("`")) {
+    if (tok.startsWith("[")) {
+      // [label](url)
+      out.push(
+        <a key={m.index} href={m[3]} target="_blank" rel="noreferrer"
+          className="underline text-p-blue dark:text-p-accent-inv hover:opacity-75 break-all">
+          {m[2]}
+        </a>
+      );
+    } else if (tok.startsWith("`")) {
       out.push(<code key={m.index} className="px-1 py-0.5 rounded bg-stone-100 dark:bg-white/10 font-mono text-[0.85em]">{tok.slice(1, -1)}</code>);
     } else if (tok.startsWith("***")) {
       out.push(<strong key={m.index}><em>{tok.slice(3, -3)}</em></strong>);

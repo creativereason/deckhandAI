@@ -18,6 +18,7 @@ import {
   JobSection,
   JobFit,
   JobType,
+  resolveJobType,
 } from "@/lib/jobs";
 import { nextSort, sortRows, type SortState } from "@/lib/table-sort";
 import { getAppliedIcon, getProspectIcon, iconSortKey } from "@/lib/job-signal";
@@ -36,13 +37,6 @@ import ChatDrawer from "@/components/ChatDrawer";
 
 type FitFilter = JobFit | "all";
 type TaggedProspectJob = ProspectJob & { _section: "prospect" | "local" | "staffing" };
-
-function getProspectType(job: TaggedProspectJob): JobType {
-  if (job.type) return job.type;
-  if (job._section === "staffing") return "contract";
-  if (job._section === "local") return "hybrid";
-  return "remote";
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -349,7 +343,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
                   <span className="leading-none shrink-0 flex items-center"><SignalIcon icon={getAppliedIcon(j)} size={16} /></span>
                   <span className="font-semibold text-gray-900 dark:text-white text-base truncate">{j.company}</span>
                   <StatusBadge label={j.status} />
-                  {j.type && <TypeBadge type={j.type} />}
+                  <TypeBadge type={resolveJobType("applied", j)} />
                 </div>
                 {j.url && <JobLink url={j.url} />}
               </div>
@@ -395,7 +389,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
               <td className="py-2.5 pr-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">{j.company}</td>
               <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-200">{j.role}</td>
               <td className="py-2.5 pr-4"><StatusBadge label={j.status} /></td>
-              <td className="py-2.5 pr-4">{j.type ? <TypeBadge type={j.type} /> : <span className="text-stone-300">—</span>}</td>
+              <td className="py-2.5 pr-4"><TypeBadge type={resolveJobType("applied", j)} /></td>
               <td className="py-2.5 pr-4 text-stone-500 dark:text-gray-400 whitespace-nowrap">{j.date || "—"}</td>
               <td className="py-2.5 pr-4 text-stone-500 dark:text-gray-400 max-w-[120px] text-xs">{j.salary || "—"}</td>
               <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[220px] text-xs leading-relaxed truncate">{j.notes}</td>
@@ -450,7 +444,7 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
       <div className="lg:hidden space-y-2 pb-1">
         {sorted.map((j) => {
           const key = `${j.company}${j.role}`;
-          const jType = getProspectType(j);
+          const jType = resolveJobType(j._section, j);
           return (
             <div key={key}
               onClick={() => onDetail(j)}
@@ -502,7 +496,7 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
         </thead>
         <tbody>
           {sorted.map((j) => {
-            const jType = getProspectType(j);
+            const jType = resolveJobType(j._section, j);
             return (
               <tr key={`${j.company}${j.role}`}
                 onClick={() => onDetail(j)}

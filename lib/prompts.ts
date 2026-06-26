@@ -108,7 +108,9 @@ ${education || "Not provided."}
 WRITING RULES — follow these exactly:
 ${rules || "Write in a clear, direct, professional voice."}
 
-Always write in first person. Do not invent experience or credentials not listed above.`.trim();
+Cover letters: write in first person ("I led", "I designed").
+Resume bullets: use implied subject — no pronouns ("Led a team of 8", not "I led"). Start each bullet with a strong action verb.
+Do not invent experience or credentials not listed above.`.trim();
 }
 
 export function buildUserPrompt(job: JobContext, type: GenerationType): string {

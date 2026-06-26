@@ -9,6 +9,7 @@ import {
   AppliedJob,
   ProspectJob,
   PassedJob,
+  resolveJobType,
 } from "@/lib/jobs";
 import { getAppliedIcon, getProspectIcon, getSignalLabel } from "@/lib/job-signal";
 import { SignalIcon } from "@/components/SignalIcon";
@@ -27,12 +28,6 @@ function boardFromSection(section: JobSection): Board {
   if (section === "applied") return "applied";
   if (section === "passed") return "passed";
   return "prospects";
-}
-
-function typeFromSection(section: JobSection): JobType {
-  if (section === "staffing") return "contract";
-  if (section === "local") return "hybrid";
-  return "remote";
 }
 
 function sectionFromBoardAndType(board: Board, jobType: JobType): JobSection {
@@ -120,7 +115,7 @@ export default function JobFormModal({
   const [board, setBoard] = useState<Board>(() => boardFromSection(initialSection));
   const [jobType, setJobType] = useState<JobType>(() => {
     const j = job as (ProspectJob & { type?: JobType }) | undefined;
-    return j?.type ?? typeFromSection(initialSection);
+    return resolveJobType(initialSection, j ?? {});
   });
   const section = sectionFromBoardAndType(board, jobType);
   const [form, setForm] = useState(() => jobToForm(initialSection, job));
@@ -169,7 +164,7 @@ export default function JobFormModal({
     setSaving(true);
     setError(null);
 
-    const payload = { ...buildJobPayload(section, form), ...(board === "prospects" ? { type: jobType } : {}) };
+    const payload = { ...buildJobPayload(section, form), type: jobType };
 
     try {
       if (mode === "add") {
@@ -237,7 +232,7 @@ export default function JobFormModal({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className={board === "prospects" ? "col-span-1" : "col-span-2"}>
+          <div className={board === "passed" ? "col-span-2" : "col-span-1"}>
             <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Board</label>
             <select
               className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
@@ -250,7 +245,7 @@ export default function JobFormModal({
             </select>
           </div>
 
-          {board === "prospects" && (
+          {board !== "passed" && (
             <div>
               <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Type</label>
               <select

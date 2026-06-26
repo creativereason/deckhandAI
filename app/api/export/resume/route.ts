@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
       company?: string;
       role?: string;
       tailoredBullets?: Record<string, string[]>;
+      tailoredProfileBullets?: string[];
     };
 
     const [config, profileRaw] = await Promise.all([
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
     const candidate = config.candidate ?? {};
     const style = config.export;
 
-    const buffer = await generateResumeDOCX(profile, candidate, style, body.tailoredBullets, body.company);
+    const buffer = await generateResumeDOCX(profile, candidate, style, body.tailoredBullets, body.company, body.tailoredProfileBullets);
 
     const company = body.company ?? "company";
     const role = body.role ?? "role";

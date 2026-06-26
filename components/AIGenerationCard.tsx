@@ -30,7 +30,8 @@ const TYPE_OPTIONS: { value: ModalTab; label: string; description: string }[] = 
   { value: "tailor-resume", label: "Tailor resume", description: "AI rewrites bullets and title for this role" },
 ];
 
-function DiffSection({ label, original, tailored }: { label: string; original: string[]; tailored: string[] }) {
+function DiffSection({ label, original, tailored, bullets }: { label: string; original: string[]; tailored: string[]; bullets?: boolean }) {
+  const listCls = bullets ? "space-y-1 list-disc pl-4" : "space-y-1";
   return (
     <div className="rounded-xl border border-p-linen dark:border-p-dark-mid overflow-hidden">
       <div className="px-3 py-1.5 bg-p-linen dark:bg-p-dark-mid">
@@ -39,18 +40,18 @@ function DiffSection({ label, original, tailored }: { label: string; original: s
       <div className="grid grid-cols-2 divide-x divide-p-linen dark:divide-p-dark-mid">
         <div className="p-3 bg-red-50/40 dark:bg-red-950/10">
           <p className="text-[10px] font-semibold text-red-400 dark:text-red-500 uppercase tracking-widest mb-1.5">Before</p>
-          <ul className="space-y-1">
+          <ul className={listCls}>
             {original.length ? original.map((b, i) => (
               <li key={i} className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{b}</li>
-            )) : <li className="text-xs text-gray-400 italic">—</li>}
+            )) : <li className="text-xs text-gray-400 italic list-none">—</li>}
           </ul>
         </div>
         <div className="p-3 bg-green-50/40 dark:bg-green-950/10">
           <p className="text-[10px] font-semibold text-green-600 dark:text-green-500 uppercase tracking-widest mb-1.5">After</p>
-          <ul className="space-y-1">
+          <ul className={listCls}>
             {tailored.length ? tailored.map((b, i) => (
               <li key={i} className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{b}</li>
-            )) : <li className="text-xs text-gray-400 italic">—</li>}
+            )) : <li className="text-xs text-gray-400 italic list-none">—</li>}
           </ul>
         </div>
       </div>
@@ -235,7 +236,11 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
       for (const exp of tailored.experience) {
         tailoredBullets[`${exp.company}::${exp.role}`] = exp.bullets;
       }
-      await triggerDownload("/api/export/resume", { company, role, tailoredBullets }, `resume-${slug}.docx`);
+      await triggerDownload(
+        "/api/export/resume",
+        { company, role, tailoredBullets, tailoredProfileBullets: tailored.profileBullets },
+        `resume-${slug}.docx`
+      );
       toast.success("Tailored resume downloaded");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed");
@@ -324,6 +329,7 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
                   label="Profile"
                   original={originalProfile?.profileBullets ?? []}
                   tailored={tailored.profileBullets ?? []}
+                  bullets
                 />
               ) : null}
               {tailored.experience.map((exp) => {
@@ -336,6 +342,7 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
                     label={`${exp.role} · ${exp.company}`}
                     original={orig?.bullets ?? []}
                     tailored={exp.bullets}
+                    bullets
                   />
                 );
               })}

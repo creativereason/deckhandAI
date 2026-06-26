@@ -61,7 +61,8 @@ export async function generateResumeDOCX(
   candidate: CandidateConfig,
   styleOverride?: ExportStyle,
   tailoredBullets?: Record<string, string[]>,
-  company?: string
+  company?: string,
+  tailoredProfileBullets?: string[]
 ): Promise<Buffer> {
   const s = resolveExportStyle(styleOverride);
   const accent = hexToDocxColor(s.accentColor);
@@ -153,14 +154,19 @@ export async function generateResumeDOCX(
   // ── Summary ────────────────────────────────────────────────────────────────
 
   const summaryParagraphs: Paragraph[] = [];
-  if (profile.summary) {
+  const profileBullets = tailoredProfileBullets ?? [];
+  if (profileBullets.length || profile.summary) {
     summaryParagraphs.push(sectionHeader("Profile"));
-    summaryParagraphs.push(
-      new Paragraph({
-        children: [run(profile.summary, { color: body })],
-        spacing: { before: 40, after: 60 },
-      })
-    );
+    if (profileBullets.length) {
+      for (const b of profileBullets) summaryParagraphs.push(bulletParagraph(b));
+    } else if (profile.summary) {
+      summaryParagraphs.push(
+        new Paragraph({
+          children: [run(profile.summary, { color: body })],
+          spacing: { before: 40, after: 60 },
+        })
+      );
+    }
   }
 
   // ── Strengths / Skills ─────────────────────────────────────────────────────
