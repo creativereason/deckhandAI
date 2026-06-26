@@ -27,7 +27,7 @@ function resolveEndpoint(config: AiConfig): { url: string; headers: Record<strin
     gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
     grok: "https://api.x.ai/v1",
   };
-  let baseUrl = process.env.AI_BASE_URL || config.base_url || BUILTIN_BASE[provider] || "https://api.openai.com/v1";
+  const baseUrl = process.env.AI_BASE_URL || config.base_url || BUILTIN_BASE[provider] || "https://api.openai.com/v1";
 
   return {
     url: `${baseUrl}/chat/completions`,

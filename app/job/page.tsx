@@ -391,6 +391,7 @@ function JobDetailContent() {
     setHasProfile(!!profile?.name);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   if (!jobs) {
