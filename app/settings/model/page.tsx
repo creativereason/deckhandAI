@@ -11,7 +11,7 @@ const PROVIDERS: { value: AiConfig["provider"]; label: string; defaultModel: str
   { value: "anthropic", label: "Anthropic (Claude)", defaultModel: "claude-sonnet-4-6" },
   { value: "openai", label: "OpenAI", defaultModel: "gpt-4o" },
   { value: "gemini", label: "Google Gemini (free tier available)", defaultModel: "gemini-2.0-flash", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" },
-  { value: "grok", label: "Grok (xAI)", defaultModel: "grok-3", baseUrl: "https://api.x.ai/v1" },
+  { value: "grok", label: "Grok (xAI) ✓ tested", defaultModel: "grok-4.3", baseUrl: "https://api.x.ai/v1" },
   { value: "ollama", label: "Ollama (local, free)", defaultModel: "llama3", baseUrl: "http://localhost:11434/v1" },
   { value: "custom", label: "Custom OpenAI-compatible endpoint", defaultModel: "" },
 ];

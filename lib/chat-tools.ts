@@ -130,6 +130,15 @@ export const ANTHROPIC_TOOLS = [
     },
   },
   {
+    name: "detect_ghost_jobs",
+    description:
+      "Scan applied and prospect jobs for ghost job signals: stale applications with no response after 60+ days, status stuck at screening/interview for 30+ days, or the same company+role appearing in multiple sections (reposted listing). Returns a ranked list of flagged jobs with reasons.",
+    input_schema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
     name: "search_remote_jobs",
     description:
       "Search RemoteOK for remote job listings by keyword. Use as a fallback when a direct JD URL is blocked or gated. Returns up to 10 results with title, company, and link.",
@@ -251,6 +260,58 @@ export async function executeTool(
         list.splice(idx, 1);
         await writeJobs(jobs);
         return JSON.stringify({ ok: true });
+      }
+
+      case "detect_ghost_jobs": {
+        const today = new Date();
+        type GhostFlag = { section: string; company: string; role: string; reason: string; daysSince?: number };
+        const flags: GhostFlag[] = [];
+
+        // Stale applied jobs
+        for (const job of jobs.applied as unknown as AnyJob[]) {
+          const dateStr = job.date as string | undefined;
+          if (!dateStr) continue;
+          const days = Math.floor((today.getTime() - new Date(dateStr).getTime()) / 86_400_000);
+          const status = job.status as string | undefined;
+          const company = job.company as string;
+          const role = job.role as string;
+
+          if (status === "applied" && days >= 90) {
+            flags.push({ section: "applied", company, role, reason: `No response in ${days} days — likely ghost`, daysSince: days });
+          } else if (status === "applied" && days >= 60) {
+            flags.push({ section: "applied", company, role, reason: `No response in ${days} days — worth checking`, daysSince: days });
+          } else if ((status === "screening" || status === "interview") && days >= 30) {
+            flags.push({ section: "applied", company, role, reason: `Status stuck at "${status}" for ${days} days`, daysSince: days });
+          }
+        }
+
+        // Duplicate company+role across sections (reposted)
+        const allSections: JobSection[] = ["applied", "prospect", "local", "staffing"];
+        const seen = new Map<string, string>();
+        for (const sec of allSections) {
+          for (const job of jobs[sec] as unknown as AnyJob[]) {
+            const key = `${String(job.company).toLowerCase()}|${String(job.role).toLowerCase()}`;
+            if (seen.has(key)) {
+              const other = seen.get(key)!;
+              const alreadyFlagged = flags.some(
+                (f) => f.company === job.company && f.role === job.role && f.reason.startsWith("Duplicate")
+              );
+              if (!alreadyFlagged) {
+                flags.push({
+                  section: sec,
+                  company: job.company as string,
+                  role: job.role as string,
+                  reason: `Duplicate: also in "${other}" — may be reposted`,
+                });
+              }
+            } else {
+              seen.set(key, sec);
+            }
+          }
+        }
+
+        flags.sort((a, b) => (b.daysSince ?? 0) - (a.daysSince ?? 0));
+        return JSON.stringify({ flagged: flags, total: flags.length });
       }
 
       case "fetch_job_description": {
