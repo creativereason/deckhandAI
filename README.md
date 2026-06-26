@@ -2,6 +2,8 @@
 
 A self-hosted job search command center. Track prospects, scrape target company career pages, and generate ATS-safe resumes and cover letters with any AI model — no vendor lock-in, no database, no monthly fee.
 
+**[→ Product overview](https://creativereason.com/deckhandai/)** — features, screenshots, and context on why it exists.
+
 **[→ View live demo](https://deckhand-ai.vercel.app)** — read-only, sample data, no login required.
 
 ---
