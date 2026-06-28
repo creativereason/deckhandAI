@@ -96,13 +96,61 @@ Write tests in this order. Do not skip letters. Do not write M before O.
 
 Each letter reveals something the previous letter cannot. The ordering is not arbitrary.
 
-### Hypothesis-driven design
+### Hypothesis-Driven Design
 
-Before writing any test, state a hypothesis:
+A test is a hypothesis made executable. The `it()` description is the hypothesis. The body is the experiment. The assertion is the verdict.
 
-> "I believe that `[function]` returns `[value]` when `[condition]`."
+**Syntax** (adapted from C# xUnit's `Method_Condition_Expected` naming convention):
 
-The test proves or disproves the hypothesis. If the test reveals the hypothesis was wrong, update the hypothesis and the understanding — not just the code. A failing test is information. The most common TDD failure is writing tests that prove the code does what you wrote, instead of proving the code does what the user needs.
+```typescript
+describe('[function or system under test]', () => {
+  it('[returns | throws | calls] [expected] when [condition]', () => {
+    // Arrange — establish the condition stated in it()
+    
+    // Act — invoke exactly what is named in describe()
+    
+    // Assert — verify exactly the outcome stated in it()
+  })
+})
+```
+
+The `it()` string is not a label — it is a falsifiable claim. Before writing the body, read the string aloud as a sentence. If it could not possibly be wrong, the test is not a hypothesis.
+
+**Applied to this codebase:**
+
+```typescript
+describe('getAppliedIcon', () => {
+  it('returns the ghost icon when isGhost is true', () => {
+    // Arrange
+    const job = { isGhost: true, status: 'applied' as const, date: '', notes: '' }
+
+    // Act
+    const icon = getAppliedIcon(job)
+
+    // Assert
+    expect(icon).toBe('👻')
+  })
+})
+```
+
+For conditional branching, nest a second `describe` as the `when`:
+
+```typescript
+describe('getAppliedIcon', () => {
+  describe('when the job is marked as a ghost', () => {
+    it('returns the ghost icon regardless of status', () => { ... })
+    it('returns the ghost icon regardless of date', () => { ... })
+  })
+
+  describe('when the application was declined', () => {
+    it('returns the red icon', () => { ... })
+  })
+})
+```
+
+**When the test fails unexpectedly:** the hypothesis was wrong, not the code. Re-read the `it()` string before touching the implementation. A wrong hypothesis corrected before a line of production code changes is the highest-value outcome in TDD.
+
+**When the test passes before any implementation:** the claim was trivially true. Delete it. Write a harder one.
 
 ### Test file locations
 
