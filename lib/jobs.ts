@@ -44,6 +44,7 @@ export interface PendingJob {
   notes: string;
   scrapeGroup: "remote" | "local";
   scrapeDate: string;
+  fit?: JobFit;
   scoreRationale?: string;
 }
 

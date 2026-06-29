@@ -28,6 +28,35 @@
       "hub_radius_miles": 30
     }
   },
+  "indeed_searches": {
+    "remote": [
+      { "search": "Director of Product Design", "location": "remote" },
+      { "search": "Head of Design", "location": "remote" },
+      { "search": "VP Design", "location": "remote" }
+    ],
+    "local": [
+      { "search": "UX Design Director", "location": "Austin, TX" }
+    ],
+    "companies": [
+      { "search": "Acme Corp", "location": "remote" }
+    ]
+  },
+  "websearch_passes": {
+    "job_boards_director": [
+      { "query": "site:jobs.ashbyhq.com \"head of design\" OR \"design director\" remote", "scrapeGroup": "remote" },
+      { "query": "site:jobs.lever.co \"UX director\" OR \"head of design\" remote", "scrapeGroup": "remote" },
+      { "query": "site:job-boards.greenhouse.io \"design director\" remote", "scrapeGroup": "remote" }
+    ],
+    "job_boards_ic": [
+      { "query": "site:jobs.ashbyhq.com \"staff product designer\" OR \"principal product designer\" remote", "scrapeGroup": "remote" }
+    ],
+    "local": [
+      { "query": "UX design director \"Austin, TX\" OR Texas hybrid", "scrapeGroup": "local" }
+    ],
+    "companies": [
+      { "query": "Acme Corp \"UX design\" OR \"experience design\" director remote", "scrapeGroup": "remote" }
+    ]
+  },
   "scraping": {
     "schedule": "0 8 * * 1-5"
   },

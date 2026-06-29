@@ -48,3 +48,6 @@ npm-debug.log*
 .idea/
 *.swp
 .vercel
+
+# Deployment docs
+DEPLOY.md

@@ -1,4 +1,5 @@
 import { readJobs, writeJobs, PendingJob } from "@/lib/jobs";
+import { scoreNewPendingJobs } from "@/lib/score";
 import {
   buildLocalRegex,
   DEFAULT_SELECTORS,
@@ -266,6 +267,7 @@ export async function runScrape(
     }
 
     if (added.length > 0) {
+      await scoreNewPendingJobs(added);
       await writeJobs(jobs);
     }
   } finally {

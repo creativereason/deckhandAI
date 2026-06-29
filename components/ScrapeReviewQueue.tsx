@@ -88,62 +88,35 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
   const [scores, setScores] = useState<Record<string, ScoreState>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const scoredRef = useRef<Set<string>>(new Set());
+  const [batchScoring, setBatchScoring] = useState(false);
+  const batchFiredRef = useRef(false);
 
   useEffect(() => {
-    const toScore = pending.filter((j) => {
-      const k = jobKey(j);
-      return !j.scoreRationale && !scoredRef.current.has(k);
-    });
-    if (toScore.length === 0) return;
+    const hasUnscored = pending.some((j) => !j.scoreRationale);
+    if (!hasUnscored || batchFiredRef.current) return;
 
-    for (const j of toScore) scoredRef.current.add(jobKey(j));
+    batchFiredRef.current = true;
+    setBatchScoring(true);
 
-    const scoringPatch: Record<string, ScoreState> = {};
-    for (const j of toScore) {
-      scoringPatch[jobKey(j)] = { fit: "good", notes: "", rationale: "", scoring: true };
-    }
-    setScores((prev) => ({ ...prev, ...scoringPatch }));
-
-    Promise.all(
-      toScore.map(async (j) => {
-        const k = jobKey(j);
-        try {
-          const res = await fetch("/api/score-fit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              company: j.company,
-              role: j.role,
-              salary: j.salary || undefined,
-              notes: j.notes || undefined,
-              url: j.url || undefined,
-            }),
-          });
-          if (!res.ok) throw new Error(await res.text());
-          const data = await res.json() as { fit: JobFit; rationale: string };
-          setScores((prev) => ({
-            ...prev,
-            [k]: { fit: data.fit, notes: "", rationale: data.rationale ?? "", scoring: false },
-          }));
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          let detail = msg;
-          try { detail = JSON.parse(msg).error ?? msg; } catch { /* use raw */ }
-          setScores((prev) => ({
-            ...prev,
-            [k]: { ...(prev[k] ?? { fit: "good", notes: "" }), rationale: `Score unavailable: ${detail}`, scoring: false },
-          }));
-        }
-      })
-    );
+    fetch("/api/scrape/score-pending", { method: "POST" })
+      .then(() => onUpdate())
+      .catch(() => { /* soft-fail — jobs show without scores */ })
+      .finally(() => setBatchScoring(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending]);
 
   const visible = pending.filter((j) => !dismissed.has(jobKey(j)));
   if (visible.length === 0) return null;
 
   function getScore(j: PendingJob): ScoreState {
-    return scores[jobKey(j)] ?? { fit: "good", notes: "", rationale: j.scoreRationale ?? "", scoring: false };
+    const k = jobKey(j);
+    if (scores[k]) return scores[k];
+    return {
+      fit: j.fit ?? "good",
+      notes: "",
+      rationale: j.scoreRationale ?? "",
+      scoring: batchScoring && !j.scoreRationale,
+    };
   }
 
   function patchScore(j: PendingJob, patch: Partial<ScoreState>) {
