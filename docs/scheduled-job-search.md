@@ -1,6 +1,6 @@
 # Scheduled Job Search
 
-deckhandAI supports automated job searching that runs on a schedule, searches for qualifying roles, and writes them directly to the `pending` queue in your private data repo — ready for triage in the UI.
+deckhandAI can search job boards automatically on a schedule, populate the pending queue, and leave new roles ready for triage in the UI — no manual effort required.
 
 Three scheduling approaches are supported. Choose based on how you run deckhandAI:
 
@@ -10,7 +10,7 @@ Three scheduling approaches are supported. Choose based on how you run deckhandA
 | [System cron](#system-cron) | VPS or local machine, no cloud CI | ✅ | ❌ |
 | [Claude Code `/schedule`](#claude-code-schedule) | claude.ai users, no server needed | ✅ | ✅ claude.ai only |
 
-**Indeed MCP** is a claude.ai integration and is only available inside a claude.ai session. GitHub Actions and system cron run headlessly and cannot access it. The WebSearch pass works identically across all three approaches.
+**Indeed MCP** is a claude.ai integration only available inside a claude.ai session. GitHub Actions and system cron use the provider-agnostic `scripts/job-search.mjs` script and work with any AI model. **WebSearch works with all three approaches.**
 
 ---
 
@@ -19,19 +19,19 @@ Three scheduling approaches are supported. Choose based on how you run deckhandA
 Before setting up any schedule, confirm:
 
 1. **deckhandAI is deployed** — local or on Vercel (see [DEPLOY.md](../DEPLOY.md))
-2. **Your data repo is configured** — the following must be set in your environment:
+2. **Your data repo is configured** — the following env vars must be set:
    ```
    GITHUB_TOKEN=your_pat_here
    GITHUB_DATA_REPO=your-org/your-private-repo
    GITHUB_DATA_BRANCH=main
    ```
-3. **`data/config.json` has your search preferences** — titles, salary floor, location hub, and `websearch_passes` queries. See `data/config.sample.json` for the shape.
+3. **`data/config.json` has your search preferences** — titles, salary floor, location, and `websearch_passes` queries. See `data/config.sample.json` for the shape.
 
 ---
 
 ## GitHub Actions
 
-The simplest path for self-hosters already using the scraper workflow. Add a new workflow file that runs Claude non-interactively with the WebSearch prompt.
+The simplest path for self-hosters already using the scraper workflow. Uses `scripts/job-search.mjs` — no Anthropic dependency, works with any OpenAI-compatible AI provider.
 
 ### Required secrets
 
@@ -39,10 +39,13 @@ In your deckhandAI repo's **Settings → Secrets and variables → Actions**, ad
 
 | Secret | Value |
 |--------|-------|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key (for `claude` CLI) |
+| `AI_API_KEY` | Your AI provider API key |
+| `AI_MODEL` | Model name (e.g. `gemini-2.0-flash`, `gpt-4o-mini`) |
+| `AI_BASE_URL` | Base URL for your provider (omit for OpenAI) |
 | `DATA_REPO_TOKEN` | GitHub PAT with write access to your data repo |
 | `GITHUB_DATA_REPO` | e.g. `your-org/your-private-repo` |
 | `GITHUB_DATA_BRANCH` | e.g. `main` |
+| `BRAVE_SEARCH_API_KEY` | *(Optional)* [Brave Search API](https://brave.com/search/api/) key — free tier (2k/mo) is plenty. Falls back to DuckDuckGo if not set. |
 
 ### Workflow file
 
@@ -87,53 +90,37 @@ jobs:
           token: ${{ secrets.DATA_REPO_TOKEN }}
           path: data-repo
 
-      - name: Copy data files into place
+      - name: Copy config into place
         run: |
           mkdir -p data
-          cp data-repo/data/jobs.json data/jobs.json 2>/dev/null || cp data/jobs.sample.json data/jobs.json
           cp data-repo/data/config.json data/config.json 2>/dev/null || cp data/config.sample.json data/config.json
 
-      - name: Run WebSearch job search pass
-        run: |
-          claude --print "
-            Run the weekly WebSearch job search pass for deckhandAI.
-            Read data/config.json for search preferences and websearch_passes queries.
-            For each query, search the web, filter against title preferences and salary floor,
-            skip any URL already in data/jobs.json, and collect qualifying roles.
-            Then write new jobs to the pending section of data/jobs.json directly on disk.
-            Commit message convention: 'Add N jobs to pending queue via WebSearch pass'
-          "
+      - name: Run job search
+        run: node scripts/job-search.mjs
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          BRAVE_SEARCH_API_KEY: ${{ secrets.BRAVE_SEARCH_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
           GITHUB_DATA_REPO: ${{ secrets.GITHUB_DATA_REPO }}
           GITHUB_DATA_BRANCH: ${{ secrets.GITHUB_DATA_BRANCH }}
-
-      - name: Commit and push results
-        working-directory: data-repo
-        run: |
-          cp ../data/jobs.json data/jobs.json
-          git config user.name "deckhandAI"
-          git config user.email "deckhand@noreply"
-          git add data/jobs.json
-          git diff --cached --quiet || git commit -m "Add jobs to pending queue via WebSearch pass — $(date '+%Y-%m-%d')"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
 ```
 
-This mirrors the pattern used in `.github/workflows/scrape.yml`. The two workflows can run independently or be combined into a single weekly workflow.
+The script writes results directly to your data repo via the GitHub API — no separate commit step needed. This mirrors the pattern in `.github/workflows/scrape.yml` and can run alongside it or be combined into a single weekly workflow.
+
+> **Note:** Scheduled workflows are disabled on repos with no recent activity. If the workflow doesn't trigger, run it once manually via the **Run workflow** button in the Actions tab to re-enable the schedule.
 
 ---
 
 ## System cron
 
-For deckhandAI running on a VPS or local machine. Uses `crontab` to call the `claude` CLI directly.
+For deckhandAI running on a VPS or local machine.
 
 ### Prerequisites
 
-- `claude` CLI installed: `npm install -g @anthropic-ai/claude-code`
-- `ANTHROPIC_API_KEY` set in your shell environment (add to `~/.bashrc` or `~/.zshrc`)
+- Node.js 20+
+- `AI_API_KEY`, `AI_MODEL`, `GITHUB_TOKEN`, `GITHUB_DATA_REPO`, `GITHUB_DATA_BRANCH` set in your environment (add to `~/.bashrc` or `~/.zshrc`)
 
 ### Setup
 
@@ -144,7 +131,7 @@ For deckhandAI running on a VPS or local machine. Uses `crontab` to call the `cl
 
 2. Add a weekly entry (Mondays at 9am):
    ```cron
-   0 9 * * 1 cd /path/to/deckhandAI && claude --print "Run the weekly WebSearch job search pass for deckhandAI. Read data/config.json for search preferences and websearch_passes queries. For each query, search the web, filter against title preferences and salary floor, skip any URL already in data/jobs.json, and add qualifying roles to the pending section using the GitHub API write flow documented in CLAUDE.md. Commit message: 'Add N jobs to pending queue via WebSearch pass'" >> /var/log/deckhand-search.log 2>&1
+   0 9 * * 1 cd /path/to/deckhandAI && node scripts/job-search.mjs >> /var/log/deckhand-search.log 2>&1
    ```
 
 3. Confirm the cron is registered:
@@ -152,13 +139,17 @@ For deckhandAI running on a VPS or local machine. Uses `crontab` to call the `cl
    crontab -l
    ```
 
-The log file at `/var/log/deckhand-search.log` captures each run's output. Rotate it with `logrotate` or a periodic `truncate` if needed.
+The log at `/var/log/deckhand-search.log` captures each run. Rotate it with `logrotate` or a periodic `truncate` if needed.
+
+### Search API
+
+Set `BRAVE_SEARCH_API_KEY` in your environment to use Brave Search (recommended). Without it the script falls back to DuckDuckGo, which may be rate-limited under heavy use.
 
 ---
 
 ## Claude Code `/schedule`
 
-The no-server option — creates a cloud-based trigger that fires into your claude.ai session. This is the only approach that supports the Indeed MCP pass.
+The no-server option — creates a cloud-based trigger that fires into your claude.ai session. This is the only approach that supports the **Indeed MCP** pass.
 
 ### Setup
 
@@ -172,7 +163,7 @@ Claude will ask for the cadence and prompt. Suggested setup:
 
 **Cadence:** `0 9 * * 1` (Mondays at 9am UTC)
 
-**Prompt — WebSearch pass (works on any plan):**
+**Prompt — WebSearch pass:**
 ```
 Run the weekly WebSearch job search pass for deckhandAI. Read data/config.json for my search preferences and websearch_passes queries. For each query, search the web, filter results against my title preferences and salary floor, skip any URL already in jobs.json, and add qualifying roles to the pending section of jobs.json in the GitHub data repo using the write flow in CLAUDE.md. Commit with message: "Add N jobs to pending queue via WebSearch pass"
 ```
@@ -182,13 +173,13 @@ Run the weekly WebSearch job search pass for deckhandAI. Read data/config.json f
 Run the weekly Indeed MCP job search pass for deckhandAI. Read data/config.json for my search preferences. Search Indeed using the mcp__claude_ai_Indeed__search_jobs tool for each target title. Filter against my salary floor and location preferences, skip any URL already in jobs.json, and add qualifying roles to the pending section of jobs.json in the GitHub data repo using the write flow in CLAUDE.md. Commit with message: "Add N jobs to pending queue via Indeed MCP"
 ```
 
-You can combine both into a single trigger — Claude will run WebSearch first, then attempt the Indeed MCP pass as a bonus step.
+You can combine both into a single trigger — Claude will run WebSearch first, then the Indeed MCP pass as a bonus step.
 
 ### Managing your schedule
 
 ```
 /schedule list    # view active triggers
-/schedule         # update cadence or prompt, or delete a trigger
+/schedule         # update cadence, prompt, or delete a trigger
 ```
 
 ---
@@ -201,7 +192,7 @@ After any scheduled run, new jobs appear in the **Pending** section of the deckh
 - **Pass** on roles that don't fit
 - **Score** fit against your profile (if AI generation is configured)
 
-The pending queue is append-only from the agent — it never moves or deletes existing jobs.
+The pending queue is append-only from the script — it never moves or deletes existing jobs.
 
 ---
 
@@ -213,10 +204,13 @@ The pending queue is append-only from the agent — it never moves or deletes ex
 - Check that salary and location filters aren't too restrictive
 
 **GitHub Actions workflow not triggering**
-- Scheduled workflows are disabled on repos with no activity in 60 days — trigger once manually via `workflow_dispatch` to re-enable
+- Scheduled workflows are disabled on repos with no recent activity — trigger once manually via `workflow_dispatch` to re-enable
+
+**DuckDuckGo returning few or no results**
+- Add a `BRAVE_SEARCH_API_KEY` — the free tier (2,000 calls/month) is well within the needs of a weekly pass
 
 **Indeed MCP tool not found**
 - You are not in a claude.ai session — use the WebSearch pass instead
 
 **Duplicate jobs appearing**
-- Deduplication matches on `url` first, then `company`+`role`. If a job board changes a listing URL the same role may be re-added — pass duplicates in the UI
+- Deduplication matches on `url`. If a job board changes a listing URL the same role may be re-added — pass duplicates in the UI
