@@ -38,15 +38,6 @@ function jobKey(j: PendingJob) {
   return `${j.company}|${j.role}`;
 }
 
-interface ItemActionsProps {
-  j: PendingJob;
-  score: ScoreState;
-  loading: boolean;
-  onFit: (fit: JobFit) => void;
-  onApprove: () => void;
-  onReject: () => void;
-}
-
 function FitSelector({ score, onFit }: { score: ScoreState; onFit: (f: JobFit) => void }) {
   return (
     <div className="flex items-center gap-1">

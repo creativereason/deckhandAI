@@ -388,6 +388,10 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 5 | `IJobRepository` interface + service contract tests | **Ready** — blocked on #1, #4 |
 | 6 | Scrape filter unit tests | **Ready** — blocked on #1 |
 | 7 | `resolveJobType` unit tests | **Ready** — blocked on #1 |
+| 12 | `table-sort.ts` unit tests — `nextSort`, `sortRows` | **Ready** — blocked on #1 |
+| 13 | `job-signal.ts` unit tests — `getAppliedIcon`, `getProspectIcon`, `iconSortKey` | **Ready** — blocked on #1 |
+| 14 | `score.ts` unit tests — fit scoring pure functions | **Ready** — blocked on #1 |
+| 15 | Playwright e2e — happy path spec (`e2e/happy-path.spec.ts`) | **Ready** — blocked on #1 |
 | 8 | Table deduplication — merge three tables into `JobTable` | **Ready** — blocked on #1 |
 | 9 | `toSlug()` and `downloadBlob()` utilities | **Ready** — blocked on #1 |
 | 10 | Rate limiting on `/api/generate` | **Ready** — blocked on #1, #3 |

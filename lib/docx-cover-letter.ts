@@ -4,7 +4,6 @@ import {
   Paragraph,
   TextRun,
   BorderStyle,
-  AlignmentType,
 } from "docx";
 import type { CandidateConfig, ExportStyle } from "@/lib/config";
 import { resolveExportStyle } from "@/lib/config";

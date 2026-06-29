@@ -57,7 +57,7 @@ export function MarkdownContent({ text, className }: Props) {
 
     // Code fence
     if (line.startsWith("```")) {
-      const lang = line.slice(3).trim();
+      // Language tag is intentionally ignored — all code blocks render the same
       i++;
       const codeLines: string[] = [];
       while (i < lines.length && !lines[i].startsWith("```")) {
