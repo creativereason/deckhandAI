@@ -381,8 +381,8 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 
 | # | Slice | Status |
 |---|-------|--------|
-| 1 | Test infrastructure (Vitest + Playwright) | **Ready** |
-| 2 | `jobKey()` — fix composite key, no separator bug | **Ready** |
+| 1 | Test infrastructure (Vitest + Playwright) | **Done** |
+| 2 | `jobKey()` — fix composite key, no separator bug | **Done** |
 | 3 | Auth middleware — enforce session on all routes | **Ready** — blocked on #1 |
 | 4 | Zod validation on `/api/jobs` | **Ready** — blocked on #1 |
 | 5 | `IJobRepository` interface + service contract tests | **Ready** — blocked on #1, #4 |
@@ -391,6 +391,7 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 8 | Table deduplication — merge three tables into `JobTable` | **Ready** — blocked on #1 |
 | 9 | `toSlug()` and `downloadBlob()` utilities | **Ready** — blocked on #1 |
 | 10 | Rate limiting on `/api/generate` | **Ready** — blocked on #1, #3 |
+| 11 | Stable job identity (UUID) — fix silent data loss on delete/move for duplicate company+role | **Ready** — blocked on #5 |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 

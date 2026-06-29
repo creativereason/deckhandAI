@@ -19,6 +19,7 @@ import {
   JobFit,
   JobType,
   resolveJobType,
+  jobKey,
 } from "@/lib/jobs";
 import { nextSort, sortRows, type SortState } from "@/lib/table-sort";
 import { getAppliedIcon, getProspectIcon, iconSortKey } from "@/lib/job-signal";
@@ -317,7 +318,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
   );
 
   function handleMove(target: JobSection, j: AppliedJob) {
-    const key = `${j.company}${j.role}`;
+    const key = jobKey(j.company, j.role);
     const label = DISPLAY_SECTIONS.find((s) => s.value === target)?.label ?? target;
     setExitingKey(key);
     toast.success(`Moved to ${label}`);
@@ -330,7 +331,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
       {/* Mobile/tablet cards */}
       <div className="lg:hidden space-y-2 pb-1">
         {sorted.map((j) => {
-          const key = `${j.company}${j.role}`;
+          const key = jobKey(j.company, j.role);
           return (
             <div key={key}
               onClick={() => onDetail(j)}
@@ -382,7 +383,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
         </thead>
         <tbody>
           {sorted.map((j) => (
-            <tr key={`${j.company}${j.role}`}
+            <tr key={jobKey(j.company, j.role)}
               onClick={() => onDetail(j)}
               className="border-b border-p-linen/60 dark:border-p-dark-mid/60 hover:bg-p-linen/40 dark:hover:bg-p-dark-mid/40 group cursor-pointer">
               <RowIcon icon={getAppliedIcon(j)} />
@@ -430,7 +431,7 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
   );
 
   function handleMove(target: JobSection, j: TaggedProspectJob) {
-    const key = `${j.company}${j.role}`;
+    const key = jobKey(j.company, j.role);
     const label = DISPLAY_SECTIONS.find((s) => s.value === target)?.label ?? target;
     setExitingKey(key);
     toast.success(`Moved to ${label}`);
@@ -443,7 +444,7 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
       {/* Mobile/tablet cards */}
       <div className="lg:hidden space-y-2 pb-1">
         {sorted.map((j) => {
-          const key = `${j.company}${j.role}`;
+          const key = jobKey(j.company, j.role);
           const jType = resolveJobType(j._section, j);
           return (
             <div key={key}
@@ -498,7 +499,7 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
           {sorted.map((j) => {
             const jType = resolveJobType(j._section, j);
             return (
-              <tr key={`${j.company}${j.role}`}
+              <tr key={jobKey(j.company, j.role)}
                 onClick={() => onDetail(j)}
                 className={cn("border-b border-p-linen/60 dark:border-p-dark-mid/60 hover:bg-p-linen/40 dark:hover:bg-p-dark-mid/40 group cursor-pointer", j.isNew && "bg-orange-50/40 dark:bg-orange-900/10")}>
                 <RowIcon icon={getProspectIcon(j)} />
@@ -560,7 +561,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExport
   );
 
   function handleMove(target: JobSection, j: PassedJob) {
-    const key = `${j.company}${j.role}`;
+    const key = jobKey(j.company, j.role);
     const label = DISPLAY_SECTIONS.find((s) => s.value === target)?.label ?? target;
     setExitingKey(key);
     toast.success(`Moved to ${label}`);
@@ -573,7 +574,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExport
       {/* Mobile/tablet cards */}
       <div className="lg:hidden space-y-2 pb-1 opacity-60">
         {sorted.map((j) => {
-          const key = `${j.company}${j.role}`;
+          const key = jobKey(j.company, j.role);
           return (
             <div key={key}
               onClick={() => onDetail(j)}
@@ -617,7 +618,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExport
         </thead>
         <tbody>
           {sorted.map((j) => (
-            <tr key={`${j.company}${j.role}`}
+            <tr key={jobKey(j.company, j.role)}
               onClick={() => onDetail(j)}
               className="border-b border-gray-50 dark:border-gray-800/60 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 group opacity-60 cursor-pointer">
               <RowIcon icon="🔴" />

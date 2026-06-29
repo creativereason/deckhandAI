@@ -1,3 +1,7 @@
+export function jobKey(company: string, role: string): string {
+  return `${company}::${role}`;
+}
+
 export type JobStatus = "applied" | "screening" | "interview" | "offer" | "declined";
 export type JobFit = "strong" | "good" | "caution" | "weak";
 export type JobType = "remote" | "hybrid" | "local" | "contract";
