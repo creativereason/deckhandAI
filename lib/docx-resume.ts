@@ -7,9 +7,6 @@ import {
   BorderStyle,
   LevelFormat,
   TabStopType,
-  TabStopPosition,
-  HeadingLevel,
-  convertInchesToTwip,
 } from "docx";
 import type { CandidateConfig, ExportStyle } from "@/lib/config";
 import { resolveExportStyle } from "@/lib/config";

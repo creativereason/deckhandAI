@@ -205,7 +205,6 @@ async function extractListings(page, preferredSelector, titlePrefix, titleFromUr
 async function scrapeTarget(browser, target) {
   const page = await browser.newPage();
   const log = { company: target.company, listings: 0, qualifying: 0, added: 0, errors: [] };
-  const newJobs = [];
 
   try {
     await page.goto(target.url, { timeout: 60000, waitUntil: "domcontentloaded" });
