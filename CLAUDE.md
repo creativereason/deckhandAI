@@ -405,6 +405,7 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 9 | `toSlug()` and `downloadBlob()` utilities | **Ready** — blocked on #1 |
 | 10 | Rate limiting on `/api/generate` | **Ready** — blocked on #1, #3 |
 | 11 | Stable job identity (UUID) — fix silent data loss on delete/move for duplicate company+role | **Ready** — blocked on #5 |
+| 16 | "Evaluate Job URL" flow — fetch → Playwright fallback, streaming status, AI fit scoring, user-confirm before write to pending | **Ready** — blocked on #5, #10 |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 
@@ -443,3 +444,89 @@ if (!parsed.success) {
 const { section, job } = parsed.data;
 ```
 Write the Z test first (empty body → 400). Then valid input (201). Then malformed field (400 with field path).
+
+---
+
+## Slice 16 — "Evaluate Job URL" Flow
+
+### Problem
+
+Many ATS platforms (Workday, iCIMS, SAP SuccessFactors) render job postings entirely in JavaScript. A plain `fetch()` returns an empty shell or a redirect. The user has no way to paste a URL and get an AI evaluation without manually copying the JD text.
+
+### Goal
+
+A new chat-style prompt: **"Evaluate a job"**. The user pastes a URL. The system fetches the full JD, scores fit against their profile, and returns a structured evaluation card. The user then confirms whether to add the job to pending — or discards it.
+
+This is distinct from "Add a job" (which writes immediately). Evaluate first, write only on confirmation.
+
+### Retrieval Strategy
+
+```
+1. fetch(url)                         ← fast; works for Lever, Ashby, Greenhouse, plain pages
+        ↓ if empty or blocked
+2. Brave Search for alternate URL      ← search for the same role cross-posted on a fetchable board
+        ↓ if alternate found
+2a. fetch(alternate_url)              ← fetch the accessible mirror; same open/closed check applies
+        ↓ if still blocked or no alternate found
+3. Playwright browser                  ← handles Workday when ENABLE_PLAYWRIGHT_FALLBACK=true
+        ↓
+4. AI extraction + fit scoring         ← structured output: role, salary, notes, fit score
+        ↓ on user confirmation
+5. Write to pending in jobs.json       ← same GitHub API write flow as other passes
+```
+
+Steps 1 and 2 run on any platform including Vercel — no Chromium needed. `BRAVE_SEARCH_API_KEY` is already used by `scripts/job-search.mjs`; no new credentials required. Step 3 is self-hosted only.
+
+### Playwright on Vercel
+
+**Playwright cannot run on Vercel** (or any other serverless/edge platform). The Chromium binary is too large for the function bundle, and the execution environment does not support spawning child processes.
+
+Control this with an env flag:
+
+```
+ENABLE_PLAYWRIGHT_FALLBACK=true   # self-hosted / local dev only
+ENABLE_PLAYWRIGHT_FALLBACK=false  # Vercel or any serverless deployment
+```
+
+When `ENABLE_PLAYWRIGHT_FALLBACK` is `false` or unset, the route skips step 2 entirely and returns a `retrieval_method: "fetch_only"` flag in the response. The UI surfaces a warning: *"Browser-based retrieval is disabled. If the page content looks incomplete, copy the job description text and paste it directly."*
+
+This flag must be checked in `lib/job-fetcher.ts` (new file), not inline in the route handler, so it can be tested without spinning up a server.
+
+### Streaming Status (SSE)
+
+Retrieval can take 5–15 seconds when Playwright is involved. The route streams progress via `text/event-stream` so the user sees feedback rather than a hung spinner:
+
+```
+event: status  data: Fetching page…
+event: status  data: Content looks incomplete — launching browser…
+event: status  data: Page loaded. Extracting job description…
+event: status  data: Scoring fit against your profile…
+event: result  data: { ...evaluation payload }
+```
+
+The UI renders each status line as it arrives, then replaces the stream with the evaluation card on the `result` event.
+
+### New Files
+
+```
+lib/job-fetcher.ts              ← fetch → Playwright fallback logic, respects ENABLE_PLAYWRIGHT_FALLBACK
+app/api/evaluate-job/route.ts   ← SSE route, auth-guarded, calls job-fetcher + AI scoring
+lib/__tests__/job-fetcher.test.ts
+app/api/__tests__/evaluate-job.test.ts
+```
+
+### Token Routing for This Slice
+
+| Task | Load | Skip |
+|------|------|------|
+| Implement `lib/job-fetcher.ts` | `lib/scrape-run.ts` for Playwright patterns | `app/`, `components/` |
+| Implement the route | `lib/auth.ts`, `lib/job-fetcher.ts`, `app/api/generate/route.ts` for SSE pattern | All other routes |
+| UI evaluation card | The component's own file + `lib/score.ts` for fit display | `lib/`, other components |
+
+### Acceptance Criteria
+
+- `ENABLE_PLAYWRIGHT_FALLBACK=false`: route returns valid result for plain-fetch-accessible URLs; blocked URLs get an explicit `retrieval_limited` flag, no Playwright is invoked.
+- `ENABLE_PLAYWRIGHT_FALLBACK=true`: Workday URL returns populated `notes` and a fit score.
+- SSE: client receives at least one `status` event before the `result` event on slow fetches.
+- No job is written to pending without an explicit user confirmation action after seeing the evaluation card.
+- Auth guard: unauthenticated request returns 401 before any fetch is attempted.

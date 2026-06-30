@@ -287,6 +287,82 @@ Improve the scraper panel so it's informative and usable while a run is in progr
 
 ---
 
+## M11 — "Evaluate Job URL" Flow
+
+A new prompt mode alongside "Add a job": the user pastes a job posting URL, the system fetches the full JD, scores fit against their profile, and returns a structured evaluation card. The user then confirms whether to add the job to pending — or discards it. No job is written without explicit confirmation.
+
+This is distinct from "Add a job" (which writes immediately). Evaluate first, decide after.
+
+### Retrieval Strategy
+
+Many ATS platforms (Workday, iCIMS, SAP SuccessFactors) render job postings entirely in JavaScript. A plain `fetch()` returns an empty shell. The system works through a chain of fallbacks — the first two run on any platform including Vercel:
+
+```
+1. fetch(url)                         — fast; works for Lever, Ashby, Greenhouse, plain pages
+        ↓ if empty or blocked
+2. Brave Search for alternate URL      — search for the same role cross-posted on a fetchable board
+        ↓ if alternate found
+2a. fetch(alternate_url)              — fetch the accessible mirror; apply same open/closed check
+        ↓ if still blocked or no alternate found
+3. Playwright browser                  — handles Workday when ENABLE_PLAYWRIGHT_FALLBACK=true
+        ↓
+4. AI extraction + fit scoring         — structured output: role, salary, notes, fit score
+        ↓ on user confirmation
+5. Write to pending in jobs.json
+```
+
+**Step 2 is the Vercel-friendly recovery path.** Workday jobs are frequently cross-posted on Greenhouse, Lever, or Ashby — all plain-fetch-accessible. Brave Search finds the mirror using the company name (usually present in the Workday domain) and role title. This recovers a meaningful percentage of JS-blocked postings without Chromium. `BRAVE_SEARCH_API_KEY` is already used by the weekly job search script, so no new credentials are needed.
+
+Limitations: Brave may return an expired cross-post or nothing at all (company posts exclusively on Workday). The alternate URL still goes through the same open/closed check before extraction.
+
+### Playwright on Vercel (and other serverless platforms)
+
+**Playwright cannot run on Vercel.** The Chromium binary exceeds the function bundle limit and the execution environment does not support spawning child processes. This is true of any serverless or edge platform.
+
+Controlled by an env flag:
+
+```
+ENABLE_PLAYWRIGHT_FALLBACK=true    # self-hosted / local dev / VPS
+ENABLE_PLAYWRIGHT_FALLBACK=false   # Vercel, Netlify, or any serverless deployment (default)
+```
+
+When `false` or unset, the route skips step 3 entirely. If steps 1–2 also failed to retrieve content, the UI surfaces: *"Content could not be retrieved automatically. Copy the job description text and paste it directly."*
+
+### Streaming Status (SSE)
+
+Playwright retrieval takes 5–15 seconds. The route streams progress via `text/event-stream` so the user sees live feedback instead of a hung spinner:
+
+```
+Fetching page…
+Content looks incomplete — launching browser…
+Page loaded. Extracting job description…
+Scoring fit against your profile…
+```
+
+Each status line appears as it happens. The stream closes with the evaluation result.
+
+### New Files
+
+```
+lib/job-fetcher.ts              — fetch → Playwright fallback, respects ENABLE_PLAYWRIGHT_FALLBACK
+app/api/evaluate-job/route.ts   — SSE route, auth-guarded, calls job-fetcher + AI fit scoring
+```
+
+### Acceptance Criteria
+
+- [ ] Plain-fetch URLs (Lever, Ashby) return a populated evaluation card
+- [ ] Workday URLs with a cross-post on Greenhouse/Lever/Ashby return a populated evaluation card via the Brave Search fallback — no Playwright required
+- [ ] Workday URLs with no cross-post return a populated evaluation card when `ENABLE_PLAYWRIGHT_FALLBACK=true`
+- [ ] When `ENABLE_PLAYWRIGHT_FALLBACK=false` and Brave Search finds no alternate, the UI surfaces a paste-it-yourself fallback message — Playwright is never invoked
+- [ ] At least one SSE `status` event arrives before the `result` event on slow fetches
+- [ ] No job is written to pending without explicit user confirmation
+- [ ] Unauthenticated requests return 401 before any fetch is attempted
+- [ ] `ENABLE_PLAYWRIGHT_FALLBACK` is documented in the env var table
+
+**Effort:** ~3 days
+
+---
+
 ## Known Bugs
 
 - [ ] **Edit modal section change discards notes** — if a user edits the notes field then changes the section dropdown in the job edit modal, the notes changes are lost (section change re-initializes form state)
@@ -317,3 +393,4 @@ Improve the scraper panel so it's informative and usable while a run is in progr
 | `AI_PROVIDER` | No | `anthropic` \| `openai` \| `ollama` \| `custom` (default: `anthropic`) |
 | `AI_BASE_URL` | No | Ollama or custom endpoint (e.g. `http://localhost:11434/v1`) |
 | `DEMO_MODE` | No | `true` to enable read-only demo, bypasses auth |
+| `ENABLE_PLAYWRIGHT_FALLBACK` | No | `true` to allow Playwright browser fetch for JS-rendered pages (self-hosted only — never set on Vercel or serverless) |
