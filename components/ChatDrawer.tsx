@@ -4,6 +4,21 @@ import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
 
 type ClientMsg = { role: "user" | "assistant"; content: string };
+type EvaluationPayload = {
+  company: string;
+  role: string;
+  url: string;
+  salary: string;
+  notes: string;
+  fit: string;
+  scoreRationale: string;
+  retrieval: {
+    retrieval_method: string;
+    retrieval_limited: boolean;
+    warning?: string;
+    source_url?: string;
+  };
+};
 
 type NdjsonEvent =
   | { type: "tool_call"; name: string }
@@ -39,6 +54,36 @@ const SUGGESTIONS_DESKTOP = [
 ];
 
 const GHOST_SCAN_PROMPT = "Scan my board for ghost jobs and stale applications";
+const EVALUATE_URL_PROMPT = "Evaluate this job URL: ";
+const URL_PATTERN = /https?:\/\/\S+/;
+
+function shouldEvaluateJobUrl(text: string): boolean {
+  return !!extractUrl(text);
+}
+
+function extractUrl(text: string): string | null {
+  return text.match(URL_PATTERN)?.[0].replace(/[),.;]+$/, "") ?? null;
+}
+
+function formatEvaluation(evaluation: EvaluationPayload): string {
+  const retrieval = evaluation.retrieval.retrieval_limited
+    ? `\n\nRetrieval note: ${evaluation.retrieval.warning ?? "Automatic retrieval was limited."}`
+    : "";
+  const source = evaluation.retrieval.source_url ? `\n\nSource: ${evaluation.retrieval.source_url}` : "";
+  return `**${evaluation.role || "Role"} at ${evaluation.company || "Company"}**\n\nFit: **${evaluation.fit}**\n\n${evaluation.scoreRationale || "Review the retrieved details before adding this job."}\n\n${evaluation.notes}${source}${retrieval}\n\nAdd this to pending when you're ready.`;
+}
+
+function jobDetailHref(section: string, company: string, role: string): string {
+  const params = new URLSearchParams({ section, company, role });
+  return `/job?${params.toString()}`;
+}
+
+function parseSseBlock(block: string): { event: string; data: unknown } | null {
+  const event = block.match(/^event:\s*(.+)$/m)?.[1];
+  const rawData = block.match(/^data:\s*(.+)$/m)?.[1];
+  if (!event || rawData === undefined) return null;
+  return { event, data: JSON.parse(rawData) as unknown };
+}
 
 export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => void }) {
   const [open, setOpen] = useState(false);
@@ -47,8 +92,10 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
   const [pending, setPending] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [error, setError] = useState("");
+  const [evaluation, setEvaluation] = useState<EvaluationPayload | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasDraftOrThread = messages.length > 0 || input.trim().length > 0 || !!error || !!evaluation;
 
   // Scroll to bottom whenever messages or status change
   useEffect(() => {
@@ -60,9 +107,47 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
 
+  const readEvaluationStream = useCallback(async (body: ReadableStream<Uint8Array>): Promise<string> => {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let assistantText = "I couldn't evaluate that job automatically. Try pasting the job description text.";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return assistantText;
+      buffer += decoder.decode(value, { stream: true });
+      const blocks = buffer.split("\n\n");
+      buffer = blocks.pop() ?? "";
+      for (const block of blocks) {
+        const parsed = parseSseBlock(block);
+        if (!parsed) continue;
+        if (parsed.event === "status" && typeof parsed.data === "string") setStatusText(parsed.data);
+        if (parsed.event === "error") throw new Error(String(parsed.data));
+        if (parsed.event === "result") {
+          const result = parsed.data as EvaluationPayload;
+          setEvaluation(result);
+          assistantText = formatEvaluation(result);
+        }
+      }
+    }
+  }, []);
+
+  const evaluateJobUrl = useCallback(async (text: string): Promise<string> => {
+    const url = extractUrl(text);
+    if (!url) return "Paste the job posting URL after the prompt and I’ll evaluate it.";
+    const res = await fetch("/api/evaluate-job", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok || !res.body) throw new Error("Job evaluation failed");
+    return readEvaluationStream(res.body);
+  }, [readEvaluationStream]);
+
   const send = useCallback(async (text: string) => {
     if (!text.trim() || pending) return;
     setError("");
+    setEvaluation(null);
     const userMsg: ClientMsg = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
@@ -74,6 +159,12 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     let toolsCalled = false;
 
     try {
+      if (shouldEvaluateJobUrl(text)) {
+        const assistantText = await evaluateJobUrl(text);
+        setMessages([...nextMessages, { role: "assistant", content: assistantText }]);
+        return;
+      }
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,11 +210,52 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
       setPending(false);
       setStatusText("");
     }
-  }, [messages, pending, onJobsChanged]);
+  }, [evaluateJobUrl, messages, pending, onJobsChanged]);
+
+  async function addEvaluationToPending() {
+    if (!evaluation || pending) return;
+    setPending(true);
+    setError("");
+    try {
+      const res = await fetch("/api/evaluate-job", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(evaluation),
+      });
+      if (!res.ok) throw new Error("Could not add job to pending");
+      const href = jobDetailHref("pending", evaluation.company, evaluation.role);
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: `Added to pending for review.\n\n[View Job](${href})` },
+      ]);
+      setEvaluation(null);
+      onJobsChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add job to pending");
+    } finally {
+      setPending(false);
+    }
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     send(input);
+  }
+
+  function startOver() {
+    if (pending) return;
+    setMessages([]);
+    setInput("");
+    setStatusText("");
+    setError("");
+    setEvaluation(null);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
+  function cueJobUrlEvaluation() {
+    setInput(EVALUATE_URL_PROMPT);
+    setError("");
+    setTimeout(() => inputRef.current?.focus(), 50);
   }
 
   return (
@@ -152,14 +284,43 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
       >
         {/* Header */}
         <div className="px-4 py-3 border-b border-p-linen dark:border-p-dark-mid shrink-0">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Assistant</p>
-          <p className="text-xs text-stone-400 dark:text-gray-500">Manage your job board by chat</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Assistant</p>
+              <p className="text-xs text-stone-400 dark:text-gray-500">Manage your job board by chat</p>
+            </div>
+            {hasDraftOrThread && (
+              <button
+                type="button"
+                onClick={startOver}
+                disabled={pending}
+                className="shrink-0 rounded-full border border-p-linen dark:border-p-dark-mid px-2.5 py-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent transition-colors"
+              >
+                Start over
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
           {messages.length === 0 && !pending && (
             <div className="pt-2 space-y-3">
+              {/* URL evaluation entry point */}
+              <div className="flex justify-start">
+                <div className="max-w-[90%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 border border-p-blue/15 dark:border-p-accent-inv/20 bg-p-blue/5 dark:bg-p-accent-inv/10 text-gray-900 dark:text-white space-y-2.5">
+                  <p className="text-sm leading-relaxed">
+                    Paste a job posting URL and I&apos;ll fetch the description, summarize the role, and help decide where it belongs.
+                  </p>
+                  <button
+                    onClick={cueJobUrlEvaluation}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-p-blue dark:bg-p-accent-inv text-white hover:opacity-90 transition-opacity"
+                  >
+                    Evaluate a job URL
+                  </button>
+                </div>
+              </div>
+
               {/* Proactive ghost scan nudge */}
               <div className="flex justify-start">
                 <div className="max-w-[90%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 bg-p-linen dark:bg-p-dark-mid text-gray-900 dark:text-white space-y-2.5">
@@ -232,6 +393,18 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
 
           {error && (
             <p className="text-xs text-red-500 dark:text-red-400 px-1">{error}</p>
+          )}
+
+          {evaluation && !pending && (
+            <div className="flex justify-start">
+              <button
+                type="button"
+                onClick={addEvaluationToPending}
+                className="rounded-lg bg-p-blue dark:bg-p-accent-inv px-3 py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+              >
+                Add to pending
+              </button>
+            </div>
           )}
 
           <div ref={bottomRef} />

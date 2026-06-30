@@ -1,0 +1,300 @@
+import { NextRequest, NextResponse } from "next/server";
+import { readConfig } from "@/lib/config";
+import { getSession } from "@/lib/auth";
+import { fetchGenerate } from "@/lib/model";
+import { fetchJobDetails, type JobFetchResult } from "@/lib/job-fetcher";
+import { readJobs, writeJobs, type JobFit, type PendingJob } from "@/lib/jobs";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+type EvaluateRequest = {
+  url?: string;
+  company?: string;
+  role?: string;
+  salary?: string;
+  notes?: string;
+};
+
+type EvaluationPayload = {
+  company: string;
+  role: string;
+  url: string;
+  salary: string;
+  notes: string;
+  fit: JobFit;
+  scoreRationale: string;
+  retrieval: JobFetchResult;
+};
+
+const VALID_FITS: JobFit[] = ["strong", "good", "caution", "weak"];
+
+async function isAuthenticated(): Promise<boolean> {
+  if (process.env.DEMO_MODE === "true") return true;
+  const session = await getSession();
+  return session.authenticated === true;
+}
+
+function sse(event: "status" | "result" | "error", data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function extractJsonObject(text: string): Record<string, unknown> {
+  const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  return JSON.parse(match ? match[0] : cleaned) as Record<string, unknown>;
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function fitValue(value: unknown): JobFit {
+  return VALID_FITS.includes(value as JobFit) ? (value as JobFit) : "good";
+}
+
+function compactText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function firstSentence(text: string): string {
+  return compactText(text).split(/(?<=[.!?])\s+/)[0] ?? "";
+}
+
+function indexOfAny(text: string, patterns: RegExp[], startAt = 0): number {
+  const tail = text.slice(startAt);
+  const indexes = patterns
+    .map((pattern) => {
+      const match = tail.match(pattern);
+      return match?.index === undefined ? -1 : startAt + match.index;
+    })
+    .filter((index) => index >= 0);
+  return indexes.length ? Math.min(...indexes) : -1;
+}
+
+function focusedJobText(request: EvaluateRequest, rawText: string): string {
+  const text = compactText(rawText);
+  const roleStart = indexOfAny(text, [
+    /\bAbout (?:the|this) Role\b/i,
+    /\bAbout (?:the|this) Position\b/i,
+    /\bThe Role\b/i,
+    /\bPosition Summary\b/i,
+    /\bJob Description\b/i,
+  ]);
+  const companyName = request.company ? request.company.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+  const companyStart = companyName
+    ? indexOfAny(text, [new RegExp(`\\bAbout ${companyName}\\b`, "i")])
+    : -1;
+  const companySummary = companyStart >= 0
+    ? firstSentence(text.slice(companyStart, roleStart > companyStart ? roleStart : undefined).replace(/^About\s+\S+\s*/i, ""))
+    : "";
+  const roleText = roleStart >= 0 ? text.slice(roleStart) : text.replace(/^.*?\bDescription\b/i, "");
+  return [companySummary, roleText.slice(0, 1400)].filter(Boolean).join("\n\n");
+}
+
+function roleDescriptionSummary(request: EvaluateRequest, rawText: string): string {
+  const text = compactText(rawText);
+  const roleStart = indexOfAny(text, [
+    /\bAbout (?:the|this) Role\b/i,
+    /\bAbout (?:the|this) Position\b/i,
+    /\bThe Role\b/i,
+    /\bPosition Summary\b/i,
+    /\bJob Description\b/i,
+  ]);
+  const roleText = roleStart >= 0 ? text.slice(roleStart) : text.replace(/^.*?\bDescription\b/i, "");
+  const withoutHeading = roleText.replace(
+    /^(About (?:the|this) Role|About (?:the|this) Position|The Role|Position Summary|Job Description)\s*/i,
+    ""
+  );
+  return compactText(withoutHeading)
+    .split(/(?<=[.!?])\s+/)
+    .slice(0, 2)
+    .join(" ");
+}
+
+function companySummary(request: EvaluateRequest, rawText: string): string {
+  const text = compactText(rawText);
+  const roleStart = indexOfAny(text, [
+    /\bAbout (?:the|this) Role\b/i,
+    /\bAbout (?:the|this) Position\b/i,
+    /\bThe Role\b/i,
+    /\bPosition Summary\b/i,
+    /\bJob Description\b/i,
+  ]);
+  const companyName = request.company ? request.company.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+  const companyStart = companyName
+    ? indexOfAny(text, [new RegExp(`\\bAbout ${companyName}\\b`, "i")])
+    : -1;
+  if (companyStart < 0) return request.company ? `${request.company} company summary unavailable.` : "Company summary unavailable.";
+  return firstSentence(
+    text.slice(companyStart, roleStart > companyStart ? roleStart : undefined).replace(/^About\s+\S+\s*/i, "")
+  );
+}
+
+function buildTrackerNotes(request: EvaluateRequest, retrieval: JobFetchResult): string {
+  const scrapedDate = new Date().toISOString().slice(0, 10);
+  const company = companySummary(request, retrieval.text);
+  const role = roleDescriptionSummary(request, retrieval.text) || "Role summary unavailable.";
+  return `Scraped ${scrapedDate}.\n\nCompany: ${company}\n\nRole: ${role}`;
+}
+
+function fallbackEvaluation(request: EvaluateRequest, retrieval: JobFetchResult): EvaluationPayload {
+  const notes = buildTrackerNotes(request, retrieval);
+  return {
+    company: request.company ?? "",
+    role: request.role ?? "",
+    url: request.url ?? retrieval.url,
+    salary: request.salary ?? "",
+    notes: request.notes || notes,
+    fit: "good",
+    scoreRationale: retrieval.retrieval_limited
+      ? "Automatic retrieval was limited, so fit needs manual review."
+      : "Retrieved job details; configure AI to score fit automatically.",
+    retrieval,
+  };
+}
+
+function buildEvaluationPrompt(request: EvaluateRequest, retrieval: JobFetchResult): string {
+  const focusedText = focusedJobText(request, retrieval.text);
+  return `Extract and evaluate this job posting for a personal job tracker.
+
+Known fields:
+Company: ${request.company ?? "unknown"}
+Role: ${request.role ?? "unknown"}
+Salary: ${request.salary ?? "unknown"}
+URL: ${request.url}
+Existing notes: ${request.notes ?? "none"}
+
+Job text, with job-board navigation removed where possible:
+${focusedText || retrieval.text.slice(0, 6000)}
+
+For notes:
+- Do not write fit assessment in notes; fit belongs only in scoreRationale.
+- Notes will be generated separately from the retrieved company and role sections.
+
+Return only valid JSON:
+{"company":"","role":"","salary":"","notes":"","fit":"strong|good|caution|weak","scoreRationale":""}`;
+}
+
+async function evaluateWithAI(
+  request: EvaluateRequest,
+  retrieval: JobFetchResult
+): Promise<EvaluationPayload> {
+  const config = await readConfig();
+  if (!process.env.AI_API_KEY && config.ai?.provider !== "ollama") {
+    return fallbackEvaluation(request, retrieval);
+  }
+
+  const raw = await fetchGenerate(config.ai ?? {}, [
+    { role: "system", content: "You extract job details and score fit. Return only valid JSON." },
+    { role: "user", content: buildEvaluationPrompt(request, retrieval) },
+  ]);
+  const parsed = extractJsonObject(raw);
+  const notes = request.notes || buildTrackerNotes(request, retrieval);
+  return {
+    company: textValue(parsed.company) || request.company || "",
+    role: textValue(parsed.role) || request.role || "",
+    url: request.url ?? retrieval.url,
+    salary: textValue(parsed.salary) || request.salary || "",
+    notes,
+    fit: fitValue(parsed.fit),
+    scoreRationale: textValue(parsed.scoreRationale) || textValue(parsed.rationale),
+    retrieval,
+  };
+}
+
+function pendingFromEvaluation(payload: EvaluationPayload): PendingJob {
+  return {
+    company: payload.company,
+    role: payload.role,
+    url: payload.url,
+    salary: payload.salary,
+    notes: payload.notes,
+    scrapeGroup: "remote",
+    scrapeDate: new Date().toISOString().slice(0, 10),
+    fit: payload.fit,
+    scoreRationale: payload.scoreRationale,
+  };
+}
+
+function alreadyTracked(jobs: Awaited<ReturnType<typeof readJobs>>, pending: PendingJob): boolean {
+  return Object.values(jobs)
+    .filter(Array.isArray)
+    .flat()
+    .some((job) =>
+      pending.url
+        ? job.url === pending.url
+        : job.company === pending.company && job.role === pending.role
+    );
+}
+
+export async function POST(req: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => ({})) as EvaluateRequest;
+  if (!body.url) return NextResponse.json({ error: "url is required" }, { status: 400 });
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const emit = (event: "status" | "result" | "error", data: unknown) =>
+        controller.enqueue(encoder.encode(sse(event, data)));
+
+      try {
+        emit("status", "Fetching page...");
+        const retrieval = await fetchJobDetails({
+          url: body.url!,
+          company: body.company,
+          role: body.role,
+        });
+        if (retrieval.retrieval_limited) {
+          emit("status", retrieval.warning ?? "Retrieval was limited.");
+        } else if (retrieval.retrieval_method === "brave_search") {
+          emit("status", "Found a fetchable cross-post. Extracting job details...");
+        } else if (retrieval.retrieval_method === "playwright") {
+          emit("status", "Browser page loaded. Extracting job details...");
+        }
+
+        emit("status", "Scoring fit against your profile...");
+        const evaluation = await evaluateWithAI(body, retrieval);
+        emit("result", evaluation);
+      } catch (err) {
+        emit("error", err instanceof Error ? err.message : String(err));
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+export async function PUT(req: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (process.env.DEMO_MODE === "true") {
+    return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
+  }
+
+  const payload = await req.json().catch(() => null) as EvaluationPayload | null;
+  if (!payload?.company || !payload.role || !payload.url) {
+    return NextResponse.json({ error: "company, role, and url are required" }, { status: 400 });
+  }
+
+  const jobs = await readJobs();
+  const pending = pendingFromEvaluation(payload);
+  if (alreadyTracked(jobs, pending)) return NextResponse.json({ ok: true, duplicate: true });
+
+  jobs.pending.unshift(pending);
+  await writeJobs(jobs);
+  return NextResponse.json({ ok: true, pending });
+}

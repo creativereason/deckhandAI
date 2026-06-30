@@ -356,6 +356,7 @@ app/api/evaluate-job/route.ts   — SSE route, auth-guarded, calls job-fetcher +
 - [ ] When `ENABLE_PLAYWRIGHT_FALLBACK=false` and Brave Search finds no alternate, the UI surfaces a paste-it-yourself fallback message — Playwright is never invoked
 - [ ] At least one SSE `status` event arrives before the `result` event on slow fetches
 - [ ] No job is written to pending without explicit user confirmation
+- [ ] Job detail view offers a "Fetch more details" action that uses the same retrieval path to enrich notes before generating or scoring
 - [ ] Unauthenticated requests return 401 before any fetch is attempted
 - [ ] `ENABLE_PLAYWRIGHT_FALLBACK` is documented in the env var table
 

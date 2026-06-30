@@ -7,7 +7,7 @@ import { Fragment } from "react";
 function parseInline(text: string): React.ReactNode[] {
   const out: React.ReactNode[] = [];
   // Patterns: markdown link, code, bold-italic, bold, italic
-  const re = /(\[([^\]]+)\]\((https?:\/\/[^)]+)\)|`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
+  const re = /(\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)]+)\)|`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g;
   let last = 0;
   let m: RegExpExecArray | null;
 
@@ -16,8 +16,9 @@ function parseInline(text: string): React.ReactNode[] {
     const tok = m[0];
     if (tok.startsWith("[")) {
       // [label](url)
+      const isExternal = m[3].startsWith("http");
       out.push(
-        <a key={m.index} href={m[3]} target="_blank" rel="noreferrer"
+        <a key={m.index} href={m[3]} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined}
           className="underline text-p-blue dark:text-p-accent-inv hover:opacity-75 break-all">
           {m[2]}
         </a>

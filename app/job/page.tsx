@@ -245,7 +245,9 @@ function JobChat({ jobContext, section, status }: { jobContext: string; section:
   const [statusText, setStatusText] = useState("");
   const [error, setError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const prompts = buildPrompts(section, status);
+  const hasDraftOrThread = messages.length > 0 || input.trim().length > 0 || !!error;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -297,8 +299,30 @@ function JobChat({ jobContext, section, status }: { jobContext: string; section:
     }
   }, [messages, pending, jobContext]);
 
+  function startOver() {
+    if (pending) return;
+    setMessages([]);
+    setInput("");
+    setStatusText("");
+    setError("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
   return (
     <div className="flex flex-col gap-3 min-h-0">
+      {hasDraftOrThread && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={startOver}
+            disabled={pending}
+            className="rounded-full border border-p-linen dark:border-p-dark-mid px-2.5 py-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent transition-colors"
+          >
+            Start over
+          </button>
+        </div>
+      )}
+
       {/* Prompt chips */}
       {messages.length === 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -350,6 +374,7 @@ function JobChat({ jobContext, section, status }: { jobContext: string; section:
       {/* Input */}
       <form onSubmit={(e: FormEvent) => { e.preventDefault(); send(input); }} className="flex gap-2">
         <input
+          ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={pending}
