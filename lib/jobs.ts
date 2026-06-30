@@ -87,14 +87,31 @@ import { githubRead, githubWrite } from "@/lib/github";
 
 const JOBS_PATH = "data/jobs.json";
 
-const EMPTY_JOBS: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
+function emptyJobs(): JobsData {
+  return { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
+}
+
+function jobList<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function normalizeJobsData(value: Partial<JobsData>): JobsData {
+  return {
+    applied: jobList<AppliedJob>(value.applied),
+    prospect: jobList<ProspectJob>(value.prospect),
+    local: jobList<ProspectJob>(value.local),
+    staffing: jobList<ProspectJob>(value.staffing),
+    passed: jobList<PassedJob>(value.passed),
+    pending: jobList<PendingJob>(value.pending),
+  };
+}
 
 export async function readJobs(): Promise<JobsData> {
   try {
     const raw = await githubRead(JOBS_PATH);
-    return JSON.parse(raw) as JobsData;
+    return normalizeJobsData(JSON.parse(raw) as Partial<JobsData>);
   } catch {
-    return { ...EMPTY_JOBS };
+    return emptyJobs();
   }
 }
 
