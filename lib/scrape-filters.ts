@@ -1,4 +1,4 @@
-export const LEVEL_INCLUDE = /senior|lead|director|manager|principal|head|\bvp\b/i;
+export const LEVEL_INCLUDE = /senior|\bsr\.?(?=\s|$)|lead|director|manager|principal|head|\bvp\b/i;
 export const LEVEL_EXCLUDE = /associate|junior|intern|entry|mid-level/i;
 export const TITLE_INCLUDE =
   /\bux\b|\bui\b.{0,10}design|user experience|experience design|product design|product designer|design lead|design director|service design|design manager|design ops|designops|creative director|creative lead|head of design|design system|interaction design|\bdesigner\b|product director|director.{0,10}product|head of product/i;

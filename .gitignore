@@ -34,6 +34,10 @@ build-resume-*.mjs
 
 # Auth / secrets
 .claude/settings.local.json
+.claude/worktrees/
+
+# Test output
+coverage/
 
 # OS
 .DS_Store
