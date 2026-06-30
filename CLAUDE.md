@@ -94,6 +94,13 @@ Typical search patterns:
 
 After searching, add qualifying jobs to the `pending` section of `jobs.json` in the remote data repo. The pending section holds unreviewed jobs awaiting triage in the UI.
 
+**Before writing any job:** fetch the job URL and confirm the posting is open. Do not add a job if:
+- The URL returns a 404 or redirects to a careers listing page instead of the specific role
+- The page content indicates the role is closed ("this position has been filled", "job no longer available", "posting has expired", or similar)
+- The URL is a generic company careers page with no job-specific path
+
+If the posting cannot be confirmed open, skip it — do not add it to pending.
+
 **Write flow** (uses credentials from `.env.local`):
 
 1. Read the current `jobs.json` from GitHub:
@@ -114,11 +121,13 @@ Each pending job should have this shape:
   "role": "",
   "url": "",
   "salary": "",
-  "notes": "",
+  "notes": "Populate from the JD: location/work model, team size, scope, key responsibilities, must-have requirements, and anything that informs fit or comp negotiation.",
   "scrapeGroup": "remote | local",
   "scrapeDate": "YYYY-MM-DD"
 }
 ```
+
+**notes field content:** Pull from the full job description. Include: work model and location specifics, team size and reporting structure, role scope and key responsibilities, must-have requirements (years of experience, tool requirements, domain expectations), and anything else that informs fit assessment or comp negotiation. Do not leave notes empty — a pending job with no JD context is not actionable for triage.
 
 Commit message convention: `"Add N jobs to pending queue via Indeed MCP"`
 
@@ -135,12 +144,12 @@ For each query:
    - Comp ≥ `preferences.salary.min_fte` (FTE) or ≥ `preferences.salary.min_contract_hourly` (contract)
    - Location: remote, or hybrid within `preferences.locations.hub_radius_miles` of hub city
    - Skip any URL already present in jobs.json (check all sections)
-4. For qualifying roles, fetch the job detail URL to confirm the posting is active and get salary/notes
+4. For qualifying roles, fetch the job detail URL. Skip the role if the URL returns a 404, redirects to a generic careers page, or the page copy indicates the role is closed ("no longer available", "position filled", "posting expired"). If the posting is open, extract salary if listed, then populate `notes` from the full JD: work model, team size, reporting structure, role scope, key responsibilities, must-have requirements (years, tools, domain). A pending job with empty notes is not triageable — do not skip this step.
 5. Add to the `pending` section of jobs.json using the same GitHub API write flow as the Indeed pass
 
 Commit message convention: `"Add N jobs to pending queue via WebSearch pass"`
 
-**Tip:** `site:jobs.ashbyhq.com` and `site:jobs.lever.co` queries are the most reliable. Built In results occasionally include closed listings — verify the URL before adding.
+**Tip:** `site:jobs.ashbyhq.com` and `site:jobs.lever.co` queries are the most reliable. Built In results frequently include closed or expired listings — always fetch and verify before adding.
 
 ---
 
