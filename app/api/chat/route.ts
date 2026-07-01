@@ -26,10 +26,12 @@ When the user asks to re-assess, re-score, or evaluate fit for the current job: 
 
 When the user asks to scan for ghost jobs, stale applications, or suspicious listings, call detect_ghost_jobs. Present the flagged jobs grouped by severity, explain each signal, and offer to flag them as ghosts or move them to passed.
 
+When the user asks to flag a job as a ghost but doesn't name which company/role, ask which job before calling flag_ghost — never guess.
+
 When the user shares a job URL:
 1. Call fetch_job_description with that URL to retrieve the JD text.
 2. If thin=true (page was blocked or gated), call search_remote_jobs with relevant keywords (role title, skills) to find similar remote listings on RemoteOK. Present the top results so the user can pick one.
-3. Once you have a description, summarize the role and ask which section to add it to (or add it directly if the user already said).
+3. Once you have a description, summarize the role and score fit if asked. Evaluating a job is not the same as filing it: only call add_job if the user actually asked to add/track/save it. If they do and named a specific section (prospect, applied, local, staffing), use that. If they didn't name one, call add_job with section "pending" so they can review and file it themselves — never default to prospect or applied on your own judgment.
 
 Today's date: ${new Date().toISOString().split("T")[0]}`;
 
@@ -222,10 +224,31 @@ export async function POST(req: NextRequest) {
   const ai = config.ai ?? {};
   const provider = getProvider(ai);
 
+  // The client can disconnect (navigate away, close the tab) while the AI request
+  // is still in flight — the controller auto-closes on cancellation, so any later
+  // enqueue()/close() call would throw "Controller is already closed". Shared
+  // across start()/cancel() since cancel() fires on a client disconnect.
+  let closed = false;
+
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
-      const emit = (event: NdjsonEvent) =>
-        controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      const emit = (event: NdjsonEvent) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+        } catch {
+          closed = true;
+        }
+      };
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        try {
+          controller.close();
+        } catch {
+          // already closed by client disconnection
+        }
+      };
 
       const effectiveSystem = jobContext
         ? SYSTEM_PROMPT + `\n\nThe user is currently viewing this specific job:\n${jobContext}\n\nJob detail context rules: do not ask clarifying questions about what to update — the job context above provides company, role, section, and URL. Act immediately. When the user asks to update from the web, call fetch_job_description with the URL from context, then call update_job with all retrieved fields (notes, fit, scoreRationale, salary if found). Never return a question about what to update when a job URL is available.`
@@ -243,7 +266,10 @@ export async function POST(req: NextRequest) {
         .catch((err) =>
           emit({ type: "error", message: err instanceof Error ? err.message : String(err) })
         )
-        .finally(() => controller.close());
+        .finally(safeClose);
+    },
+    cancel() {
+      closed = true;
     },
   });
 

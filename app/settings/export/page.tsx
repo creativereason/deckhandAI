@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { AppConfig, ExportStyle } from "@/lib/config";
 import { DEFAULT_EXPORT_STYLE } from "@/lib/config";
 
@@ -176,13 +177,9 @@ export default function ExportSettings() {
       </div>
 
       <div className="flex justify-end">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-5 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-40 transition-colors"
-        >
-          {saving ? "Saving…" : "Save export settings"}
-        </button>
+        <Button onClick={save} loading={saving} size="lg" className="px-5">
+          Save export settings
+        </Button>
       </div>
     </div>
   );

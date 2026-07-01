@@ -17,6 +17,7 @@ import { SignalIcon } from "@/components/SignalIcon";
 import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import AIGenerationCard from "@/components/AIGenerationCard";
+import { Button } from "@/components/ui/button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -182,20 +183,12 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
       {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
 
       <div className="flex items-center gap-2 pt-1">
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-5 py-2 text-sm font-semibold bg-p-blue dark:bg-p-accent-inv text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 text-sm border border-p-linen dark:border-p-dark-mid text-gray-600 dark:text-gray-300 rounded-lg hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
-        >
+        <Button type="submit" loading={saving}>
+          Save changes
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -448,14 +441,9 @@ function JobChat({
     <div className="flex flex-col gap-3 min-h-0">
       {hasDraftOrThread && (
         <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={startOver}
-            disabled={pending}
-            className="rounded-full border border-p-linen dark:border-p-dark-mid px-2.5 py-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent transition-colors"
-          >
+          <Button type="button" variant="outline" size="xs" onClick={startOver} disabled={pending} className="text-[11px]">
             Start over
-          </button>
+          </Button>
         </div>
       )}
 
@@ -505,20 +493,12 @@ function JobChat({
           {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
           {notesRefresh && !pending && (
             <div className="flex items-center gap-2 pl-1">
-              <button
-                type="button"
-                onClick={applyNotesRefresh}
-                className="px-3 py-1.5 text-xs font-semibold bg-p-blue dark:bg-p-accent-inv text-white rounded-lg hover:opacity-90 transition-opacity"
-              >
+              <Button type="button" size="sm" onClick={applyNotesRefresh}>
                 Apply
-              </button>
-              <button
-                type="button"
-                onClick={cancelNotesRefresh}
-                className="px-3 py-1.5 text-xs border border-p-linen dark:border-p-dark-mid text-gray-600 dark:text-gray-300 rounded-lg hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
-              >
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={cancelNotesRefresh}>
                 Cancel
-              </button>
+              </Button>
             </div>
           )}
           <div ref={bottomRef} />
@@ -535,13 +515,9 @@ function JobChat({
           placeholder="Ask about this role…"
           className="flex-1 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/30 dark:focus:ring-p-accent-inv/30 disabled:opacity-50 transition"
         />
-        <button
-          type="submit"
-          disabled={pending || !input.trim()}
-          className="px-3 py-2 bg-p-blue dark:bg-p-accent-inv text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity shrink-0"
-        >
+        <Button type="submit" disabled={!input.trim()} loading={pending} className="shrink-0">
           Send
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -585,7 +561,7 @@ function JobDetailContent() {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4 text-gray-400">
         <p className="text-sm">Job not found.</p>
-        <button onClick={() => router.push("/")} className="text-sm text-p-blue dark:text-p-accent-inv hover:underline">← Back to board</button>
+        <Button onClick={() => router.push("/")} variant="link">← Back to board</Button>
       </div>
     );
   }
@@ -653,15 +629,16 @@ function JobDetailContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
 
         {/* Back nav */}
-        <button
+        <Button
           onClick={() => router.push("/")}
-          className="flex items-center gap-1.5 text-sm text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors group mb-5"
+          variant="link"
+          className="flex items-center gap-1.5 text-sm group mb-5"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="group-hover:-translate-x-0.5 transition-transform">
             <path d="M19 12H5M12 5l-7 7 7 7" />
           </svg>
           Board
-        </button>
+        </Button>
 
         {/* Header — full width */}
         <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-6 py-5 mb-5">
@@ -762,25 +739,14 @@ function JobDetailContent() {
             {/* Actions */}
             <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-5 py-4">
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setEditing((e) => !e)}
-                  className={cn(
-                    "px-4 py-2 text-sm font-semibold rounded-lg transition-colors",
-                    editing
-                      ? "bg-p-linen dark:bg-p-dark-mid text-gray-700 dark:text-white"
-                      : "bg-p-blue dark:bg-p-accent-inv text-white hover:opacity-90"
-                  )}
-                >
+                <Button onClick={() => setEditing((e) => !e)} variant={editing ? "secondary" : "default"}>
                   {editing ? "Cancel edit" : "Edit"}
-                </button>
+                </Button>
                 {moveSections.length > 0 && (
                   <div className="relative">
-                    <button
-                      onClick={() => setMoveOpen((o) => !o)}
-                      className="px-4 py-2 text-sm border border-p-linen dark:border-p-dark-mid text-gray-600 dark:text-gray-300 rounded-lg hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
-                    >
+                    <Button onClick={() => setMoveOpen((o) => !o)} variant="outline">
                       Move to ▾
-                    </button>
+                    </Button>
                     {moveOpen && (
                       <>
                         <div className="fixed inset-0 z-[100]" onClick={() => setMoveOpen(false)} />

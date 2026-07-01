@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { AppConfig } from "@/lib/config";
 
 const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
@@ -253,31 +254,20 @@ export default function OnboardingWizard({ onComplete }: Props) {
           {/* Footer */}
           <div className="flex justify-between pt-2">
             {step > 1 ? (
-              <button
-                onClick={() => setStep((s) => s - 1)}
-                className="text-sm text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-              >
+              <Button onClick={() => setStep((s) => s - 1)} variant="ghost">
                 ← Back
-              </button>
+              </Button>
             ) : (
               <div />
             )}
             {step < TOTAL_STEPS ? (
-              <button
-                onClick={() => setStep((s) => s + 1)}
-                disabled={!canAdvance()}
-                className="bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-6 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-40 transition-colors"
-              >
+              <Button onClick={() => setStep((s) => s + 1)} disabled={!canAdvance()} size="lg" className="px-6">
                 Continue
-              </button>
+              </Button>
             ) : (
-              <button
-                onClick={finish}
-                disabled={saving}
-                className="bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-6 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-50 transition-colors"
-              >
-                {saving ? "Saving…" : "Go to tracker"}
-              </button>
+              <Button onClick={finish} loading={saving} size="lg" className="px-6">
+                Go to tracker
+              </Button>
             )}
           </div>
         </div>

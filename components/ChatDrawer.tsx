@@ -1,13 +1,17 @@
 "use client";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { Button } from "@/components/ui/button";
 import {
   evaluateJobUrl as evaluateJobUrlRequest,
   evaluationMissingIdentity,
   addEvaluationToPending as putEvaluationToPending,
   type EvaluationPayload,
 } from "@/lib/evaluate-job-client";
+import { readSseStream } from "@/lib/sse-client";
+import type { ScrapeLogEntry } from "@/lib/scrape-run";
 
 type ClientMsg = { role: "user" | "assistant"; content: string };
 
@@ -41,10 +45,11 @@ const SUGGESTIONS_DESKTOP = [
   "Show strong prospects",
   "Move all declined to passed",
   "Add a job",
-  "Flag Acme Corp as a ghost",
+  "Flag a job as a ghost job",
 ];
 
 const GHOST_SCAN_PROMPT = "Scan my board for ghost jobs and stale applications";
+const SCRAPE_PROMPT = "Scrape for new jobs";
 const EVALUATE_URL_PROMPT = "Evaluate this job URL: ";
 const URL_PATTERN = /https?:\/\/\S+/;
 
@@ -73,35 +78,81 @@ function jobDetailHref(section: string, company: string, role: string): string {
   return `/job?${params.toString()}`;
 }
 
+function formatLogLine(entry: ScrapeLogEntry): string {
+  if (entry.status === "error") return `- ${entry.company}: failed — ${entry.error}`;
+  return `- ${entry.company}: ${entry.listings} listings, ${entry.qualifying} qualifying, ${entry.added} new`;
+}
+
+type ScrapeApiResult = { added: number; log: ScrapeLogEntry[] };
+
+function formatScrapeResult(result: ScrapeApiResult): string {
+  const summary = result.added > 0
+    ? `**${result.added} new job${result.added !== 1 ? "s" : ""}** added to the pending review queue.`
+    : "Scrape complete — no new qualifying jobs found.";
+  const lines = result.log.map(formatLogLine).join("\n");
+  return lines ? `${summary}\n\n${lines}` : summary;
+}
+
+const COLLAPSED_STORAGE_KEY = "board-chat-collapsed";
+
 export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => void }) {
-  const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [messages, setMessages] = useState<ClientMsg[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
-  const [statusText, setStatusText] = useState("");
+  const [statusLines, setStatusLines] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [evaluation, setEvaluation] = useState<EvaluationPayload | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasDraftOrThread = messages.length > 0 || input.trim().length > 0 || !!error || !!evaluation;
 
-  // Scroll to bottom whenever messages or status change
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, statusText, pending]);
+  const appendStatus = useCallback((line: string) => {
+    setStatusLines((lines) => [...lines, line]);
+  }, []);
 
-  // Focus input when drawer opens
+  // Scroll the message list itself to bottom whenever messages or status change —
+  // scrollIntoView() would walk up the scroll-ancestor chain and drag the whole
+  // page along with it now that this panel is embedded inline (not a floating overlay).
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open]);
+    const el = messagesRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, statusLines, pending]);
+
+  // Restore collapsed/expanded state once on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(COLLAPSED_STORAGE_KEY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved === "true") setCollapsed(true);
+  }, []);
+
+  // Focus input when expanded
+  useEffect(() => {
+    if (!collapsed) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [collapsed]);
 
   const evaluateJobUrl = useCallback(async (text: string): Promise<string> => {
     const url = extractUrl(text);
     if (!url) return "Paste the job posting URL after the prompt and I’ll evaluate it.";
-    const result = await evaluateJobUrlRequest(url, setStatusText);
+    const result = await evaluateJobUrlRequest(url, appendStatus);
     setEvaluation(result);
     return formatEvaluation(result);
-  }, []);
+  }, [appendStatus]);
+
+  const runScrapeNow = useCallback(async (): Promise<string> => {
+    const res = await fetch("/api/scrape", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    if (!res.ok || !res.body) throw new Error("Scrape failed");
+    let result: ScrapeApiResult | null = null;
+    await readSseStream(res.body, (event, data) => {
+      if (event === "status" && typeof data === "string") appendStatus(data);
+      if (event === "error") throw new Error(String(data));
+      if (event === "result") result = data as ScrapeApiResult;
+    });
+    if (!result) throw new Error("No scrape result returned");
+    const scrapeResult: ScrapeApiResult = result;
+    if (scrapeResult.added > 0) onJobsChanged();
+    return formatScrapeResult(scrapeResult);
+  }, [appendStatus, onJobsChanged]);
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || pending) return;
@@ -112,12 +163,18 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     setMessages(nextMessages);
     setInput("");
     setPending(true);
-    setStatusText("");
+    setStatusLines([]);
 
     let assistantText = "";
     let toolsCalled = false;
 
     try {
+      if (text === SCRAPE_PROMPT) {
+        const assistantText = await runScrapeNow();
+        setMessages([...nextMessages, { role: "assistant", content: assistantText }]);
+        return;
+      }
+
       if (shouldEvaluateJobUrl(text)) {
         const assistantText = await evaluateJobUrl(text);
         setMessages([...nextMessages, { role: "assistant", content: assistantText }]);
@@ -147,7 +204,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
             const event = JSON.parse(line) as NdjsonEvent;
             if (event.type === "tool_call") {
               toolsCalled = true;
-              setStatusText(TOOL_LABELS[event.name] ?? "Working…");
+              appendStatus(TOOL_LABELS[event.name] ?? "Working…");
             } else if (event.type === "text") {
               assistantText = event.text;
             } else if (event.type === "error") {
@@ -167,9 +224,9 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setPending(false);
-      setStatusText("");
+      setStatusLines([]);
     }
-  }, [evaluateJobUrl, messages, pending, onJobsChanged]);
+  }, [evaluateJobUrl, runScrapeNow, messages, pending, onJobsChanged, appendStatus]);
 
   async function addEvaluationToPending() {
     if (!evaluation || pending || evaluationMissingIdentity(evaluation)) return;
@@ -200,10 +257,18 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     if (pending) return;
     setMessages([]);
     setInput("");
-    setStatusText("");
+    setStatusLines([]);
     setError("");
     setEvaluation(null);
     setTimeout(() => inputRef.current?.focus(), 50);
+  }
+
+  function toggleCollapsed() {
+    setCollapsed((c) => {
+      const next = !c;
+      localStorage.setItem(COLLAPSED_STORAGE_KEY, String(next));
+      return next;
+    });
   }
 
   function cueJobUrlEvaluation() {
@@ -213,86 +278,81 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
   }
 
   return (
-    <>
-      {/* Floating toggle button */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-label={open ? "Close assistant" : "Open assistant"}
-        className={cn(
-          "fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-lg transition-all duration-200 hover:scale-105",
-          open
-            ? "bg-stone-200 dark:bg-p-dark-mid text-gray-700 dark:text-gray-300"
-            : "bg-p-blue dark:bg-p-accent-inv text-white"
+    <div className={cn(
+      "bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-3 py-3 md:px-5 md:py-4",
+      !collapsed && "md:max-h-[calc(100vh-2rem)] md:flex md:flex-col md:overflow-hidden"
+    )}>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Expand assistant" : "Collapse assistant"}
+          className="flex items-start gap-2 text-left flex-1 min-w-0 group"
+        >
+          {collapsed
+            ? <ChevronDownIcon className="w-4 h-4 mt-0.5 shrink-0 text-stone-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" />
+            : <ChevronUpIcon className="w-4 h-4 mt-0.5 shrink-0 text-stone-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" />
+          }
+          <span>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Your Deckhand</p>
+            <p className="text-xs text-stone-400 dark:text-gray-500">Manage your job board by chat</p>
+          </span>
+        </button>
+        {!collapsed && hasDraftOrThread && (
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={startOver}
+            disabled={pending}
+            className="shrink-0 text-[11px]"
+          >
+            Start over
+          </Button>
         )}
-      >
-        {open ? "✕" : "✦"}
-      </button>
+      </div>
 
-      {/* Chat panel */}
-      <div
-        className={cn(
-          "fixed bottom-20 right-6 z-50 w-80 sm:w-96 flex flex-col rounded-xl border border-p-linen dark:border-p-dark-mid bg-white dark:bg-p-dark-surface shadow-2xl transition-all duration-200 origin-bottom-right",
-          open ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"
-        )}
-        style={{ maxHeight: "min(65vh, 560px)" }}
-      >
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-p-linen dark:border-p-dark-mid shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Assistant</p>
-              <p className="text-xs text-stone-400 dark:text-gray-500">Manage your job board by chat</p>
-            </div>
-            {hasDraftOrThread && (
-              <button
-                type="button"
-                onClick={startOver}
-                disabled={pending}
-                className="shrink-0 rounded-full border border-p-linen dark:border-p-dark-mid px-2.5 py-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent transition-colors"
-              >
-                Start over
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
+      {!collapsed && (
+      <>
+      {/* Messages */}
+        <div ref={messagesRef} className="mt-2 md:mt-3 max-h-56 md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto space-y-3">
           {messages.length === 0 && !pending && (
-            <div className="pt-2 space-y-3">
-              {/* URL evaluation entry point */}
-              <div className="flex justify-start">
-                <div className="max-w-[90%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 border border-p-blue/15 dark:border-p-accent-inv/20 bg-p-blue/5 dark:bg-p-accent-inv/10 text-gray-900 dark:text-white space-y-2.5">
-                  <p className="text-sm leading-relaxed">
-                    Paste a job posting URL and I&apos;ll fetch the description, summarize the role, and help decide where it belongs.
-                  </p>
-                  <button
-                    onClick={cueJobUrlEvaluation}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-p-blue dark:bg-p-accent-inv text-white hover:opacity-90 transition-opacity"
-                  >
-                    Evaluate a job URL
-                  </button>
-                </div>
-              </div>
+            <div className="pt-2 space-y-1.5">
+              <button
+                onClick={cueJobUrlEvaluation}
+                title="Paste a job posting URL and I'll fetch the description, summarize the role, and help decide where it belongs."
+                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-p-blue dark:text-p-accent-inv bg-p-blue/5 dark:bg-p-accent-inv/10 border border-p-blue/15 dark:border-p-accent-inv/20 hover:bg-p-blue/10 dark:hover:bg-p-accent-inv/20 transition-colors"
+              >
+                <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6.5 9.5 9.5 6.5M7 4l.7-.7a2.5 2.5 0 0 1 3.5 3.5L10.5 7.5M9 12l-.7.7a2.5 2.5 0 0 1-3.5-3.5L5.5 8.5" />
+                </svg>
+                Evaluate a job URL
+              </button>
 
-              {/* Proactive ghost scan nudge */}
-              <div className="flex justify-start">
-                <div className="max-w-[90%] rounded-2xl rounded-tl-sm px-3.5 py-2.5 bg-p-linen dark:bg-p-dark-mid text-gray-900 dark:text-white space-y-2.5">
-                  <p className="text-sm leading-relaxed">
-                    Want me to scan your board for <strong>ghost jobs</strong>? I can flag stale applications, listings stuck in screening, and roles that keep getting reposted.
-                  </p>
-                  <button
-                    onClick={() => send(GHOST_SCAN_PROMPT)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-p-blue dark:bg-p-accent-inv text-white hover:opacity-90 transition-opacity"
-                  >
-                    <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="6.5" cy="6.5" r="4.5" />
-                      <line x1="10.5" y1="10.5" x2="14" y2="14" />
-                    </svg>
-                    Scan now
-                  </button>
-                </div>
-              </div>
+              <button
+                onClick={() => send(GHOST_SCAN_PROMPT)}
+                title="Scan your board for ghost jobs — stale applications, listings stuck in screening, and roles that keep getting reposted."
+                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-p-blue dark:text-p-accent-inv bg-p-linen/60 dark:bg-p-dark-mid/60 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
+              >
+                <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="6.5" cy="6.5" r="4.5" />
+                  <line x1="10.5" y1="10.5" x2="14" y2="14" />
+                </svg>
+                Scan for ghost jobs
+              </button>
+
+              <button
+                onClick={() => send(SCRAPE_PROMPT)}
+                title="Scan configured career pages for new qualifying roles and add them to the pending review queue."
+                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-p-blue dark:text-p-accent-inv bg-p-linen/60 dark:bg-p-dark-mid/60 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
+              >
+                <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 4h12M2 8h12M2 12h8" />
+                </svg>
+                Scrape for new jobs
+              </button>
 
               <p className="text-xs text-stone-400 dark:text-gray-500 text-center pt-1">Or try asking:</p>
               {SUGGESTIONS_DESKTOP.map((s, i) => (
@@ -330,9 +390,9 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
 
           {pending && (
             <div className="flex flex-col gap-1.5">
-              {statusText && (
-                <p className="text-[11px] text-stone-400 dark:text-gray-500 italic px-1">{statusText}</p>
-              )}
+              {statusLines.map((line, i) => (
+                <p key={i} className="text-[11px] text-stone-400 dark:text-gray-500 italic px-1">{line}</p>
+              ))}
               <div className="flex items-center gap-1 px-1">
                 {[0, 150, 300].map((delay) => (
                   <span
@@ -356,24 +416,22 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
                   Couldn&apos;t detect company/role automatically — add this job manually from the board instead.
                 </p>
               )}
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={addEvaluationToPending}
                 disabled={evaluationMissingIdentity(evaluation)}
-                className="rounded-lg bg-p-blue dark:bg-p-accent-inv px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:hover:opacity-40 transition-opacity"
               >
                 Add to pending
-              </button>
+              </Button>
             </div>
           )}
-
-          <div ref={bottomRef} />
         </div>
 
         {/* Input */}
         <form
           onSubmit={handleSubmit}
-          className="px-3 py-3 border-t border-p-linen dark:border-p-dark-mid shrink-0 flex gap-2"
+          className="mt-3 pt-3 border-t border-p-linen dark:border-p-dark-mid flex gap-2 shrink-0"
         >
           <input
             ref={inputRef}
@@ -381,17 +439,14 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
             onChange={(e) => setInput(e.target.value)}
             disabled={pending}
             placeholder="Message…"
-            className="flex-1 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/40 dark:focus:ring-p-accent-inv/40 disabled:opacity-50 transition"
+            className="flex-1 min-w-0 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/40 dark:focus:ring-p-accent-inv/40 disabled:opacity-50 transition"
           />
-          <button
-            type="submit"
-            disabled={pending || !input.trim()}
-            className="px-3 py-2 bg-p-blue dark:bg-p-accent-inv text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-          >
+          <Button type="submit" disabled={!input.trim()} loading={pending}>
             Send
-          </button>
+          </Button>
         </form>
-      </div>
-    </>
+      </>
+      )}
+    </div>
   );
 }

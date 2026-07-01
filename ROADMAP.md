@@ -212,26 +212,31 @@ Export a tailored cover letter and resume using a code-defined style generator b
 
 ## M8 — AI Chat Assistant (post-beta)
 
-A floating chat interface that lets you manage the job board through natural language instead of the modal forms.
+A chat interface, branded "Your Deckhand," that lets you manage the job board through natural language instead of the modal forms.
 
 **Chat UI**
-- [x] Floating chat button (bottom-right) opens a drawer/panel
-- [x] Streaming message display with tool call status indicators
+- [x] ~~Floating chat button (bottom-right) opens a drawer/panel~~ — superseded by the board layout redesign: the assistant is now an inline card above the board on mobile, and a sticky 1/3-width right rail from `md` up, collapsible and persisted per user
+- [x] Streaming message display with tool call status indicators, now appended progressively as a growing list instead of overwriting a single status line
 - [x] Conversation history within the session
 
 **Tools (what the AI can do)**
+- [x] `read_profile()` — read the candidate profile for fit/background questions
 - [x] `list_jobs(section?)` — read jobs across one or all sections
 - [x] `add_job(section, fields)` — add a new job to the board
 - [x] `update_job(section, company, role, updates)` — edit any field on a job
 - [x] `move_job(company, role, from_section, to_section)` — move a job between sections
-- [x] `flag_ghost(company, role)` — set `isGhost: true` on a job
+- [x] `flag_ghost(company, role)` — set `isGhost: true` on a job (asks which job if not named)
 - [x] `delete_job(section, company, role)` — remove a job
+- [x] `fetch_job_description(url)` — retrieve JD text for a shared URL
+- [x] `search_remote_jobs(keywords)` — RemoteOK fallback when a JD page is blocked/gated
+- [x] `detect_ghost_jobs()` — scan applied jobs for stale/suspicious signals
 
 **Example prompts**
-- "Mark the Acme Corp posting as a ghost job"
+- "Flag a job as a ghost job" (asks which one)
 - "Move all declined applications to passed"
 - "What have I applied to in the last two weeks?"
 - "Add a new prospect: Stripe, Head of Design, strong fit"
+- "Scrape for new jobs" — see M10
 
 **Effort:** ~2 days
 
@@ -248,8 +253,12 @@ A floating chat interface that lets you manage the job board through natural lan
 Establish a test baseline that catches regressions in the data layer, API routes, and critical UI flows before they reach production.
 
 **Unit / integration**
-- [ ] `lib/jobs.ts` — read/write round-trip, section moves, dedup logic
-- [ ] `lib/scrape-filters.ts` — title qualification, location matching edge cases
+- [x] `lib/jobs.ts` — read/write round-trip, section moves, dedup logic (`lib/__tests__/jobs.test.ts`)
+- [x] `lib/scrape-filters.ts` — title qualification, location matching edge cases (`lib/__tests__/scrape-filters.test.ts`)
+- [x] `lib/job-fetcher.ts` — retrieval fallback chain, time budget, content-quality gate (`lib/__tests__/job-fetcher.test.ts`)
+- [x] `/api/evaluate-job` — auth, validation, SSE status/result ordering, notes extraction (`app/api/__tests__/evaluate-job.test.ts`)
+- [x] `ChatDrawer` — evaluation confirm/disable states (`components/__tests__/ChatDrawer.test.tsx`, `shouldEvaluateJobUrl.test.ts`)
+- [x] Job detail page — notes-refresh confirm flow (`app/job/__tests__/page.test.tsx`)
 - [ ] `lib/config.ts` + `lib/scrape-targets.ts` — config parsing, fallback behavior
 - [ ] `/api/jobs` — GET, POST, PATCH, DELETE happy paths and error cases
 - [ ] `/api/scrape/review` — approve and reject paths update correct sections
@@ -265,7 +274,7 @@ Establish a test baseline that catches regressions in the data layer, API routes
 - [ ] Settings — save profile, toggle preferences, reflect on board
 
 **CI**
-- [ ] Run unit/integration tests on every PR (`pnpm test`)
+- [x] Run unit/integration tests on every PR (`pnpm test`) — added to `.github/workflows/lint.yml`
 - [ ] Run E2E suite on merge to main against a seeded demo dataset
 
 **Effort:** ~4 days
@@ -274,14 +283,15 @@ Establish a test baseline that catches regressions in the data layer, API routes
 
 ## M10 — Scraper UX
 
-Improve the scraper panel so it's informative and usable while a run is in progress.
+Improve the scraper experience so it's informative and usable while a run is in progress.
 
-- [ ] Live progress feed — stream per-target status (queued → running → found N / skipped / failed) as the scrape runs instead of a spinner
+- [x] Manual "scrape now" trigger via the Deckhand chat assistant — the board layout redesign removed the standalone Scrape button/panel from the header in favor of scheduled (GitHub Actions cron) scraping; a "Scrape for new jobs" chat prompt replaces on-demand runs, streaming real per-target status via SSE (`/api/scrape`) across both remote and local target groups in one request
+- [x] Live progress feed — per-target status (listings found / qualifying / added, or the failure reason) streams into the chat as each target completes, replacing the old panel's static spinner
 - [ ] Elapsed time and per-target timing shown in the feed
-- [ ] Error detail inline — when a target fails, show the reason (timeout, selector miss, blocked) without leaving the panel
-- [ ] Cancel in-flight run — button to abort a running scrape and show partial results
-- [ ] Persist last-run summary — timestamp, targets hit, jobs found/skipped, shown on next open so the panel isn't blank between runs
-- [ ] Empty-state polish — clear call-to-action when no targets are configured, linking to the scrape sources config
+- [ ] Error detail inline — already surfaced per-target on failure; no dedicated retry affordance yet
+- [ ] Cancel in-flight run — no way to abort a running scrape once started via chat
+- [ ] Persist last-run summary — chat history clears with "Start over"; no persisted last-run summary across sessions
+- [ ] Empty-state polish — no dedicated empty state; N/A now that targets are configured via Settings → Scrape Targets rather than a panel
 
 **Effort:** ~2 days
 
@@ -350,24 +360,70 @@ app/api/evaluate-job/route.ts   — SSE route, auth-guarded, calls job-fetcher +
 
 ### Acceptance Criteria
 
-- [ ] Plain-fetch URLs (Lever, Ashby) return a populated evaluation card
-- [ ] Workday URLs with a cross-post on Greenhouse/Lever/Ashby return a populated evaluation card via the Brave Search fallback — no Playwright required
-- [ ] Workday URLs with no cross-post return a populated evaluation card when `ENABLE_PLAYWRIGHT_FALLBACK=true`
-- [ ] When `ENABLE_PLAYWRIGHT_FALLBACK=false` and Brave Search finds no alternate, the UI surfaces a paste-it-yourself fallback message — Playwright is never invoked
-- [ ] At least one SSE `status` event arrives before the `result` event on slow fetches
-- [ ] No job is written to pending without explicit user confirmation
-- [ ] Job detail view offers a "Fetch more details" action that uses the same retrieval path to enrich notes before generating or scoring
-- [ ] Unauthenticated requests return 401 before any fetch is attempted
-- [ ] `ENABLE_PLAYWRIGHT_FALLBACK` is documented in the env var table
+- [x] Plain-fetch URLs (Lever, Ashby) return a populated evaluation card
+- [x] Workday URLs with a cross-post on Greenhouse/Lever/Ashby return a populated evaluation card via the Brave Search fallback — no Playwright required
+- [x] Workday URLs with no cross-post return a populated evaluation card when `ENABLE_PLAYWRIGHT_FALLBACK=true`
+- [x] When `ENABLE_PLAYWRIGHT_FALLBACK=false` and Brave Search finds no alternate, the UI surfaces a paste-it-yourself fallback message — Playwright is never invoked
+- [x] At least one SSE `status` event arrives before the `result` event on slow fetches
+- [x] No job is written to pending without explicit user confirmation
+- [x] Job detail view offers a notes-refresh-from-URL action (chat: "update notes from the posting") that uses the same retrieval path, with an Apply/Cancel confirm step before writing
+- [x] Unauthenticated requests return 401 before any fetch is attempted
+- [x] `ENABLE_PLAYWRIGHT_FALLBACK` is documented in the env var table
+
+Shipped in PR #10, plus a content-quality follow-up fix (nav/mega-menu shells were being accepted as job descriptions on client-rendered career pages — see `lib/job-fetcher.ts` and `app/api/evaluate-job/route.ts`).
 
 **Effort:** ~3 days
 
 ---
 
+## M12 — Board Redesign (shipped this PR)
+
+The board moved from a single-column table layout to a two-column layout with a persistent AI assistant rail, and the job tables became card-only.
+
+- [x] Responsive layout: single column with the Deckhand assistant stacked on top (mobile), 2/3 board + 1/3 assistant from `md` up, sticky assistant rail that auto-sizes to content instead of forcing full viewport height
+- [x] Header decluttered — removed the standalone "+ Add Job" button and the Scrape button/panel in favor of the assistant (Add Job already had its own URL-evaluate flow; scrape moved to a chat prompt, see M10)
+- [x] Footer added — credits the original creator with a link to creativereason.com and a link to the MIT License
+- [x] Header de-emphasizes the candidate's name — "DeckhandAI" is the prominent title, name is a small line underneath
+- [x] Card view is now the only view for Applied/Prospects/Passed — removed the desktop-table/mobile-card split, added a compact per-section sort control, surfaced the AI fit-rationale on Prospect cards (previously desktop-table-only)
+- [x] Show/Hide toggle for Applied/Prospects/Passed sections, and the Fit filter relocated into the Prospects card itself (it only ever applied to that section) — both persisted per user
+- [x] `Button` component (`components/ui/button.tsx`) re-themed to the app's actual color tokens (was still the generic shadcn palette) and given a fully-rounded radius, press feedback, and a `loading` spinner; converted the app's standalone CTA buttons (Save/Cancel/Send/Approve/Generate/etc., ~55 buttons across 17 files) to use it. Toggle/filter/sort chip groups, dropdown menu rows, and inline table-row links (Edit/Remove/Dismiss) were intentionally left as-is — they're a different UI pattern, not action buttons.
+- [x] Two real bugs fixed along the way: the assistant panel was auto-scrolling the whole page during chat activity (`scrollIntoView` was walking up the scroll-ancestor chain instead of scrolling its own message list), and asking the assistant to "evaluate" a job could silently add it straight to Prospects instead of Pending (tightened the system prompt to treat evaluating and filing as distinct actions)
+
+**Effort:** absorbed into this PR
+
+---
+
+## M13 — Color / Accent Retheme (planned)
+
+The board redesign (M12) surfaced how much of the UI still leans on the original slate/blue palette (`p-blue`, `p-accent`, etc. in `app/globals.css`) even after the `Button` component and card-view work. Next pass: rethink colors, accents, and callouts (fit badges, status badges, type badges, the amber scrape-review-queue treatment, chart/signal colors) as a deliberate palette rather than the incremental choices made slice-by-slice so far.
+
+- [ ] Decide on and document the new palette in `app/globals.css`'s `@theme inline` block
+- [ ] Reconcile the two token systems currently in play — the hand-rolled `p-*` tokens and the shadcn/OKLCH tokens (`--primary`, `--border`, etc.) used by `components/ui/*` — so `Button`, `Badge`, and `Accordion` all draw from one source
+- [ ] Audit badge/callout colors (fit: strong/good/caution/weak, status: applied/screening/interview/offer/declined, type: remote/hybrid/local/contract) for consistency and accessibility (contrast) under both light and dark mode
+- [ ] Apply across cards, the scrape-review-queue amber treatment, and chat UI accents
+
+**Effort:** TBD — scoping pass needed before estimating
+
+---
+
+## M14 — AI Role Summary (planned)
+
+A third, distinct piece of AI-generated context per job — separate from the user's own `notes` and from the fit-assessment `scoreRationale` — that concisely summarizes what the role actually is (scope, team, key responsibilities) in the candidate's terms. Surfaced in two places: on the job card (board view) and in the top bar of the job detail page, so the gist of a role is visible without opening notes or re-reading the full JD.
+
+- [ ] Schema: add a new field (e.g. `aiSummary: string`) to the relevant job types in `lib/jobs.ts` and to `data/jobs.sample.json`; update `CLAUDE.md`'s jobs.json schema docs
+- [ ] Decide the generation trigger — likely piggybacks on the existing evaluate-job flow (`app/api/evaluate-job/route.ts` already extracts company/role summaries for notes; a role summary could reuse that extraction rather than a second AI call) vs. a dedicated on-demand "Summarize this role" action for jobs added by other paths (chat `add_job`, scrape)
+- [ ] Card UI: short (1–2 line, truncated) summary shown on the Applied/Prospect/Passed card, below the role title
+- [ ] Job detail UI: summary shown in the top bar/header area of `app/job/page.tsx`, distinct from the Notes card
+- [ ] Backfill story for existing jobs with no `aiSummary` — likely just render nothing until the user regenerates, no bulk migration
+
+**Effort:** TBD — needs a design pass on the generation trigger before estimating
+
+---
+
 ## Known Bugs
 
-- [ ] **Edit modal section change discards notes** — if a user edits the notes field then changes the section dropdown in the job edit modal, the notes changes are lost (section change re-initializes form state)
-- [ ] **Moved-to-Passed job shows "Declined" status** — when a job is moved from Applied to Passed via the kebab menu, it retains its Applied `status` value (e.g. "declined") and the Passed section renders it with that label instead of showing it as passed
+- [ ] **Edit modal section change discards notes** — if a user edits the notes field then changes the section dropdown in the job edit modal, the notes changes are lost (section change re-initializes form state). Verified still present in `components/JobFormModal.tsx`'s `onBoardChange` — not touched by the card-view/board redesign.
+- [ ] **Moved-to-Passed job retains stale `status` field** — when a job moves from Applied to Passed, `app/api/jobs/route.ts`'s `normalizeJobForSection` never strips the old `status` value from the underlying record. The card-view rewrite means the Passed card no longer *renders* a status badge, so the original visible symptom ("shows Declined") likely no longer reproduces — but the stale field is still written to `jobs.json`, which is worth cleaning up regardless of whether it's currently user-visible.
 
 ---
 

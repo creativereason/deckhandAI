@@ -132,6 +132,7 @@ export type RunScrapeOptions = {
   targets: ScrapeTargetConfig[];
   localOnly?: boolean;
   localRegex?: RegExp;
+  onProgress?: (entry: ScrapeLogEntry) => void;
 };
 
 export async function runScrape(
@@ -139,7 +140,7 @@ export async function runScrape(
   playwright: any,
   options: RunScrapeOptions
 ): Promise<{ added: PendingJob[]; log: ScrapeLogEntry[] }> {
-  const { targets, localOnly = false, localRegex = buildLocalRegex() } = options;
+  const { targets, localOnly = false, localRegex = buildLocalRegex(), onProgress } = options;
   const browser = await playwright.chromium.launch({ headless: true });
   const added: PendingJob[] = [];
   const log: ScrapeLogEntry[] = [];
@@ -242,25 +243,29 @@ export async function runScrape(
           addedForTarget++;
         }
 
-        log.push({
+        const entry: ScrapeLogEntry = {
           company: target.company,
           status: "ok",
           listings: listings.length,
           qualifying,
           added: addedForTarget,
           selector: usedSelector,
-        });
+        };
+        log.push(entry);
+        onProgress?.(entry);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(`Scrape failed for ${target.company}:`, err);
-        log.push({
+        const entry: ScrapeLogEntry = {
           company: target.company,
           status: "error",
           listings: 0,
           qualifying: 0,
           added: 0,
           error: message,
-        });
+        };
+        log.push(entry);
+        onProgress?.(entry);
       } finally {
         await page.close();
       }

@@ -1,55 +1,115 @@
-import { NextRequest, NextResponse } from "next/server";
-import { loadPlaywright, runScrape } from "@/lib/scrape-run";
-import {
-  findTarget,
-  getTargetsForGroup,
-  ScrapeGroup,
-} from "@/lib/scrape-targets";
+import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { loadPlaywright, runScrape, type ScrapeLogEntry } from "@/lib/scrape-run";
+import { getTargetsForGroup, type ScrapeGroup } from "@/lib/scrape-targets";
 import { readConfig } from "@/lib/config";
 import { buildLocalRegex } from "@/lib/scrape-filters";
+import type { PendingJob } from "@/lib/jobs";
 
-export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
-  const targetCompany = body.company as string | undefined;
-  const group = (body.group as ScrapeGroup) || "remote";
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
-  const playwright = await loadPlaywright();
-  if (!playwright) {
-    return NextResponse.json(
-      {
-        error:
-          "Playwright not installed. Run: pnpm exec playwright install chromium",
-      },
-      { status: 500 }
-    );
+const SCRAPE_GROUPS: Exclude<ScrapeGroup, "all">[] = ["remote", "local"];
+const GROUP_LABELS: Record<Exclude<ScrapeGroup, "all">, string> = {
+  remote: "remote/national",
+  local: "local/hybrid",
+};
+
+async function isAuthenticated(): Promise<boolean> {
+  if (process.env.DEMO_MODE === "true") return true;
+  const session = await getSession();
+  return session.authenticated === true;
+}
+
+function formatLogEntry(entry: ScrapeLogEntry): string {
+  if (entry.status === "error") return `${entry.company}: failed — ${entry.error}`;
+  return `${entry.company}: ${entry.listings} listings, ${entry.qualifying} qualifying, ${entry.added} new`;
+}
+
+function sse(event: "status" | "result" | "error", data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+export async function POST() {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (process.env.DEMO_MODE === "true") {
+    return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
   }
 
-  let targets = await getTargetsForGroup(group);
+  const encoder = new TextEncoder();
+  // Shared across start()/cancel() since cancel() fires on a client disconnect
+  // (navigate away, close the tab) while the scrape is still in flight.
+  let closed = false;
 
-  if (targetCompany && targetCompany !== "All") {
-    const match = await findTarget(group, targetCompany);
-    if (!match) {
-      return NextResponse.json({ error: `Unknown company: ${targetCompany}` }, { status: 400 });
-    }
-    targets = [match];
-  }
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const emit = (event: "status" | "result" | "error", data: unknown) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(sse(event, data)));
+        } catch {
+          closed = true;
+        }
+      };
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        try {
+          controller.close();
+        } catch {
+          // already closed by client disconnection
+        }
+      };
 
-  const config = await readConfig();
-  const localRegex = buildLocalRegex(
-    config.preferences?.locations?.hub_city,
-    config.preferences?.locations?.hub_state
-  );
+      (async () => {
+        const playwright = await loadPlaywright();
+        if (!playwright) {
+          emit("error", "Playwright not installed. Run: pnpm exec playwright install chromium");
+          return;
+        }
 
-  try {
-    const { added, log } = await runScrape(playwright, {
-      targets,
-      localOnly: group === "local",
-      localRegex,
-    });
-    return NextResponse.json({ added: added.length, jobs: added, log, group });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("Scrape fatal error:", err);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+        const config = await readConfig();
+        const localRegex = buildLocalRegex(
+          config.preferences?.locations?.hub_city,
+          config.preferences?.locations?.hub_state
+        );
+
+        const added: PendingJob[] = [];
+        const log: ScrapeLogEntry[] = [];
+
+        for (const group of SCRAPE_GROUPS) {
+          const targets = await getTargetsForGroup(group);
+          if (targets.length === 0) continue;
+          emit("status", `Scanning ${targets.length} ${GROUP_LABELS[group]} target${targets.length !== 1 ? "s" : ""}…`);
+          const result = await runScrape(playwright, {
+            targets,
+            localOnly: group === "local",
+            localRegex,
+            onProgress: (entry) => emit("status", formatLogEntry(entry)),
+          });
+          added.push(...result.added);
+          log.push(...result.log);
+        }
+
+        emit("result", { added: added.length, jobs: added, log });
+      })()
+        .catch((err) =>
+          emit("error", err instanceof Error ? err.message : String(err))
+        )
+        .finally(safeClose);
+    },
+    cancel() {
+      closed = true;
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

@@ -2,6 +2,7 @@
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 import JobFormModal from "@/components/JobFormModal";
+import { Button } from "@/components/ui/button";
 import {
   evaluateJobUrl,
   evaluationMissingIdentity,
@@ -86,13 +87,9 @@ function UrlEvaluateForm({ onClose, onAdded, onSwitchToManual }: {
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Add Job</h2>
-          <button
-            type="button"
-            onClick={onSwitchToManual}
-            className="text-xs text-p-accent dark:text-p-accent-inv hover:underline"
-          >
+          <Button type="button" variant="link" size="sm" onClick={onSwitchToManual} className="text-xs">
             Enter details manually
-          </button>
+          </Button>
         </div>
 
         {!evaluation && (
@@ -122,20 +119,12 @@ function UrlEvaluateForm({ onClose, onAdded, onSwitchToManual }: {
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 border border-p-linen dark:border-p-dark-mid rounded-lg py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid"
-              >
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={pending || !url.trim()}
-                className="flex-1 bg-p-blue dark:bg-p-accent-inv text-white rounded py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-50"
-              >
+              </Button>
+              <Button type="submit" disabled={!url.trim()} loading={pending} className="flex-1">
                 {pending ? "Evaluating…" : "Evaluate"}
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -170,21 +159,18 @@ function UrlEvaluateForm({ onClose, onAdded, onSwitchToManual }: {
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setEvaluation(null)}
-                className="flex-1 border border-p-linen dark:border-p-dark-mid rounded-lg py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid"
-              >
+              <Button type="button" variant="outline" onClick={() => setEvaluation(null)} className="flex-1">
                 Back
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={confirmAdd}
-                disabled={saving || evaluationMissingIdentity(evaluation)}
-                className="flex-1 bg-p-blue dark:bg-p-accent-inv text-white rounded py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-50"
+                disabled={evaluationMissingIdentity(evaluation)}
+                loading={saving}
+                className="flex-1"
               >
                 {saving ? "Adding…" : "Add to pending"}
-              </button>
+              </Button>
             </div>
           </div>
         )}

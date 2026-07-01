@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { GenerationType } from "@/lib/prompts";
 import type { TailoredResume } from "@/app/api/tailor-resume/route";
 
@@ -271,13 +272,9 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
             <h2 className="text-base font-bold text-gray-900 dark:text-white">Generate document</h2>
             <p className="text-sm text-p-dusk dark:text-gray-400 mt-0.5">{role} — {company}</p>
           </div>
-          <button
-            onClick={onClose}
-            disabled={streaming}
-            className="text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40 text-xl leading-none"
-          >
+          <Button onClick={onClose} disabled={streaming} variant="ghost" size="icon-sm" className="text-xl leading-none">
             ×
-          </button>
+          </Button>
         </div>
 
         {/* Controls */}
@@ -396,47 +393,56 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
             {type === "tailor-resume" ? (
               <>
                 {tailored && (
-                  <button
+                  <Button
                     onClick={exportTailoredResume}
                     disabled={!!exporting}
-                    className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors disabled:opacity-40"
+                    loading={exporting === "tailored-resume"}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
                   >
-                    {exporting === "tailored-resume" ? "Exporting…" : "Download tailored resume .docx"}
-                  </button>
+                    Download tailored resume .docx
+                  </Button>
                 )}
               </>
             ) : (
               <>
                 {hasOutput && done && (
                   <>
-                    <button onClick={copyToClipboard} className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors">
+                    <Button onClick={copyToClipboard} variant="outline" size="sm" className="text-xs">
                       Copy
-                    </button>
-                    <button onClick={downloadTxt} className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors">
+                    </Button>
+                    <Button onClick={downloadTxt} variant="outline" size="sm" className="text-xs">
                       .txt
-                    </button>
-                    <button onClick={printPdf} className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors">
+                    </Button>
+                    <Button onClick={printPdf} variant="outline" size="sm" className="text-xs">
                       Print / PDF
-                    </button>
+                    </Button>
                     {hasProfile && type === "cover-letter" && (
-                      <button
+                      <Button
                         onClick={exportCoverLetterDocx}
                         disabled={!!exporting}
-                        className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors disabled:opacity-40"
+                        loading={exporting === "cover-letter-docx"}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
                       >
-                        {exporting === "cover-letter-docx" ? "Exporting…" : "Cover letter .docx"}
-                      </button>
+                        Cover letter .docx
+                      </Button>
                     )}
                   </>
                 )}
                 {hasProfile && (
-                  <button
+                  <Button
                     onClick={exportResumeDocx}
                     disabled={!!exporting}
-                    className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-1.5 border border-p-linen dark:border-p-dark-mid rounded-lg transition-colors disabled:opacity-40"
+                    loading={exporting === "resume-docx"}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
                   >
-                    {exporting === "resume-docx" ? "Exporting…" : "Resume .docx"}
-                  </button>
+                    Resume .docx
+                  </Button>
                 )}
               </>
             )}
@@ -446,53 +452,29 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
             {type === "tailor-resume" ? (
               <>
                 {tailored && !tailoring && (
-                  <button
-                    onClick={() => { setTailored(null); tailorResume(); }}
-                    className="text-sm border border-p-linen dark:border-p-dark-mid rounded-lg px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
-                  >
+                  <Button onClick={() => { setTailored(null); tailorResume(); }} variant="outline">
                     Re-tailor
-                  </button>
+                  </Button>
                 )}
-                <button
-                  onClick={tailorResume}
-                  disabled={tailoring || !!tailored}
-                  className="bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-5 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-40 transition-colors"
-                >
-                  {tailoring ? (
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Tailoring…
-                    </span>
-                  ) : tailored ? "Tailored" : "Tailor"}
-                </button>
+                <Button onClick={tailorResume} disabled={!!tailored} loading={tailoring} size="lg" className="px-5">
+                  {tailoring ? "Tailoring…" : tailored ? "Tailored" : "Tailor"}
+                </Button>
               </>
             ) : (
               <>
                 {streaming && (
-                  <button onClick={stop} className="text-sm text-p-dusk dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 px-4 py-2 transition-colors">
+                  <Button onClick={stop} variant="ghost" className="hover:text-red-600 dark:hover:text-red-400">
                     Stop
-                  </button>
+                  </Button>
                 )}
                 {!streaming && hasOutput && (
-                  <button
-                    onClick={() => { setOutput(""); setDone(false); generate(); }}
-                    className="text-sm border border-p-linen dark:border-p-dark-mid rounded-lg px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
-                  >
+                  <Button onClick={() => { setOutput(""); setDone(false); generate(); }} variant="outline">
                     Regenerate
-                  </button>
+                  </Button>
                 )}
-                <button
-                  onClick={generate}
-                  disabled={!canGenerate}
-                  className="bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-5 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-40 transition-colors"
-                >
-                  {streaming ? (
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Generating…
-                    </span>
-                  ) : hasOutput ? "Generate again" : "Generate"}
-                </button>
+                <Button onClick={generate} disabled={!canGenerate} loading={streaming} size="lg" className="px-5">
+                  {streaming ? "Generating…" : hasOutput ? "Generate again" : "Generate"}
+                </Button>
               </>
             )}
           </div>
