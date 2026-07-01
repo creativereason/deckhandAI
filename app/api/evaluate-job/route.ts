@@ -112,13 +112,36 @@ function lastIndexOfAny(text: string, patterns: RegExp[]): number {
   return indexes.length ? Math.max(...indexes) : -1;
 }
 
+// Common section-heading synonyms across ATS templates (Greenhouse, Lever, Ashby, Workday,
+// SmartRecruiters) and hand-written postings, for locating where the role description starts.
 const ROLE_SECTION_PATTERNS = [
   /\bAbout (?:the|this) Role\b/i,
   /\bAbout (?:the|this) Position\b/i,
+  /\bAbout (?:the|this) Job\b/i,
+  /\bAbout (?:the|this) Opportunity\b/i,
   /\bThe Role\b/i,
+  /\bThe Opportunity\b/i,
+  /\bThe Position\b/i,
+  /\bRole Overview\b/i,
+  /\bRole Summary\b/i,
   /\bPosition Summary\b/i,
+  /\bJob Summary\b/i,
   /\bJob Description\b/i,
+  /\bRole Description\b/i,
+  /\bWhat You.?ll (?:Do|Be Doing)\b/i,
+  /\bWhat You Will (?:Do|Be Doing)\b/i,
+  /\b(?:Key )?Responsibilities\b/i,
+  /\bYour Responsibilities\b/i,
+  /\bDuties and Responsibilities\b/i,
+  /\bA Day in the Life\b/i,
+  /\bDay[\s-]to[\s-]Day\b/i,
 ];
+
+function stripLeadingHeading(text: string, patterns: RegExp[]): string {
+  if (patterns.length === 0) return text;
+  const combined = new RegExp(`^(?:${patterns.map((p) => p.source).join("|")})\\s*:?\\s*`, "i");
+  return text.replace(combined, "");
+}
 
 function focusedJobText(request: EvaluateRequest, rawText: string): string {
   const text = compactText(rawText);
@@ -135,38 +158,45 @@ function focusedJobText(request: EvaluateRequest, rawText: string): string {
 }
 
 const NAV_BOILERPLATE = /log in|sign in|get in touch|get started|we'?re hiring|copyright|\u00a9 20\d\d|privacy policy|terms of (?:use|service)/gi;
+// Site nav/mega-menus (e.g. a client-rendered careers page whose JD never loaded) read as a wall
+// of short labels with very few sentence-ending periods relative to their length \u2014 real prose
+// runs well under this many words per period. Keyword matching alone misses menus that don't
+// happen to mention login/legal boilerplate.
+const MIN_WORDS_FOR_PROSE_DENSITY_CHECK = 40;
+const MAX_WORDS_PER_SENTENCE = 24;
+// How much text after a recognized heading to consider when checking quality — keeps a distant
+// footer/legal section from poisoning the check for a legitimate paragraph right after the heading.
+const ROLE_TEXT_WINDOW = 700;
 
 function isBoilerplate(text: string): boolean {
   const compact = compactText(text);
   if (compact.length < 80) return true;
   const sentenceCount = compact.split(/(?<=[.!?])\s+/).length;
   const navHitCount = (compact.match(NAV_BOILERPLATE) ?? []).length;
-  return navHitCount >= 2 || (navHitCount >= 1 && sentenceCount <= 3);
+  if (navHitCount >= 2 || (navHitCount >= 1 && sentenceCount <= 3)) return true;
+  const wordCount = compact.split(/\s+/).length;
+  return wordCount > MIN_WORDS_FOR_PROSE_DENSITY_CHECK && wordCount / sentenceCount > MAX_WORDS_PER_SENTENCE;
 }
 
 function roleDescriptionSummary(request: EvaluateRequest, rawText: string): string {
   const text = compactText(rawText);
   const roleStart = lastIndexOfAny(text, ROLE_SECTION_PATTERNS);
-  let roleText: string;
-  if (roleStart >= 0) {
-    roleText = text.slice(roleStart);
-  } else {
-    const afterDescription = text.replace(/^.*?\bDescription\b/i, "");
-    if (isBoilerplate(afterDescription)) return "";
-    roleText = afterDescription;
-  }
-  const withoutHeading = roleText.replace(
-    /^(About (?:the|this) Role|About (?:the|this) Position|The Role|Position Summary|Job Description)\s*/i,
-    ""
-  );
-  if (isBoilerplate(withoutHeading)) return "";
-  return firstSentences(withoutHeading, 2);
+  const roleText = roleStart >= 0 ? text.slice(roleStart) : text.replace(/^.*?\bDescription\b/i, "");
+  // Bounded so unrelated boilerplate deep in the same page (footer, legal text) can't poison
+  // the quality check for a legitimate paragraph found right after the heading.
+  const localWindow = stripLeadingHeading(roleText, ROLE_SECTION_PATTERNS).slice(0, ROLE_TEXT_WINDOW);
+  if (isBoilerplate(localWindow)) return "";
+  return firstSentences(localWindow, 2);
 }
 
+// Common "about the employer" section-heading synonyms across ATS templates and hand-written postings.
 const COMPANY_SECTION_PATTERNS = [
   /\bAbout (?:the Company|Our Company|Us)\b/i,
   /\bCompany Overview\b/i,
   /\bWho We Are\b/i,
+  /\bOur Story\b/i,
+  /\bOur Mission\b/i,
+  /\bWhat We Do\b/i,
 ];
 
 function companySummary(request: EvaluateRequest, rawText: string): string {
@@ -174,11 +204,13 @@ function companySummary(request: EvaluateRequest, rawText: string): string {
   const roleStart = lastIndexOfAny(text, ROLE_SECTION_PATTERNS);
   const companyName = request.company ? request.company.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
   const namedPattern = companyName ? [new RegExp(`\\bAbout ${companyName}\\b`, "i")] : [];
-  const companyStart = indexOfAny(text, [...namedPattern, ...COMPANY_SECTION_PATTERNS]);
+  const companyPatterns = [...namedPattern, ...COMPANY_SECTION_PATTERNS];
+  const companyStart = indexOfAny(text, companyPatterns);
   if (companyStart >= 0) {
-    const slice = text.slice(companyStart, roleStart > companyStart ? roleStart : undefined)
-      .replace(/^About\s+\S+\s*/i, "")
-      .replace(/^(?:the Company|Our Company|Us|Company Overview|Who We Are)\s*/i, "");
+    const slice = stripLeadingHeading(
+      text.slice(companyStart, roleStart > companyStart ? roleStart : undefined),
+      companyPatterns
+    );
     const summary = firstSentences(slice, 2);
     if (!isBoilerplate(summary)) return summary;
   }

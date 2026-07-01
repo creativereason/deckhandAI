@@ -66,6 +66,21 @@ describe("fetchJobDetails", () => {
     expect(result.text).not.toContain("window.__DATA__");
   });
 
+  // B — Boundary: HTML entities in the body (not just the meta description) must decode too.
+  it("decodes HTML entities in the page body, not just the meta description", async () => {
+    const html = `<html><body><h1>Staff Product Designer (Experience &amp; Engagement)</h1>
+      <p>Own end-to-end design vision and execution across the customer experience product surface. Partner with product, engineering, and operations to ship measurable improvements every quarter.&nbsp; The role requires 7+ years of product design experience with a strong portfolio demonstrating systems thinking and cross-functional leadership on consumer-facing products. Compensation: $190k&#8211;$230k. Fully remote.</p>
+      </body></html>`;
+    const fetchImpl = vi.fn().mockResolvedValue(response(html));
+
+    const result = await fetchJobDetails({ url: "https://jobs.example.com/designer", fetchImpl });
+
+    expect(result.text).toContain("Experience & Engagement");
+    expect(result.text).not.toContain("&amp;");
+    expect(result.text).not.toContain("&nbsp;");
+    expect(result.text).toContain("$190k–$230k");
+  });
+
   // B — Boundary: SPAs that embed JD in meta description (Ashby) should be read directly.
   it("returns readable text from meta description when body is an SPA shell", async () => {
     const ashbyShell = `<!DOCTYPE html><html><head>
@@ -386,6 +401,39 @@ describe("fetchJobDetails", () => {
 
       const braveCall = fetchImpl.mock.calls.find(([url]) => String(url).includes("api.search.brave.com"));
       expect(braveCall?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    });
+  });
+
+  describe("content-quality gate", () => {
+    // E — Exception: a long SPA app-shell (site-wide nav/mega-menu) can be long enough
+    // and free of nav-boilerplate keywords, yet still isn't a job description — it must
+    // not be accepted as "enough text" just because of its length.
+    it("falls through to Playwright when the raw fetch returns a long site-navigation shell with no job-description signal", async () => {
+      vi.stubEnv("ENABLE_PLAYWRIGHT_FALLBACK", "true");
+      const navShell = "Skip to content Skip to site index Earn up to $2,000 when you buy $50 in crypto Cryptocurrencies Individuals Trade Crypto Buy and sell cryptocurrencies Prediction markets Trade on sports crypto politics and more Derivatives Amplify your trades with futures Stocks Commission-free trading Token sales Get early access to upcoming tokens Advanced Professional-grade trading tools Coinbase One Get zero trading fees Coinbase Wealth Institutional-grade services Credit Card Earn Bitcoin back on every purchase Terms apply Debit card Earn crypto rewards Staking Stake your crypto and earn rewards USDC rewards Earn APY Borrow Get a crypto-backed loan Base App Post earn trade discover apps Businesses Business Crypto trading and payments Asset Listings List your asset Token Manager platform for distributions Coinbase Business All-in-one crypto account Institutions Prime Trading and Financing Professional prime brokerage services Custody Securely store digital assets Staking Explore staking Onchain Wallet Institutional-grade wallet Markets Exchange Spot market data".repeat(3);
+      const fetchImpl = vi.fn().mockResolvedValue(response(`<body>${navShell}</body>`));
+      const close = vi.fn();
+      const page = {
+        goto: vi.fn(),
+        waitForTimeout: vi.fn(),
+        locator: vi.fn().mockReturnValue({
+          innerText: vi.fn().mockResolvedValue(
+            "Staff Product Designer (Experience & Engagement) at Coinbase. You will own end-to-end design for engagement surfaces spanning notifications, onboarding, and retention flows across the Coinbase app. The role requires 8+ years of product design experience with a strong portfolio demonstrating systems thinking and cross-functional leadership on consumer-facing products. Familiarity with design systems, user research methods, and experimentation is essential. Compensation: $190k–$230k depending on experience. This is a fully remote position open to candidates in the US."
+          ),
+        }),
+      };
+      const browser = { newPage: vi.fn().mockResolvedValue(page), close };
+      const loadPlaywrightImpl = vi.fn().mockResolvedValue({ chromium: { launch: vi.fn().mockResolvedValue(browser) } });
+
+      const result = await fetchJobDetails({
+        url: "https://www.coinbase.com/careers/positions/8014564",
+        fetchImpl,
+        loadPlaywrightImpl,
+      });
+
+      expect(result.retrieval_method).toBe("playwright");
+      expect(result.text).toContain("Staff Product Designer");
+      expect(result.text).not.toContain("Skip to site index");
     });
   });
 });

@@ -115,12 +115,14 @@ function extractMetaDescription(html: string): string {
 
 function stripHtml(html: string): string {
   const metaDesc = extractMetaDescription(html);
-  const bodyText = html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const bodyText = decodeEntities(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
   // Prepend meta description so SPAs with empty bodies still yield job content
   return metaDesc ? `${metaDesc}\n\n${bodyText}` : bodyText;
 }
@@ -206,6 +208,14 @@ async function fetchMarkdownAlternate({
 const NAV_BOILERPLATE_RE =
   /log in|sign in|get in touch|get started|we'?re hiring|copyright|\u00a9 20\d\d|privacy policy|terms of (?:use|service)/gi;
 
+// Common phrasing in real job postings. A page this long should contain at least one of these.
+const JD_SIGNAL_RE =
+  /\bresponsibilities\b|\bqualifications\b|\brequirements\b|about (?:the|this) role\b|about (?:the|this) position\b|what you.?ll (?:do|bring)|who you are\b|you will\b|you.?ll\b|we.?re looking for\b|looking for a\b|minimum qualifications\b|preferred qualifications\b|years? of experience\b|equal opportunity employer\b|apply (?:for this|now)\b/i;
+// Above this word count, a long page with none of the JD_SIGNAL_RE phrasing is more likely
+// a SPA app-shell / site-wide nav (mega-menu) that slipped past the nav-keyword check below
+// simply by being long, than an actual job description.
+const LONG_TEXT_WITHOUT_SIGNAL_THRESHOLD = 200;
+
 function hasEnoughText(text: string): boolean {
   if (text.length < MIN_JOB_TEXT_LENGTH) return false;
   const navHits = (text.match(NAV_BOILERPLATE_RE) ?? []).length;
@@ -213,6 +223,7 @@ function hasEnoughText(text: string): boolean {
   // Reject dense nav pages: if nav signals are high relative to word count it's
   // a header/footer page, not a job description.
   if (navHits >= 2 && wordCount < 120) return false;
+  if (wordCount > LONG_TEXT_WITHOUT_SIGNAL_THRESHOLD && !JD_SIGNAL_RE.test(text)) return false;
   return true;
 }
 

@@ -188,6 +188,71 @@ describe("/api/evaluate-job", () => {
     expect(result.notes).toContain("Role summary unavailable.");
   });
 
+  it("extracts the role summary from a 'What you'll do' heading when no 'About the Role' heading exists", async () => {
+    const navShell = "Skip to content Skip to site index Earn up to $2,000 when you buy $50 in crypto Cryptocurrencies Individuals Trade Crypto Buy and sell cryptocurrencies Prediction markets Trade on sports crypto politics and more Derivatives Amplify your trades with futures Stocks Commission-free trading Token sales Get early access to upcoming tokens Advanced Professional-grade trading tools Coinbase One Get zero trading fees Coinbase Wealth Institutional-grade services Credit Card Earn Bitcoin back on every purchase. Terms apply. Debit card Earn crypto rewards Staking Stake your crypto and earn rewards USDC rewards Earn APY Borrow Get a crypto-backed loan Base App Post earn trade discover apps. Businesses Business Crypto trading and payments Asset Listings List your asset Token Manager platform for distributions. Institutions Prime Trading and Financing Custody Securely store digital assets. Sign in Sign up Back to jobs.";
+    const jdText = "Staff Product Designer Remote - USA At Coinbase, we are uncompromising on our mission to increase economic freedom around the world. What you'll do: Own end-to-end design vision and execution across the customer experience product surface. Partner with product, engineering, and operations to ship measurable improvements. Required skills & experience: 7+ years of Product Design experience with a strong portfolio.";
+    vi.mocked(fetchJobDetails).mockResolvedValue({
+      ok: true,
+      url: "https://www.coinbase.com/careers/positions/8014564",
+      text: `${navShell} ${jdText}`,
+      retrieval_method: "fetch_only",
+      retrieval_limited: false,
+    });
+
+    const response = await POST(request("POST", {
+      url: "https://www.coinbase.com/careers/positions/8014564",
+      company: "Coinbase",
+      role: "Staff Product Designer",
+    }));
+    const result = resultEventData(await streamText(response));
+
+    expect(result.notes).not.toContain("Skip to site index");
+    expect(result.notes).toContain("Own end-to-end design vision");
+  });
+
+  it("extracts the role summary even when unrelated boilerplate appears much later on the same page", async () => {
+    const companyIntro = "About Acme. Acme builds logistics software for freight teams worldwide, helping them route shipments more efficiently every day.";
+    const roleIntro = "About the Role. Own end-to-end design for a cross-functional team shipping enterprise workflows. Partner with product and engineering to deliver measurable outcomes on a quarterly cadence.";
+    const distantFooter = ` ${"Filler content about the platform. ".repeat(40)} Sign in Sign up. Copyright 2026 privacy policy terms of service.`;
+    vi.mocked(fetchJobDetails).mockResolvedValue({
+      ok: true,
+      url: "https://example.com/job",
+      text: `${companyIntro} ${roleIntro}${distantFooter}`,
+      retrieval_method: "fetch_only",
+      retrieval_limited: false,
+    });
+
+    const response = await POST(request("POST", {
+      url: "https://example.com/job",
+      company: "Acme",
+      role: "Designer",
+    }));
+    const result = resultEventData(await streamText(response));
+
+    expect(result.notes).not.toContain("Role summary unavailable");
+    expect(result.notes).toContain("Own end-to-end design for a cross-functional team");
+  });
+
+  it("treats a long site-navigation shell with no boilerplate keywords or section headings as unusable", async () => {
+    vi.mocked(fetchJobDetails).mockResolvedValue({
+      ok: true,
+      url: "https://example.com/job",
+      text: "Skip to content Skip to site index Earn up to $2,000 when you buy $50 in crypto Cryptocurrencies Individuals Trade Crypto Buy and sell cryptocurrencies Prediction markets Trade on sports crypto politics and more Derivatives Amplify your trades with futures Stocks Commission-free trading Token sales Get early access to upcoming tokens Advanced Professional-grade trading tools Coinbase One Get zero trading fees Coinbase Wealth Institutional-grade services Credit Card Earn Bitcoin back on every purchase. Terms apply.",
+      retrieval_method: "fetch_only",
+      retrieval_limited: false,
+    });
+
+    const response = await POST(request("POST", {
+      url: "https://example.com/job",
+      company: "Coinbase",
+      role: "Staff Product Designer",
+    }));
+    const result = resultEventData(await streamText(response));
+
+    expect(result.notes).not.toContain("Skip to site index");
+    expect(result.notes).toContain("No relevant job description found");
+  });
+
   it("adds an evaluated job to pending only on confirmation", async () => {
     vi.mocked(readJobs).mockResolvedValue({
       applied: [],
