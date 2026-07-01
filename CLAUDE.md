@@ -529,4 +529,5 @@ app/api/__tests__/evaluate-job.test.ts
 - `ENABLE_PLAYWRIGHT_FALLBACK=true`: Workday URL returns populated `notes` and a fit score.
 - SSE: client receives at least one `status` event before the `result` event on slow fetches.
 - No job is written to pending without an explicit user confirmation action after seeing the evaluation card.
+- Job detail view offers a "Fetch more details" action that uses the same retrieval path to enrich notes before generating or scoring.
 - Auth guard: unauthenticated request returns 401 before any fetch is attempted.

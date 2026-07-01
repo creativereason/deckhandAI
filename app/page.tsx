@@ -38,6 +38,7 @@ import ChatDrawer from "@/components/ChatDrawer";
 
 type FitFilter = JobFit | "all";
 type TaggedProspectJob = ProspectJob & { _section: "prospect" | "local" | "staffing" };
+type ToggleableSection = "applied" | "prospect";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,13 @@ const DISPLAY_SECTIONS: { value: JobSection; label: string }[] = [
   { value: "prospect", label: "Prospects" },
   { value: "passed", label: "Passed" },
 ];
+
+const SECTION_VISIBILITY_OPTIONS: { value: ToggleableSection; label: string }[] = [
+  { value: "applied", label: "Applied" },
+  { value: "prospect", label: "Prospects" },
+];
+
+const BOARD_FILTERS_STORAGE_KEY = "board-filters";
 
 // ─── Shared small components ──────────────────────────────────────────────────
 
@@ -289,6 +297,32 @@ function FitFilterBar({ active, onChange }: { active: FitFilter; onChange: (f: F
           {opt.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+function SectionVisibilityBar({ visible, onToggle }: {
+  visible: Set<ToggleableSection>;
+  onToggle: (section: ToggleableSection) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <span className="text-xs text-p-dusk dark:text-p-accent-inv font-medium mr-1 uppercase tracking-widest">Show:</span>
+      {SECTION_VISIBILITY_OPTIONS.map((opt) => {
+        const active = visible.has(opt.value);
+        return (
+          <button key={opt.value} onClick={() => onToggle(opt.value)}
+            aria-pressed={active}
+            className={cn(
+              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all",
+              active
+                ? "bg-p-blue text-white border-p-blue dark:bg-p-accent-inv dark:text-white dark:border-p-accent-inv"
+                : "bg-white dark:bg-p-dark-mid text-stone-500 dark:text-gray-400 border-p-linen dark:border-p-dark-mid hover:border-p-dusk dark:hover:border-gray-500"
+            )}>
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -657,6 +691,43 @@ export default function Home() {
   const [modelLabel, setModelLabel] = useState<string>("");
   const [hasProfile, setHasProfile] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["applied", "prospect", "passed"]);
+  const [visibleSections, setVisibleSections] = useState<Set<ToggleableSection>>(
+    new Set(["applied", "prospect"])
+  );
+
+  function toggleSectionVisibility(section: ToggleableSection) {
+    setVisibleSections((current) => {
+      const next = new Set(current);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
+  }
+
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
+
+  useEffect(() => {
+    const raw = localStorage.getItem(BOARD_FILTERS_STORAGE_KEY);
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw) as { fitFilter?: FitFilter; visibleSections?: ToggleableSection[] };
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (saved.fitFilter) setFitFilter(saved.fitFilter);
+        if (saved.visibleSections) setVisibleSections(new Set(saved.visibleSections));
+      } catch {
+        // ignore malformed storage from a prior schema
+      }
+    }
+    setFiltersHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!filtersHydrated) return;
+    localStorage.setItem(
+      BOARD_FILTERS_STORAGE_KEY,
+      JSON.stringify({ fitFilter, visibleSections: Array.from(visibleSections) })
+    );
+  }, [filtersHydrated, fitFilter, visibleSections]);
 
   const load = useCallback(async () => {
     const [jobsRes, configRes, profileRes] = await Promise.all([
@@ -873,6 +944,7 @@ export default function Home() {
 
         {/* Filter bar */}
         <div className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
+          <SectionVisibilityBar visible={visibleSections} onToggle={toggleSectionVisibility} />
           <FitFilterBar active={fitFilter} onChange={setFitFilter} />
           {fitFilter !== "all" && (
             <span className="text-xs text-p-dusk dark:text-gray-400 shrink-0">
@@ -922,50 +994,54 @@ export default function Home() {
           className="space-y-3"
         >
 
-          <AccordionItem value="applied"
-            className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <SectionHeader title="Applied" count={jobs.applied.length} visibleCount={searchQ ? filteredApplied.length : undefined} />
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <div className="overflow-x-auto">
-                <AppliedTable
-                  jobs={filteredApplied}
-                  otherSections={otherSectionsFor("applied")}
-                  onEdit={(j) => setEditing({ section: "applied", job: j })}
-                  onMove={(t, j) => moveJob("applied", j.company, j.role, t)}
-                  onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
-                  onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
-                  onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
-                  onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=applied`)}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+          {visibleSections.has("applied") && (
+            <AccordionItem value="applied"
+              className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <SectionHeader title="Applied" count={jobs.applied.length} visibleCount={searchQ ? filteredApplied.length : undefined} />
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <div className="overflow-x-auto">
+                  <AppliedTable
+                    jobs={filteredApplied}
+                    otherSections={otherSectionsFor("applied")}
+                    onEdit={(j) => setEditing({ section: "applied", job: j })}
+                    onMove={(t, j) => moveJob("applied", j.company, j.role, t)}
+                    onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
+                    onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
+                    onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
+                    onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=applied`)}
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )}
 
-          <AccordionItem value="prospect"
-            className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <SectionHeader title="Prospects" count={totalProspects}
-                visibleCount={filteredProspects.length}
-                newCount={totalNew} />
-            </AccordionTrigger>
-            <AccordionContent className="pb-3">
-              <div className="overflow-x-auto">
-                <ProspectTable
-                  jobs={filteredProspects}
-                  onMove={moveJob}
-                  onEdit={(job) => setEditing({ section: (job as TaggedProspectJob)._section ?? "prospect", job })}
-                  onDismiss={(job) => dismissNew((job as TaggedProspectJob)._section ?? "prospect", job.company, job.role)}
-                  onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
-                  onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
-                  onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
-                  otherSections={otherSectionsFor("prospect")}
-                  onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=${j._section}`)}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+          {visibleSections.has("prospect") && (
+            <AccordionItem value="prospect"
+              className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <SectionHeader title="Prospects" count={totalProspects}
+                  visibleCount={filteredProspects.length}
+                  newCount={totalNew} />
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <div className="overflow-x-auto">
+                  <ProspectTable
+                    jobs={filteredProspects}
+                    onMove={moveJob}
+                    onEdit={(job) => setEditing({ section: (job as TaggedProspectJob)._section ?? "prospect", job })}
+                    onDismiss={(job) => dismissNew((job as TaggedProspectJob)._section ?? "prospect", job.company, job.role)}
+                    onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
+                    onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
+                    onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
+                    otherSections={otherSectionsFor("prospect")}
+                    onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=${j._section}`)}
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          )}
 
           {showPassed && (
             <AccordionItem value="passed"

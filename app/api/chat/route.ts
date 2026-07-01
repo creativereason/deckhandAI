@@ -18,8 +18,11 @@ const SYSTEM_PROMPT = `You are a concise job search assistant inside DeckhandAI,
 Board sections: prospect (remote), local (local/hybrid), staffing (contract), applied, passed, pending (awaiting review).
 
 Use the available tools to read and mutate the board. After completing an action, confirm briefly what you did. Keep replies short.
+When add_job returns a detailUrl for a pending or applied job, include a final markdown link exactly like: [View Job](detailUrl).
 
 When the user asks about fit, their background, how their experience compares to a role, or anything about the candidate's qualifications, call read_profile first — never ask the user to describe their own experience.
+
+When the user asks to re-assess, re-score, or evaluate fit for the current job: call read_profile, then call fetch_job_description with the job URL if you don't already have the full JD, then call update_job with both fit (strong/good/caution/weak) and scoreRationale explaining the reasoning. Always write both fields together.
 
 When the user asks to scan for ghost jobs, stale applications, or suspicious listings, call detect_ghost_jobs. Present the flagged jobs grouped by severity, explain each signal, and offer to flag them as ghosts or move them to passed.
 
@@ -225,7 +228,7 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
 
       const effectiveSystem = jobContext
-        ? SYSTEM_PROMPT + `\n\nThe user is currently viewing this specific job:\n${jobContext}`
+        ? SYSTEM_PROMPT + `\n\nThe user is currently viewing this specific job:\n${jobContext}\n\nJob detail context rules: do not ask clarifying questions about what to update — the job context above provides company, role, section, and URL. Act immediately. When the user asks to update from the web, call fetch_job_description with the URL from context, then call update_job with all retrieved fields (notes, fit, scoreRationale, salary if found). Never return a question about what to update when a job URL is available.`
         : SYSTEM_PROMPT;
 
       const run = provider === "anthropic"

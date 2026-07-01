@@ -1,6 +1,6 @@
 import { readJobs, writeJobs, type JobSection } from "@/lib/jobs";
 import { readProfile } from "@/lib/profile-server";
-import { fetchJdText } from "@/lib/fetch-jd";
+import { fetchJobDetails } from "@/lib/job-fetcher";
 
 // ─── Anthropic tool definitions ───────────────────────────────────────────────
 
@@ -30,7 +30,7 @@ export const ANTHROPIC_TOOLS = [
     input_schema: {
       type: "object",
       properties: {
-        section: { type: "string", enum: ["applied", "prospect", "local", "staffing", "passed"] },
+        section: { type: "string", enum: ["applied", "prospect", "local", "staffing", "passed", "pending"] },
         company: { type: "string" },
         role: { type: "string" },
         url: { type: "string" },
@@ -65,7 +65,7 @@ export const ANTHROPIC_TOOLS = [
         role: { type: "string" },
         updates: {
           type: "object",
-          description: "Key-value pairs of fields to update (status, notes, salary, fit, date, etc.)",
+          description: "Key-value pairs of fields to update. Updatable fields: status, notes, salary, fit, scoreRationale, date, url. When updating fit always include scoreRationale explaining why.",
         },
       },
       required: ["section", "company", "role", "updates"],
@@ -122,7 +122,7 @@ export const ANTHROPIC_TOOLS = [
   {
     name: "fetch_job_description",
     description:
-      "Fetch the job description text from a URL. Returns the text and a 'thin' flag if the page was gated or blocked. If thin is true, try search_indeed as a fallback.",
+      "Fetch job description text from a URL using direct fetch, Brave Search cross-post fallback, and Playwright when enabled. Returns retrieval metadata and a thin flag when automatic retrieval is limited.",
     input_schema: {
       type: "object",
       properties: {
@@ -183,8 +183,20 @@ function normalizeForSection(job: AnyJob, section: JobSection): AnyJob {
     if (!out.date) out.date = new Date().toISOString().split("T")[0];
   } else if (section === "prospect" || section === "local" || section === "staffing") {
     if (!out.fit) out.fit = "good";
+  } else if (section === "pending") {
+    if (!out.scrapeGroup) out.scrapeGroup = "remote";
+    if (!out.scrapeDate) out.scrapeDate = new Date().toISOString().split("T")[0];
   }
   return out;
+}
+
+function jobDetailHref(section: JobSection, company: unknown, role: unknown): string {
+  const params = new URLSearchParams({
+    section,
+    company: String(company ?? ""),
+    role: String(role ?? ""),
+  });
+  return `/job?${params.toString()}`;
 }
 
 export async function executeTool(
@@ -213,7 +225,7 @@ export async function executeTool(
         const job = normalizeForSection(rest, sec);
         (jobs[sec] as unknown as AnyJob[]).unshift(job);
         await writeJobs(jobs);
-        return JSON.stringify({ ok: true, added: job });
+        return JSON.stringify({ ok: true, added: job, detailUrl: jobDetailHref(sec, job.company, job.role) });
       }
 
       case "update_job": {
@@ -327,9 +339,15 @@ export async function executeTool(
 
       case "fetch_job_description": {
         const { url, company } = input as { url: string; company?: string };
-        const text = await fetchJdText(url, company);
-        const thin = text.length < 300;
-        return JSON.stringify({ text: text.slice(0, 6000), thin });
+        const result = await fetchJobDetails({ url, company });
+        return JSON.stringify({
+          text: result.text.slice(0, 6000),
+          thin: result.retrieval_limited,
+          retrieval_limited: result.retrieval_limited,
+          retrieval_method: result.retrieval_method,
+          source_url: result.source_url,
+          warning: result.warning,
+        });
       }
 
       case "search_remote_jobs": {
