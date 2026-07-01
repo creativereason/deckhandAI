@@ -239,4 +239,85 @@ describe("fetchJobDetails", () => {
     expect(result.text).toContain("LifeMD Senior Product Designer");
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
+
+  describe("time budget", () => {
+    // B — Boundary: once the cumulative budget is spent, remaining fallback legs
+    // must be skipped instead of hanging past the route's maxDuration.
+    it("skips the markdown, Brave, and Playwright legs once the budget is exhausted after the raw fetch", async () => {
+      vi.stubEnv("BRAVE_SEARCH_API_KEY", "brave-key");
+      vi.stubEnv("ENABLE_PLAYWRIGHT_FALLBACK", "true");
+      let elapsedMs = 0;
+      const nowMs = () => elapsedMs;
+      // The raw fetch itself is what spends the whole budget.
+      const fetchImpl = vi.fn().mockImplementationOnce(async () => {
+        elapsedMs = 46000;
+        return response("");
+      });
+      const loadPlaywrightImpl = vi.fn();
+
+      const result = await fetchJobDetails({
+        url: "https://jobs.example.com/empty",
+        fetchImpl,
+        loadPlaywrightImpl,
+        nowMs,
+      });
+
+      expect(result).toMatchObject({ ok: false, retrieval_limited: true });
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      expect(loadPlaywrightImpl).not.toHaveBeenCalled();
+    });
+
+    // M — Many: the Brave-alternates loop must stop trying candidates once
+    // the budget runs out instead of always attempting every result.
+    it("stops trying further Brave alternate candidates once the budget runs out mid-loop", async () => {
+      vi.stubEnv("BRAVE_SEARCH_API_KEY", "brave-key");
+      let elapsedMs = 0;
+      const nowMs = () => elapsedMs;
+      const fetchImpl = vi
+        .fn()
+        .mockImplementationOnce(async () => response(""))
+        .mockImplementationOnce(async () => Response.json({
+          web: {
+            results: [
+              { title: "Job A", url: "https://jobs.lever.co/acme/a" },
+              { title: "Job B", url: "https://jobs.lever.co/acme/b" },
+            ],
+          },
+        }))
+        // Fetching the first candidate is what spends the remaining budget.
+        .mockImplementationOnce(async () => {
+          elapsedMs = 46000;
+          return response("");
+        });
+
+      const result = await fetchJobDetails({
+        url: "https://acme.myworkdayjobs.com/job/123",
+        company: "Acme",
+        role: "Designer",
+        fetchImpl,
+        nowMs,
+      });
+
+      expect(result).toMatchObject({ ok: false, retrieval_limited: true });
+      // raw fetch + brave search + exactly one alternate candidate fetch, no second candidate
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+    });
+
+    // E — Exception: the Brave Search API call itself must not hang indefinitely.
+    it("passes an abort signal to the Brave Search API request", async () => {
+      vi.stubEnv("BRAVE_SEARCH_API_KEY", "brave-key");
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(response(""))
+        .mockResolvedValueOnce(Response.json({ web: { results: [] } }));
+
+      await fetchJobDetails({
+        url: "https://jobs.example.com/empty",
+        fetchImpl,
+      });
+
+      const braveCall = fetchImpl.mock.calls.find(([url]) => String(url).includes("api.search.brave.com"));
+      expect(braveCall?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    });
+  });
 });

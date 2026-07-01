@@ -17,6 +17,8 @@ interface FetchJobDetailsOptions {
   fetchImpl?: typeof fetch;
   loadPlaywrightImpl?: () => Promise<PlaywrightModule | null>;
   timeoutMs?: number;
+  nowMs?: () => number;
+  budgetMs?: number;
 }
 
 type BraveResult = { title?: string; url?: string; description?: string };
@@ -41,6 +43,8 @@ type FetchPageTextOptions = {
 };
 
 const USER_AGENT = "Mozilla/5.0 (compatible; deckhandAI/1.0)";
+// Leaves headroom under the route's `maxDuration = 60` so a killed function doesn't discard completed work.
+const DEFAULT_BUDGET_MS = 45000;
 const FETCHABLE_JOB_HOSTS = [
   "ashbyhq.com",
   "greenhouse.io",
@@ -218,15 +222,18 @@ function buildSearchQuery(options: FetchJobDetailsOptions): string {
 async function searchBraveAlternates({
   options,
   fetchImpl,
+  timeoutMs,
 }: {
   options: FetchJobDetailsOptions;
   fetchImpl: typeof fetch;
+  timeoutMs: number;
 }): Promise<string[]> {
   const token = process.env.BRAVE_SEARCH_API_KEY;
   if (!token) return [];
   const endpoint = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(buildSearchQuery(options))}&count=8`;
   const response = await fetchImpl(endpoint, {
     headers: { Accept: "application/json", "X-Subscription-Token": token },
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) return [];
   const data = await response.json() as { web?: { results?: BraveResult[] } };
@@ -254,13 +261,21 @@ async function fetchFromBraveAlternate({
   options,
   fetchImpl,
   timeoutMs,
+  remainingMs,
 }: FetchPageTextOptions & {
   options: FetchJobDetailsOptions;
+  remainingMs: () => number;
 }): Promise<JobFetchResult | null> {
-  const alternates = await searchBraveAlternates({ options, fetchImpl }).catch(() => []);
+  const alternates = await searchBraveAlternates({
+    options,
+    fetchImpl,
+    timeoutMs: Math.max(0, Math.min(timeoutMs, remainingMs())),
+  }).catch(() => []);
   for (const alternateUrl of alternates) {
     if (alternateUrl === options.url) continue;
-    const text = await fetchPageText({ url: alternateUrl, fetchImpl, timeoutMs }).catch(() => "");
+    if (remainingMs() <= 0) break;
+    const legTimeout = Math.max(0, Math.min(timeoutMs, remainingMs()));
+    const text = await fetchPageText({ url: alternateUrl, fetchImpl, timeoutMs: legTimeout }).catch(() => "");
     if (hasEnoughText(text)) {
       return successfulResult({ url: options.url, sourceUrl: alternateUrl, text, method: "brave_search" });
     }
@@ -295,17 +310,26 @@ export async function fetchJobDetails({
   fetchImpl = fetch,
   loadPlaywrightImpl = loadPlaywright,
   timeoutMs = 10000,
+  nowMs = Date.now,
+  budgetMs = DEFAULT_BUDGET_MS,
 }: FetchJobDetailsOptions): Promise<JobFetchResult> {
-  const { text, raw } = await fetchRaw({ url, fetchImpl, timeoutMs }).catch(() => ({ text: "", raw: "" }));
+  const deadline = nowMs() + budgetMs;
+  const remainingMs = () => deadline - nowMs();
+  const legTimeoutMs = () => Math.max(0, Math.min(timeoutMs, remainingMs()));
+
+  const { text, raw } = await fetchRaw({ url, fetchImpl, timeoutMs: legTimeoutMs() }).catch(() => ({ text: "", raw: "" }));
   if (hasEnoughText(text)) return successfulResult({ url, text, method: "fetch_only" });
+  if (remainingMs() <= 0) return limitedResult(url);
 
   // Many SPAs advertise a machine-readable alternate in <head> (Workable .md, etc.)
-  const mdResult = await fetchMarkdownAlternate({ html: raw, url, fetchImpl, timeoutMs });
+  const mdResult = await fetchMarkdownAlternate({ html: raw, url, fetchImpl, timeoutMs: legTimeoutMs() });
   if (mdResult) return mdResult;
+  if (remainingMs() <= 0) return limitedResult(url);
 
   const options = { url, company, role };
-  const braveResult = await fetchFromBraveAlternate({ options, url, fetchImpl, timeoutMs });
+  const braveResult = await fetchFromBraveAlternate({ options, url, fetchImpl, timeoutMs: legTimeoutMs(), remainingMs });
   if (braveResult) return braveResult;
+  if (remainingMs() <= 0) return limitedResult(url);
 
   if (!isPlaywrightFallbackEnabled()) return limitedResult(url);
   const browserText = await fetchWithPlaywright({ url, loadPlaywrightImpl }).catch(() => "");
