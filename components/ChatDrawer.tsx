@@ -57,8 +57,12 @@ const GHOST_SCAN_PROMPT = "Scan my board for ghost jobs and stale applications";
 const EVALUATE_URL_PROMPT = "Evaluate this job URL: ";
 const URL_PATTERN = /https?:\/\/\S+/;
 
-function shouldEvaluateJobUrl(text: string): boolean {
-  return !!extractUrl(text);
+const JOB_INTENT_PATTERN = /\b(evaluate|job|posting|role|apply|hiring)\b/i;
+
+export function shouldEvaluateJobUrl(text: string): boolean {
+  if (!extractUrl(text)) return false;
+  if (text.startsWith(EVALUATE_URL_PROMPT)) return true;
+  return JOB_INTENT_PATTERN.test(text);
 }
 
 function extractUrl(text: string): string | null {
