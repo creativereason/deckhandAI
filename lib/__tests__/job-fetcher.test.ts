@@ -303,6 +303,74 @@ describe("fetchJobDetails", () => {
       expect(fetchImpl).toHaveBeenCalledTimes(3);
     });
 
+  });
+
+  describe("company-homepage fallback", () => {
+    // M — Many: when every other leg comes up empty, homepage context beats nothing.
+    it("falls back to the company homepage when the JD page and all other legs yield nothing", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(response("")) // raw JD fetch — empty
+        .mockResolvedValueOnce(response(
+          "<main>" + "Acme builds logistics software for freight teams worldwide, helping them route shipments and manage vendors more efficiently every day. ".repeat(3) + "</main>"
+        )); // homepage fetch
+
+      const result = await fetchJobDetails({
+        url: "https://careers.acme.com/jobs/123",
+        company: "Acme",
+        fetchImpl,
+      });
+
+      expect(result).toMatchObject({
+        ok: true,
+        source_url: "https://acme.com",
+        retrieval_limited: true,
+      });
+      expect(result.text).toContain("Acme builds logistics software");
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    // B — Boundary: third-party ATS hosts have no meaningful homepage of their own.
+    it("does not treat a third-party ATS host as a homepage, and uses the company name instead", async () => {
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(response("")) // raw JD fetch on the ATS host — empty
+        .mockResolvedValueOnce(response(
+          "Acme builds logistics software for freight teams worldwide, helping them route shipments and manage vendors more efficiently every day. ".repeat(3)
+        )); // fetch of the company-name-derived homepage
+
+      const result = await fetchJobDetails({
+        url: "https://jobs.ashbyhq.com/acme/123",
+        company: "Acme",
+        fetchImpl,
+      });
+
+      expect(result.source_url).toBe("https://www.acme.com");
+      expect(fetchImpl).toHaveBeenNthCalledWith(2, "https://www.acme.com", expect.any(Object));
+    });
+
+    // E — Exception: an exhausted time budget must skip the homepage leg too.
+    it("skips the homepage fallback once the time budget is exhausted", async () => {
+      let elapsedMs = 0;
+      const nowMs = () => elapsedMs;
+      const fetchImpl = vi.fn().mockImplementationOnce(async () => {
+        elapsedMs = 46000;
+        return response("");
+      });
+
+      const result = await fetchJobDetails({
+        url: "https://careers.acme.com/jobs/123",
+        company: "Acme",
+        fetchImpl,
+        nowMs,
+      });
+
+      expect(result).toMatchObject({ ok: false, retrieval_limited: true });
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("brave timeout", () => {
     // E — Exception: the Brave Search API call itself must not hang indefinitely.
     it("passes an abort signal to the Brave Search API request", async () => {
       vi.stubEnv("BRAVE_SEARCH_API_KEY", "brave-key");

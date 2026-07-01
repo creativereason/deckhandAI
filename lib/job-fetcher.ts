@@ -45,6 +45,8 @@ type FetchPageTextOptions = {
 const USER_AGENT = "Mozilla/5.0 (compatible; deckhandAI/1.0)";
 // Leaves headroom under the route's `maxDuration = 60` so a killed function doesn't discard completed work.
 const DEFAULT_BUDGET_MS = 45000;
+// Third-party ATS/job-board hosts: used both to filter Brave alternates to
+// fetchable job boards and to exclude hosts with no meaningful employer homepage.
 const FETCHABLE_JOB_HOSTS = [
   "ashbyhq.com",
   "greenhouse.io",
@@ -53,11 +55,21 @@ const FETCHABLE_JOB_HOSTS = [
   "workable.com",
   "myworkdayjobs.com",
   "workdayjobs.com",
+  "workday.com",
   "smartrecruiters.com",
   "jobvite.com",
   "bamboohr.com",
   "icims.com",
   "successfactors.com",
+  "taleo.net",
+  "brassring.com",
+  "recruitee.com",
+  "rippling.com",
+  "applytojob.com",
+  "linkedin.com",
+  "indeed.com",
+  "glassdoor.com",
+  "ziprecruiter.com",
 ];
 const NON_JOB_HOSTS = ["apify.com", "github.com", "npmjs.com", "docs.", "developer."];
 const MIN_JOB_TEXT_LENGTH = 400;
@@ -283,6 +295,48 @@ async function fetchFromBraveAlternate({
   return null;
 }
 
+function homepageFromJdUrl(jdUrl: string): string | null {
+  try {
+    const { hostname, protocol } = new URL(jdUrl);
+    if (FETCHABLE_JOB_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`))) return null;
+    const parts = hostname.split(".");
+    // Strip subdomains like jobs., careers., apply., etc.
+    const root = parts.length > 2 ? parts.slice(-2).join(".") : hostname;
+    return `${protocol}//${root}`;
+  } catch {
+    return null;
+  }
+}
+
+function homepageFromCompanyName(company: string): string {
+  const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return `https://www.${slug}.com`;
+}
+
+async function fetchFromHomepage({
+  options,
+  fetchImpl,
+  timeoutMs,
+}: {
+  options: FetchJobDetailsOptions;
+  fetchImpl: typeof fetch;
+  timeoutMs: number;
+}): Promise<JobFetchResult | null> {
+  const homepage = homepageFromJdUrl(options.url) ?? (options.company ? homepageFromCompanyName(options.company) : null);
+  if (!homepage) return null;
+  const text = await fetchPageText({ url: homepage, fetchImpl, timeoutMs }).catch(() => "");
+  if (text.length < 300) return null;
+  return {
+    ok: true,
+    url: options.url,
+    source_url: homepage,
+    text: `[Job description unavailable — company website context below]\n\n${text.slice(0, 4000)}`,
+    retrieval_method: "fetch_only",
+    retrieval_limited: true,
+    warning: "Job description could not be retrieved. Showing company homepage context instead — verify details manually.",
+  };
+}
+
 async function fetchWithPlaywright({
   url,
   loadPlaywrightImpl,
@@ -331,9 +385,14 @@ export async function fetchJobDetails({
   if (braveResult) return braveResult;
   if (remainingMs() <= 0) return limitedResult(url);
 
-  if (!isPlaywrightFallbackEnabled()) return limitedResult(url);
-  const browserText = await fetchWithPlaywright({ url, loadPlaywrightImpl }).catch(() => "");
-  if (hasEnoughText(browserText)) return successfulResult({ url, text: browserText, method: "playwright" });
+  if (isPlaywrightFallbackEnabled()) {
+    const browserText = await fetchWithPlaywright({ url, loadPlaywrightImpl }).catch(() => "");
+    if (hasEnoughText(browserText)) return successfulResult({ url, text: browserText, method: "playwright" });
+    if (remainingMs() <= 0) return limitedResult(url);
+  }
+
+  const homepageResult = await fetchFromHomepage({ options, fetchImpl, timeoutMs: legTimeoutMs() }).catch(() => null);
+  if (homepageResult) return homepageResult;
 
   return limitedResult(url);
 }
