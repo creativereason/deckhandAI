@@ -113,8 +113,8 @@ describe("/api/evaluate-job", () => {
       ok: true,
       url: "https://lifemd.workable.com/jobs/123",
       text: `Director of UX HybridTechnologyFull time New York, New York, United States
-        OVERVIEW APPLICATION Share this job Description About LifeMD LifeMD is a leading provider of virtual primary care, telehealth, and specialized treatment programs serving hundreds of thousands of patients nationwide.
-        About the Role LifeMD is seeking a highly strategic and customer-obsessed Director of UX to lead experience design across patient experiences, physician workflows, and end-to-end digital care journeys.`,
+        OVERVIEW APPLICATION Share this job Description About LifeMD LifeMD is a leading provider of virtual primary care, telehealth, and specialized treatment programs serving hundreds of thousands of patients nationwide. The company combines licensed providers, pharmacy and lab integrations, and proprietary technology to make healthcare more accessible.
+        About the Role LifeMD is seeking a highly strategic and customer-obsessed Director of UX to lead experience design across patient experiences, physician workflows, and end-to-end digital care journeys. This role owns UX leadership across care journeys, design systems, and cross-functional product strategy.`,
       retrieval_method: "playwright",
       retrieval_limited: false,
     });
@@ -128,7 +128,9 @@ describe("/api/evaluate-job", () => {
 
     expect(result.notes).toContain("Scraped ");
     expect(result.notes).toContain("LifeMD is a leading provider of virtual primary care");
+    expect(result.notes).toContain("The company combines licensed providers");
     expect(result.notes).toContain("LifeMD is seeking a highly strategic and customer-obsessed Director of UX");
+    expect(result.notes).toContain("This role owns UX leadership");
     expect(result.notes).not.toContain("OVERVIEW APPLICATION");
     expect(result.notes).not.toContain("Share this job");
     expect(result.notes).not.toContain("Weak fit");

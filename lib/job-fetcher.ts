@@ -56,7 +56,7 @@ const FETCHABLE_JOB_HOSTS = [
   "successfactors.com",
 ];
 const NON_JOB_HOSTS = ["apify.com", "github.com", "npmjs.com", "docs.", "developer."];
-const MIN_JOB_TEXT_LENGTH = 80;
+const MIN_JOB_TEXT_LENGTH = 400;
 const MAX_JOB_TEXT_LENGTH = 12000;
 const RETRIEVAL_LIMITED_WARNING =
   "Content could not be retrieved automatically. Copy the job description text and paste it directly.";
@@ -75,13 +75,38 @@ async function loadPlaywright(): Promise<PlaywrightModule | null> {
   }
 }
 
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&nbsp;/gi, " ");
+}
+
+function extractMetaDescription(html: string): string {
+  // Many SPAs (Ashby, some Lever pages) put the full JD in the meta description
+  // because the body is a JS-rendered shell. [^"] matches newlines in JS regex.
+  const m =
+    html.match(/<meta\s+name=["']description["'][^>]*content="([^"]*)"/i) ??
+    html.match(/<meta\s+name=["']description["'][^>]*content='([^']*)'/i) ??
+    html.match(/<meta\s+content="([^"]*)"\s[^>]*name=["']description["']/i) ??
+    html.match(/<meta\s+content='([^']*)'\s[^>]*name=["']description["']/i);
+  return m ? decodeEntities(m[1].trim()) : "";
+}
+
 function stripHtml(html: string): string {
-  return html
+  const metaDesc = extractMetaDescription(html);
+  const bodyText = html
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+  // Prepend meta description so SPAs with empty bodies still yield job content
+  return metaDesc ? `${metaDesc}\n\n${bodyText}` : bodyText;
 }
 
 function limitedResult(url: string): JobFetchResult {
@@ -115,21 +140,64 @@ function successfulResult(
   };
 }
 
-async function fetchPageText({
+async function fetchRaw({
   url,
   fetchImpl,
   timeoutMs,
-}: FetchPageTextOptions): Promise<string> {
+}: FetchPageTextOptions): Promise<{ text: string; raw: string }> {
   const response = await fetchImpl(url, {
     headers: { "User-Agent": USER_AGENT },
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!response.ok) return "";
-  return stripHtml(await response.text()).slice(0, MAX_JOB_TEXT_LENGTH);
+  if (!response.ok) return { text: "", raw: "" };
+  const raw = await response.text();
+  return { text: stripHtml(raw).slice(0, MAX_JOB_TEXT_LENGTH), raw };
 }
 
+async function fetchPageText(options: FetchPageTextOptions): Promise<string> {
+  return (await fetchRaw(options)).text;
+}
+
+function extractMarkdownAlternate(html: string): string | null {
+  const m =
+    html.match(/<link[^>]+type=["']text\/markdown["'][^>]+href=["']([^"']+)["']/i) ??
+    html.match(/<link[^>]+href=["']([^"']+)["'][^>]+type=["']text\/markdown["']/i);
+  return m?.[1] ?? null;
+}
+
+async function fetchMarkdownAlternate({
+  html,
+  url,
+  fetchImpl,
+  timeoutMs,
+}: FetchPageTextOptions & { html: string }): Promise<JobFetchResult | null> {
+  const mdUrl = extractMarkdownAlternate(html);
+  if (!mdUrl) return null;
+  try {
+    const response = await fetchImpl(mdUrl, {
+      headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) return null;
+    const mdText = (await response.text()).slice(0, MAX_JOB_TEXT_LENGTH);
+    if (!hasEnoughText(mdText)) return null;
+    return successfulResult({ url, sourceUrl: mdUrl, text: mdText, method: "fetch_only" });
+  } catch {
+    return null;
+  }
+}
+
+const NAV_BOILERPLATE_RE =
+  /log in|sign in|get in touch|get started|we'?re hiring|copyright|\u00a9 20\d\d|privacy policy|terms of (?:use|service)/gi;
+
 function hasEnoughText(text: string): boolean {
-  return text.length >= MIN_JOB_TEXT_LENGTH;
+  if (text.length < MIN_JOB_TEXT_LENGTH) return false;
+  const navHits = (text.match(NAV_BOILERPLATE_RE) ?? []).length;
+  const wordCount = text.split(/\s+/).length;
+  // Reject dense nav pages: if nav signals are high relative to word count it's
+  // a header/footer page, not a job description.
+  if (navHits >= 2 && wordCount < 120) return false;
+  return true;
 }
 
 function companyFromUrl(url: string): string {
@@ -143,7 +211,8 @@ function companyFromUrl(url: string): string {
 function buildSearchQuery(options: FetchJobDetailsOptions): string {
   const company = options.company ?? companyFromUrl(options.url);
   const role = options.role ?? "";
-  return `${company} ${role} job greenhouse lever ashby`.replace(/\s+/g, " ").trim();
+  // "site:..." terms focus Brave on job board domains rather than marketing/comparison pages
+  return `${company} ${role} job (site:jobs.lever.co OR site:jobs.ashbyhq.com OR site:greenhouse.io OR site:jobs.smartrecruiters.com)`.replace(/\s+/g, " ").trim();
 }
 
 async function searchBraveAlternates({
@@ -227,8 +296,12 @@ export async function fetchJobDetails({
   loadPlaywrightImpl = loadPlaywright,
   timeoutMs = 10000,
 }: FetchJobDetailsOptions): Promise<JobFetchResult> {
-  const text = await fetchPageText({ url, fetchImpl, timeoutMs }).catch(() => "");
+  const { text, raw } = await fetchRaw({ url, fetchImpl, timeoutMs }).catch(() => ({ text: "", raw: "" }));
   if (hasEnoughText(text)) return successfulResult({ url, text, method: "fetch_only" });
+
+  // Many SPAs advertise a machine-readable alternate in <head> (Workable .md, etc.)
+  const mdResult = await fetchMarkdownAlternate({ html: raw, url, fetchImpl, timeoutMs });
+  if (mdResult) return mdResult;
 
   const options = { url, company, role };
   const braveResult = await fetchFromBraveAlternate({ options, url, fetchImpl, timeoutMs });

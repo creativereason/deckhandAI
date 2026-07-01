@@ -61,6 +61,10 @@ function firstSentence(text: string): string {
   return compactText(text).split(/(?<=[.!?])\s+/)[0] ?? "";
 }
 
+function firstSentences(text: string, count: number): string {
+  return compactText(text).split(/(?<=[.!?])\s+/).slice(0, count).join(" ");
+}
+
 function indexOfAny(text: string, patterns: RegExp[], startAt = 0): number {
   const tail = text.slice(startAt);
   const indexes = patterns
@@ -72,15 +76,28 @@ function indexOfAny(text: string, patterns: RegExp[], startAt = 0): number {
   return indexes.length ? Math.min(...indexes) : -1;
 }
 
+function lastIndexOfAny(text: string, patterns: RegExp[]): number {
+  const indexes = patterns
+    .map((pattern) => {
+      const matches = [...text.matchAll(new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`))];
+      const last = matches.at(-1);
+      return last?.index ?? -1;
+    })
+    .filter((index) => index >= 0);
+  return indexes.length ? Math.max(...indexes) : -1;
+}
+
+const ROLE_SECTION_PATTERNS = [
+  /\bAbout (?:the|this) Role\b/i,
+  /\bAbout (?:the|this) Position\b/i,
+  /\bThe Role\b/i,
+  /\bPosition Summary\b/i,
+  /\bJob Description\b/i,
+];
+
 function focusedJobText(request: EvaluateRequest, rawText: string): string {
   const text = compactText(rawText);
-  const roleStart = indexOfAny(text, [
-    /\bAbout (?:the|this) Role\b/i,
-    /\bAbout (?:the|this) Position\b/i,
-    /\bThe Role\b/i,
-    /\bPosition Summary\b/i,
-    /\bJob Description\b/i,
-  ]);
+  const roleStart = lastIndexOfAny(text, ROLE_SECTION_PATTERNS);
   const companyName = request.company ? request.company.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
   const companyStart = companyName
     ? indexOfAny(text, [new RegExp(`\\bAbout ${companyName}\\b`, "i")])
@@ -92,50 +109,73 @@ function focusedJobText(request: EvaluateRequest, rawText: string): string {
   return [companySummary, roleText.slice(0, 1400)].filter(Boolean).join("\n\n");
 }
 
+const NAV_BOILERPLATE = /log in|sign in|get in touch|get started|we'?re hiring|copyright|\u00a9 20\d\d|privacy policy|terms of (?:use|service)/i;
+
+function isBoilerplate(text: string): boolean {
+  const compact = compactText(text);
+  if (compact.length < 80) return true;
+  const sentenceCount = compact.split(/(?<=[.!?])\s+/).length;
+  const navHitCount = (compact.match(NAV_BOILERPLATE) ?? []).length;
+  return navHitCount >= 2 || (navHitCount >= 1 && sentenceCount <= 3);
+}
+
 function roleDescriptionSummary(request: EvaluateRequest, rawText: string): string {
   const text = compactText(rawText);
-  const roleStart = indexOfAny(text, [
-    /\bAbout (?:the|this) Role\b/i,
-    /\bAbout (?:the|this) Position\b/i,
-    /\bThe Role\b/i,
-    /\bPosition Summary\b/i,
-    /\bJob Description\b/i,
-  ]);
-  const roleText = roleStart >= 0 ? text.slice(roleStart) : text.replace(/^.*?\bDescription\b/i, "");
+  const roleStart = lastIndexOfAny(text, ROLE_SECTION_PATTERNS);
+  let roleText: string;
+  if (roleStart >= 0) {
+    roleText = text.slice(roleStart);
+  } else {
+    const afterDescription = text.replace(/^.*?\bDescription\b/i, "");
+    if (isBoilerplate(afterDescription)) return "";
+    roleText = afterDescription;
+  }
   const withoutHeading = roleText.replace(
     /^(About (?:the|this) Role|About (?:the|this) Position|The Role|Position Summary|Job Description)\s*/i,
     ""
   );
-  return compactText(withoutHeading)
-    .split(/(?<=[.!?])\s+/)
-    .slice(0, 2)
-    .join(" ");
+  if (isBoilerplate(withoutHeading)) return "";
+  return firstSentences(withoutHeading, 2);
 }
+
+const COMPANY_SECTION_PATTERNS = [
+  /\bAbout (?:the Company|Our Company|Us)\b/i,
+  /\bCompany Overview\b/i,
+  /\bWho We Are\b/i,
+];
 
 function companySummary(request: EvaluateRequest, rawText: string): string {
   const text = compactText(rawText);
-  const roleStart = indexOfAny(text, [
-    /\bAbout (?:the|this) Role\b/i,
-    /\bAbout (?:the|this) Position\b/i,
-    /\bThe Role\b/i,
-    /\bPosition Summary\b/i,
-    /\bJob Description\b/i,
-  ]);
+  const roleStart = lastIndexOfAny(text, ROLE_SECTION_PATTERNS);
   const companyName = request.company ? request.company.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
-  const companyStart = companyName
-    ? indexOfAny(text, [new RegExp(`\\bAbout ${companyName}\\b`, "i")])
-    : -1;
-  if (companyStart < 0) return request.company ? `${request.company} company summary unavailable.` : "Company summary unavailable.";
-  return firstSentence(
-    text.slice(companyStart, roleStart > companyStart ? roleStart : undefined).replace(/^About\s+\S+\s*/i, "")
-  );
+  const namedPattern = companyName ? [new RegExp(`\\bAbout ${companyName}\\b`, "i")] : [];
+  const companyStart = indexOfAny(text, [...namedPattern, ...COMPANY_SECTION_PATTERNS]);
+  if (companyStart >= 0) {
+    const slice = text.slice(companyStart, roleStart > companyStart ? roleStart : undefined)
+      .replace(/^About\s+\S+\s*/i, "")
+      .replace(/^(?:the Company|Our Company|Us|Company Overview|Who We Are)\s*/i, "");
+    const summary = firstSentences(slice, 2);
+    if (!isBoilerplate(summary)) return summary;
+  }
+  // Fallback: use the first substantive paragraph in the first 800 chars
+  const opener = text.slice(0, 800);
+  const paragraphs = opener.split(/\s{2,}|\n+/).map((p) => p.trim()).filter((p) => p.length > 60);
+  const candidate = paragraphs.find((p) => !isBoilerplate(p));
+  if (candidate) return firstSentences(candidate, 2);
+  return request.company ? `${request.company} company summary unavailable.` : "Company summary unavailable.";
 }
 
 function buildTrackerNotes(request: EvaluateRequest, retrieval: JobFetchResult): string {
   const scrapedDate = new Date().toISOString().slice(0, 10);
   const company = companySummary(request, retrieval.text);
-  const role = roleDescriptionSummary(request, retrieval.text) || "Role summary unavailable.";
-  return `Scraped ${scrapedDate}.\n\nCompany: ${company}\n\nRole: ${role}`;
+  const role = roleDescriptionSummary(request, retrieval.text);
+  const companyUnavailable = company.includes("unavailable");
+  const roleUnavailable = !role;
+  if (companyUnavailable && roleUnavailable) {
+    return `Scraped ${scrapedDate}. No relevant job description found at the URL (page appears changed or blocked). Notes unchanged.`;
+  }
+  const roleText = role || "Role summary unavailable.";
+  return `Scraped ${scrapedDate}.\n\nCompany: ${company}\n\nRole: ${roleText}`;
 }
 
 function fallbackEvaluation(request: EvaluateRequest, retrieval: JobFetchResult): EvaluationPayload {

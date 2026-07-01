@@ -238,7 +238,53 @@ function buildPrompts(section: JobSection, status?: string): string[] {
   ];
 }
 
-function JobChat({ jobContext, section, status }: { jobContext: string; section: JobSection; status?: string }) {
+type EvaluationPayload = {
+  company: string;
+  role: string;
+  salary: string;
+  notes: string;
+  fit?: JobFit;
+  scoreRationale?: string;
+  retrieval: {
+    retrieval_limited: boolean;
+    warning?: string;
+  };
+};
+
+function contextValue(context: string, label: string): string {
+  const line = context.split("\n").find((item) => item.startsWith(`${label}: `));
+  return line?.slice(label.length + 2).trim() ?? "";
+}
+
+function shouldRefreshNotesFromUrl(text: string): boolean {
+  const n = text.toLowerCase();
+  // "update/refresh/fetch notes"
+  if (/\b(refresh|update|fetch)\b/.test(n) && n.includes("notes")) return true;
+  // "retrieve/pull/get from web/url/online/posting"
+  if (/\b(retrieve|pull|fetch)\b/.test(n) && /\b(web|url|online|site|posting|page)\b/.test(n)) return true;
+  // "all of it / everything / all details" combined with any retrieval signal
+  if (/\b(all|everything|details?)\b/.test(n) && /\b(retrieve|web|url|refresh|fetch)\b/.test(n)) return true;
+  return false;
+}
+
+function parseSseBlock(block: string): { event: string; data: unknown } | null {
+  const event = block.match(/^event:\s*(.+)$/m)?.[1];
+  const rawData = block.match(/^data:\s*(.+)$/m)?.[1];
+  if (!event || rawData === undefined) return null;
+  return { event, data: JSON.parse(rawData) as unknown };
+}
+
+function JobChat({
+  jobContext,
+  section,
+  status,
+  onJobsChanged,
+}: {
+  jobContext: string;
+  section: JobSection;
+  status?: string;
+  onJobsChanged: () => void;
+}) {
   const [messages, setMessages] = useState<ClientMsg[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -253,6 +299,63 @@ function JobChat({ jobContext, section, status }: { jobContext: string; section:
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, statusText]);
 
+  const readEvaluationStream = useCallback(async (body: ReadableStream<Uint8Array>): Promise<EvaluationPayload> => {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) throw new Error("Evaluation finished without a result");
+      buffer += decoder.decode(value, { stream: true });
+      const blocks = buffer.split("\n\n");
+      buffer = blocks.pop() ?? "";
+      for (const block of blocks) {
+        const parsed = parseSseBlock(block);
+        if (!parsed) continue;
+        if (parsed.event === "status" && typeof parsed.data === "string") setStatusText(parsed.data);
+        if (parsed.event === "error") throw new Error(String(parsed.data));
+        if (parsed.event === "result") return parsed.data as EvaluationPayload;
+      }
+    }
+  }, []);
+
+  const refreshNotesFromUrl = useCallback(async (): Promise<string> => {
+    const url = contextValue(jobContext, "URL");
+    const company = contextValue(jobContext, "Company");
+    const role = contextValue(jobContext, "Role");
+    if (!url || !company || !role) return "I need a company, role, and URL on this job before I can refresh notes.";
+
+    const res = await fetch("/api/evaluate-job", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, company, role }),
+    });
+    if (!res.ok || !res.body) throw new Error("Could not evaluate the job URL");
+    const evaluation = await readEvaluationStream(res.body);
+    if (
+      evaluation.retrieval.retrieval_limited ||
+      evaluation.notes.includes("Notes unchanged")
+    ) {
+      return evaluation.retrieval.warning ?? "No relevant job description found at the URL (page appears changed or blocked). Notes unchanged.";
+    }
+
+    const updates: Record<string, unknown> = { notes: evaluation.notes };
+    if (evaluation.salary) updates.salary = evaluation.salary;
+    if (evaluation.scoreRationale) updates.scoreRationale = evaluation.scoreRationale;
+    if ((section === "prospect" || section === "local" || section === "staffing") && evaluation.fit) {
+      updates.fit = evaluation.fit;
+    }
+
+    const updateRes = await fetch("/api/jobs", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section, company, role, updates }),
+    });
+    if (!updateRes.ok) throw new Error("Could not update this job");
+    onJobsChanged();
+    return "Refreshed notes from the job URL using the full retrieval pipeline.";
+  }, [jobContext, onJobsChanged, readEvaluationStream, section]);
+
   const send = useCallback(async (text: string) => {
     if (!text.trim() || pending) return;
     setError("");
@@ -263,8 +366,15 @@ function JobChat({ jobContext, section, status }: { jobContext: string; section:
     setPending(true);
     setStatusText("");
     let assistantText = "";
+    let toolsCalled = false;
 
     try {
+      if (shouldRefreshNotesFromUrl(text)) {
+        const refreshedText = await refreshNotesFromUrl();
+        setMessages([...nextMessages, { role: "assistant", content: refreshedText }]);
+        return;
+      }
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -284,20 +394,24 @@ function JobChat({ jobContext, section, status }: { jobContext: string; section:
           if (!line.trim()) continue;
           try {
             const ev = JSON.parse(line) as { type: string; text?: string; name?: string; message?: string };
-            if (ev.type === "tool_call" && ev.name) setStatusText(TOOL_LABELS[ev.name] ?? "Working…");
+            if (ev.type === "tool_call" && ev.name) {
+              toolsCalled = true;
+              setStatusText(TOOL_LABELS[ev.name] ?? "Working…");
+            }
             else if (ev.type === "text" && ev.text) assistantText = ev.text;
             else if (ev.type === "error") throw new Error(ev.message);
           } catch { /* skip */ }
         }
       }
       if (assistantText) setMessages([...nextMessages, { role: "assistant", content: assistantText }]);
+      if (toolsCalled) onJobsChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setPending(false);
       setStatusText("");
     }
-  }, [messages, pending, jobContext]);
+  }, [messages, pending, jobContext, onJobsChanged, refreshNotesFromUrl]);
 
   function startOver() {
     if (pending) return;
@@ -465,6 +579,21 @@ function JobDetailContent() {
       body: JSON.stringify({ section, company, role, targetSection: target }),
     });
     router.push("/");
+  }
+
+  async function refreshAfterChatChange() {
+    const res = await fetch("/api/jobs", { cache: "no-store" });
+    const nextJobs = await res.json() as JobsData;
+    setJobs(nextJobs);
+
+    const sameSection = (nextJobs[section] ?? []) as AnyJob[];
+    if (sameSection.some((j) => j.company === company && j.role === role)) return;
+    if (!foundJob.url) return;
+
+    const updated = sameSection.find((j) => j.url === foundJob.url);
+    if (!updated) return;
+    const params = new URLSearchParams({ section, company: updated.company, role: updated.role });
+    router.replace(`/job?${params.toString()}`);
   }
 
   const jobContext = [
@@ -637,7 +766,7 @@ function JobDetailContent() {
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">Discuss this role</p>
                 <p className="text-xs text-p-dusk dark:text-gray-500 mt-0.5">Interview prep, offer analysis, fit questions</p>
               </div>
-              <JobChat jobContext={jobContext} section={section} status={appliedJob?.status} />
+              <JobChat jobContext={jobContext} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
             </div>
 
           </div>

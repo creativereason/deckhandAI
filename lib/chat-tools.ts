@@ -65,7 +65,7 @@ export const ANTHROPIC_TOOLS = [
         role: { type: "string" },
         updates: {
           type: "object",
-          description: "Key-value pairs of fields to update (status, notes, salary, fit, date, etc.)",
+          description: "Key-value pairs of fields to update. Updatable fields: status, notes, salary, fit, scoreRationale, date, url. When updating fit always include scoreRationale explaining why.",
         },
       },
       required: ["section", "company", "role", "updates"],
