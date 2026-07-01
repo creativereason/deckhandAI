@@ -2,23 +2,14 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import {
+  evaluateJobUrl as evaluateJobUrlRequest,
+  evaluationMissingIdentity,
+  addEvaluationToPending as putEvaluationToPending,
+  type EvaluationPayload,
+} from "@/lib/evaluate-job-client";
 
 type ClientMsg = { role: "user" | "assistant"; content: string };
-type EvaluationPayload = {
-  company: string;
-  role: string;
-  url: string;
-  salary: string;
-  notes: string;
-  fit: string;
-  scoreRationale: string;
-  retrieval: {
-    retrieval_method: string;
-    retrieval_limited: boolean;
-    warning?: string;
-    source_url?: string;
-  };
-};
 
 type NdjsonEvent =
   | { type: "tool_call"; name: string }
@@ -82,13 +73,6 @@ function jobDetailHref(section: string, company: string, role: string): string {
   return `/job?${params.toString()}`;
 }
 
-function parseSseBlock(block: string): { event: string; data: unknown } | null {
-  const event = block.match(/^event:\s*(.+)$/m)?.[1];
-  const rawData = block.match(/^data:\s*(.+)$/m)?.[1];
-  if (!event || rawData === undefined) return null;
-  return { event, data: JSON.parse(rawData) as unknown };
-}
-
 export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => void }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ClientMsg[]>([]);
@@ -111,42 +95,13 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
 
-  const readEvaluationStream = useCallback(async (body: ReadableStream<Uint8Array>): Promise<string> => {
-    const reader = body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let assistantText = "I couldn't evaluate that job automatically. Try pasting the job description text.";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) return assistantText;
-      buffer += decoder.decode(value, { stream: true });
-      const blocks = buffer.split("\n\n");
-      buffer = blocks.pop() ?? "";
-      for (const block of blocks) {
-        const parsed = parseSseBlock(block);
-        if (!parsed) continue;
-        if (parsed.event === "status" && typeof parsed.data === "string") setStatusText(parsed.data);
-        if (parsed.event === "error") throw new Error(String(parsed.data));
-        if (parsed.event === "result") {
-          const result = parsed.data as EvaluationPayload;
-          setEvaluation(result);
-          assistantText = formatEvaluation(result);
-        }
-      }
-    }
-  }, []);
-
   const evaluateJobUrl = useCallback(async (text: string): Promise<string> => {
     const url = extractUrl(text);
     if (!url) return "Paste the job posting URL after the prompt and I’ll evaluate it.";
-    const res = await fetch("/api/evaluate-job", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-    if (!res.ok || !res.body) throw new Error("Job evaluation failed");
-    return readEvaluationStream(res.body);
-  }, [readEvaluationStream]);
+    const result = await evaluateJobUrlRequest(url, setStatusText);
+    setEvaluation(result);
+    return formatEvaluation(result);
+  }, []);
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || pending) return;
@@ -216,21 +171,12 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     }
   }, [evaluateJobUrl, messages, pending, onJobsChanged]);
 
-  function evaluationMissingIdentity(evaluation: EvaluationPayload): boolean {
-    return !evaluation.company.trim() || !evaluation.role.trim();
-  }
-
   async function addEvaluationToPending() {
     if (!evaluation || pending || evaluationMissingIdentity(evaluation)) return;
     setPending(true);
     setError("");
     try {
-      const res = await fetch("/api/evaluate-job", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(evaluation),
-      });
-      if (!res.ok) throw new Error("Could not add job to pending");
+      await putEvaluationToPending(evaluation);
       const href = jobDetailHref("pending", evaluation.company, evaluation.role);
       setMessages((current) => [
         ...current,

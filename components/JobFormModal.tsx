@@ -46,6 +46,7 @@ interface Props {
   originalRole?: string;
   onClose: () => void;
   onSaved: () => void;
+  secondaryAction?: { label: string; onClick: () => void };
 }
 
 function jobToForm(section: JobSection, job?: JobRecord) {
@@ -111,6 +112,7 @@ export default function JobFormModal({
   originalRole,
   onClose,
   onSaved,
+  secondaryAction,
 }: Props) {
   const [board, setBoard] = useState<Board>(() => boardFromSection(initialSection));
   const [jobType, setJobType] = useState<JobType>(() => {
@@ -230,6 +232,16 @@ export default function JobFormModal({
             );
           })()}
         </div>
+
+        {secondaryAction && (
+          <button
+            type="button"
+            onClick={secondaryAction.onClick}
+            className="text-xs text-p-accent dark:text-p-accent-inv hover:underline -mt-2"
+          >
+            {secondaryAction.label}
+          </button>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div className={board === "passed" ? "col-span-2" : "col-span-1"}>
