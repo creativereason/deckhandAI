@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { readConfig } from "@/lib/config";
 import { getSession } from "@/lib/auth";
 import { fetchGenerate } from "@/lib/model";
@@ -8,13 +9,37 @@ import { readJobs, writeJobs, type JobFit, type PendingJob } from "@/lib/jobs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-type EvaluateRequest = {
-  url?: string;
-  company?: string;
-  role?: string;
-  salary?: string;
-  notes?: string;
-};
+const JobFitSchema = z.enum(["strong", "good", "caution", "weak"]);
+
+const EvaluateRequestSchema = z.object({
+  url: z.string().min(1),
+  company: z.string().optional(),
+  role: z.string().optional(),
+  salary: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type EvaluateRequest = z.infer<typeof EvaluateRequestSchema>;
+
+const RetrievalSchema = z.object({
+  ok: z.boolean(),
+  url: z.string(),
+  text: z.string(),
+  retrieval_method: z.enum(["fetch_only", "brave_search", "playwright"]),
+  retrieval_limited: z.boolean(),
+  warning: z.string().optional(),
+}) satisfies z.ZodType<JobFetchResult>;
+
+const EvaluationPayloadSchema = z.object({
+  company: z.string().min(1),
+  role: z.string().min(1),
+  url: z.string().min(1),
+  salary: z.string().optional().default(""),
+  notes: z.string().optional().default(""),
+  fit: JobFitSchema.optional().default("good"),
+  scoreRationale: z.string().optional().default(""),
+  retrieval: RetrievalSchema.optional(),
+});
 
 type EvaluationPayload = {
   company: string;
@@ -24,7 +49,7 @@ type EvaluationPayload = {
   notes: string;
   fit: JobFit;
   scoreRationale: string;
-  retrieval: JobFetchResult;
+  retrieval?: JobFetchResult;
 };
 
 const VALID_FITS: JobFit[] = ["strong", "good", "caution", "weak"];
@@ -273,8 +298,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({})) as EvaluateRequest;
-  if (!body.url) return NextResponse.json({ error: "url is required" }, { status: 400 });
+  const parsedBody = EvaluateRequestSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: parsedBody.error.flatten() }, { status: 400 });
+  }
+  const body = parsedBody.data;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -285,7 +313,7 @@ export async function POST(req: NextRequest) {
       try {
         emit("status", "Fetching page...");
         const retrieval = await fetchJobDetails({
-          url: body.url!,
+          url: body.url,
           company: body.company,
           role: body.role,
         });
@@ -325,10 +353,11 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
   }
 
-  const payload = await req.json().catch(() => null) as EvaluationPayload | null;
-  if (!payload?.company || !payload.role || !payload.url) {
-    return NextResponse.json({ error: "company, role, and url are required" }, { status: 400 });
+  const parsedPayload = EvaluationPayloadSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsedPayload.success) {
+    return NextResponse.json({ error: parsedPayload.error.flatten() }, { status: 400 });
   }
+  const payload = parsedPayload.data;
 
   const jobs = await readJobs();
   const pending = pendingFromEvaluation(payload);

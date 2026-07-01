@@ -64,6 +64,38 @@ afterEach(() => {
 });
 
 describe("/api/evaluate-job", () => {
+  it("returns 400 with a field path when POST body is empty", async () => {
+    const response = await POST(request("POST", {}));
+    const body = await response.json() as { error: { fieldErrors: Record<string, unknown> } };
+
+    expect(response.status).toBe(400);
+    expect(body.error.fieldErrors).toHaveProperty("url");
+    expect(fetchJobDetails).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 with a field path when PUT body is missing required fields", async () => {
+    const response = await PUT(request("PUT", { company: "Acme" }));
+    const body = await response.json() as { error: { fieldErrors: Record<string, unknown> } };
+
+    expect(response.status).toBe(400);
+    expect(body.error.fieldErrors).toHaveProperty("role");
+    expect(body.error.fieldErrors).toHaveProperty("url");
+    expect(writeJobs).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when PUT fit is not one of the JobFit enum values", async () => {
+    const response = await PUT(request("PUT", {
+      company: "Acme",
+      role: "Senior UX Designer",
+      url: "https://example.com/job",
+      fit: "amazing",
+    }));
+    const body = await response.json() as { error: { fieldErrors: Record<string, unknown> } };
+
+    expect(response.status).toBe(400);
+    expect(body.error.fieldErrors).toHaveProperty("fit");
+  });
+
   it("returns 401 before fetching when the session is unauthenticated", async () => {
     vi.mocked(getSession).mockResolvedValue({ authenticated: false } as Awaited<ReturnType<typeof getSession>>);
 
