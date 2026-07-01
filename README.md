@@ -139,6 +139,8 @@ Add and manage scrape targets in two ways:
 - **Settings UI** — go to Settings → Scrape Sources to add, edit, or remove targets without touching any files. Changes are saved to `data/scrape-targets.json` in your data repo.
 - **Script** — edit `scripts/scrape-careers.mjs` directly for bulk setup or to define custom selectors. The script reads from `data/scrape-targets.json` at runtime if it exists, falling back to the targets defined in the file.
 
+**On-demand scrape from the UI:** ask the Deckhand chat assistant to "scrape for new jobs" — it runs your configured remote and local targets and streams per-target progress into the chat. Scheduled runs (below) remain the primary path for hands-off scraping; the chat prompt is for a manual run without leaving the board.
+
 Run the scraper manually or let GitHub Actions run it on a schedule:
 
 ```bash
@@ -169,8 +171,8 @@ Beyond scraping your target companies, deckhandAI can search job boards automati
 
 deckhandAI uses AI throughout the workflow — not just for document output. All features run through the same provider you configure, so one API key covers everything.
 
-**Chat assistant**
-A floating chat panel available on every page. Ask questions about your pipeline, get prioritization suggestions, or have it add, move, or update jobs through natural language.
+**Chat assistant ("Your Deckhand")**
+An always-visible panel on the board — stacked above the tracker on mobile, a sticky rail alongside it on larger screens — plus a per-job chat on the job detail page. Ask questions about your pipeline, evaluate a job URL, scan for ghost jobs, trigger an on-demand scrape of your configured career-page targets, or have it add, move, or update jobs through natural language.
 
 **Job fit evaluation**
 Each job in your tracker can be scored against your target titles, salary floor, and location preferences. The AI explains why a role is a strong fit or a caution, surfacing signal you'd otherwise have to read manually.

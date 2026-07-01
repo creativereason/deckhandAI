@@ -1,4 +1,4 @@
-name: Lint and type-check
+name: Lint, type-check, and test
 
 on:
   pull_request:
@@ -32,3 +32,6 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Test
+        run: pnpm test
