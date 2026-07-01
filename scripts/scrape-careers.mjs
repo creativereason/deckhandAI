@@ -2,9 +2,17 @@
 /**
  * Standalone career page scraper for cloud routines.
  * Runs all automated targets (remote + local), filters qualifying roles,
- * appends new entries to jobs.json, and commits + pushes.
+ * appends new entries to data/jobs.json, and commits + pushes.
  *
  * Usage: node scripts/scrape-careers.mjs
+ *
+ * Env vars:
+ *   DATA_ROOT           Root of the data repo's git checkout. Defaults to
+ *                        this script's own app checkout (../ from scripts/).
+ *                        Set this to a separately-checked-out data repo path
+ *                        when the app code and data repo are checked out
+ *                        into different directories (e.g. in CI).
+ *   GITHUB_DATA_BRANCH   Branch to pull/commit/push. Defaults to "main".
  */
 
 import { execSync } from "child_process";
@@ -13,8 +21,13 @@ import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const JOBS_PATH = resolve(__dirname, "../data/jobs.json");
-const CONFIG_PATH = resolve(__dirname, "../data/config.json");
+// Root of the data repo's git checkout. Defaults to this app's own checkout
+// (data repo cloned/symlinked into deckhandAI/data/ for local/VPS runs);
+// override to point at a separately-checked-out data repo in CI.
+const DATA_ROOT = process.env.DATA_ROOT ?? resolve(__dirname, "..");
+const DATA_BRANCH = process.env.GITHUB_DATA_BRANCH || "main";
+const JOBS_PATH = resolve(DATA_ROOT, "data/jobs.json");
+const CONFIG_PATH = resolve(DATA_ROOT, "data/config.json");
 
 // ---------------------------------------------------------------------------
 // Filters (mirrors lib/scrape-filters.ts)
@@ -317,9 +330,11 @@ async function main() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Ensure we're on main and up to date (CCR checks out a detached HEAD)
-  execSync("git checkout main 2>/dev/null || git checkout -b main --track origin/main", { stdio: "inherit" });
-  execSync("git pull --rebase origin main", { stdio: "inherit" });
+  // Ensure the data repo checkout is on its tracked branch and up to date
+  // (CI checks out a detached HEAD; this also covers a fresh local clone).
+  const gitOpts = { stdio: "inherit", cwd: DATA_ROOT };
+  execSync(`git checkout ${DATA_BRANCH} 2>/dev/null || git checkout -b ${DATA_BRANCH} --track origin/${DATA_BRANCH}`, gitOpts);
+  execSync(`git pull --rebase origin ${DATA_BRANCH}`, gitOpts);
 
   const jobs = JSON.parse(readFileSync(JOBS_PATH, "utf-8"));
 
@@ -404,13 +419,11 @@ async function main() {
 
   if (totalAdded > 0) {
     writeFileSync(JOBS_PATH, JSON.stringify(jobs, null, 2));
-    execSync("git config user.email 'routine@claude.ai'", { stdio: "inherit" });
-    execSync("git config user.name 'Claude Routine'", { stdio: "inherit" });
-    execSync("git add jobs.json", { stdio: "inherit" });
-    execSync(`git commit -m "Scrape career pages: ${totalAdded} new role(s) added (${today})"`, {
-      stdio: "inherit",
-    });
-    execSync("git push", { stdio: "inherit" });
+    execSync("git config user.email 'routine@claude.ai'", gitOpts);
+    execSync("git config user.name 'Claude Routine'", gitOpts);
+    execSync("git add data/jobs.json", gitOpts);
+    execSync(`git commit -m "Scrape career pages: ${totalAdded} new role(s) added (${today})"`, gitOpts);
+    execSync("git push", gitOpts);
     console.log(`\nDone. ${totalAdded} new role(s) added and pushed.`);
   } else {
     console.log("\nDone. No new qualifying roles found.");
