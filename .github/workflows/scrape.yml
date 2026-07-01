@@ -23,7 +23,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -39,24 +39,8 @@ jobs:
           token: ${{ secrets.DATA_REPO_TOKEN }}
           path: data-repo
 
-      - name: Copy jobs.json into place
-        run: |
-          mkdir -p data
-          cp data-repo/jobs.json data/jobs.json 2>/dev/null || cp data/jobs.sample.json data/jobs.json
-
       - name: Run scraper
         run: node scripts/scrape-careers.mjs
         env:
-          SCRAPE_OUTPUT_PATH: data/jobs.json
-
-      - name: Commit and push results
-        working-directory: data-repo
-        run: |
-          cp ../data/jobs.json jobs.json
-          git config user.name "deckhandAI"
-          git config user.email "deckhand@noreply"
-          git add jobs.json
-          git diff --cached --quiet || git commit -m "Scrape: $(date '+%Y-%m-%d %H:%M') UTC"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.DATA_REPO_TOKEN }}
+          DATA_ROOT: ${{ github.workspace }}/data-repo
+          GITHUB_DATA_BRANCH: ${{ secrets.GITHUB_DATA_BRANCH }}

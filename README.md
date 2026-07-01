@@ -153,6 +153,8 @@ npx playwright install chromium
 
 > **Vercel deployments cannot run the scraper.** Vercel's serverless environment does not support Chromium. To use automated scraping, run the scraper from your own machine or a self-hosted server — either on a schedule via cron or via the GitHub Actions workflow (`.github/workflows/scrape.yml`), which runs the script in a standard Ubuntu runner that supports Playwright.
 
+**Scheduling your own runs?** `.github/workflows/scrape.yml` in this repo is a template — never add your own secrets to the shared upstream repo. See [docs/scheduled-scraping.md](docs/scheduled-scraping.md) for hosting it in your own fork or (recommended) directly in your private data repo.
+
 ---
 
 ## Scheduled job searching
