@@ -16,13 +16,13 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-p-light dark:bg-p-navy">
+    <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <Link
               href="/"
-              className="text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               ← Tracker
             </Link>
@@ -30,7 +30,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           </div>
         </div>
 
-        <nav className="flex flex-wrap gap-1 border-b border-p-linen dark:border-p-dark-mid pb-0 overflow-x-auto">
+        <nav className="flex flex-wrap gap-1 border-b border-border pb-0 overflow-x-auto">
           {TABS.map((tab) => {
             const active = tab.href === "/settings"
               ? pathname === "/settings"
@@ -42,8 +42,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 className={cn(
                   "px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors whitespace-nowrap",
                   active
-                    ? "border-p-accent dark:border-p-accent-inv text-p-accent dark:text-p-accent-inv bg-white dark:bg-p-dark-surface"
-                    : "border-transparent text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                    ? "border-primary text-primary bg-card"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
                 {tab.label}

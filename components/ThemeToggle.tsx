@@ -21,7 +21,7 @@ export default function ThemeToggle() {
     <button
       onClick={toggle}
       title="Toggle dark mode"
-      className="text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200 transition-colors px-1"
+      className="text-muted-foreground hover:text-foreground transition-colors px-1"
     >
       {dark ? <Sun size={18} /> : <Moon size={18} />}
     </button>

@@ -40,25 +40,25 @@ const TYPE_OPTIONS: { value: ModalTab; label: string; description: string }[] = 
 
 function DiffSection({ label, original, tailored }: { label: string; original: string[]; tailored: string[] }) {
   return (
-    <div className="rounded-xl border border-p-linen dark:border-p-dark-mid overflow-hidden">
-      <div className="px-3 py-1.5 bg-p-linen dark:bg-p-dark-mid">
-        <span className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">{label}</span>
+    <div className="rounded-xl border border-border overflow-hidden">
+      <div className="px-3 py-1.5 bg-muted">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{label}</span>
       </div>
-      <div className="grid grid-cols-2 divide-x divide-p-linen dark:divide-p-dark-mid">
-        <div className="p-3 bg-red-50/40 dark:bg-red-950/10">
-          <p className="text-[10px] font-semibold text-red-400 dark:text-red-500 uppercase tracking-widest mb-1.5">Before</p>
+      <div className="grid grid-cols-2 divide-x divide-border">
+        <div className="p-3 bg-destructive/5">
+          <p className="text-[10px] font-semibold text-destructive uppercase tracking-widest mb-1.5">Before</p>
           <ul className="space-y-1">
             {original.length ? original.map((b, i) => (
-              <li key={i} className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{b}</li>
-            )) : <li className="text-xs text-gray-400 italic">—</li>}
+              <li key={i} className="text-xs text-muted-foreground leading-relaxed">{b}</li>
+            )) : <li className="text-xs text-muted-foreground italic">—</li>}
           </ul>
         </div>
-        <div className="p-3 bg-green-50/40 dark:bg-green-950/10">
-          <p className="text-[10px] font-semibold text-green-600 dark:text-green-500 uppercase tracking-widest mb-1.5">After</p>
+        <div className="p-3 bg-tone-success/5">
+          <p className="text-[10px] font-semibold text-tone-success uppercase tracking-widest mb-1.5">After</p>
           <ul className="space-y-1">
             {tailored.length ? tailored.map((b, i) => (
               <li key={i} className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{b}</li>
-            )) : <li className="text-xs text-gray-400 italic">—</li>}
+            )) : <li className="text-xs text-muted-foreground italic">—</li>}
           </ul>
         </div>
       </div>
@@ -264,13 +264,13 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4">
-      <div className="bg-white dark:bg-p-dark-surface rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh]">
+      <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh]">
 
         {/* Header */}
-        <div className="flex items-start justify-between px-4 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-p-linen dark:border-p-dark-mid shrink-0">
+        <div className="flex items-start justify-between px-4 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-border shrink-0">
           <div>
             <h2 className="text-base font-bold text-gray-900 dark:text-white">Generate document</h2>
-            <p className="text-sm text-p-dusk dark:text-gray-400 mt-0.5">{role} — {company}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{role} — {company}</p>
           </div>
           <Button onClick={onClose} disabled={streaming} variant="ghost" size="icon-sm" className="text-xl leading-none">
             ×
@@ -288,12 +288,12 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
                 disabled={streaming}
                 className={`flex-1 rounded-xl border px-4 py-3 text-left transition-colors disabled:opacity-50 ${
                   type === opt.value
-                    ? "border-p-accent dark:border-p-accent-inv bg-p-light dark:bg-p-dark-mid"
-                    : "border-p-linen dark:border-p-dark-mid hover:border-p-dusk dark:hover:border-gray-500"
+                    ? "border-primary bg-muted"
+                    : "border-border hover:border-ring/50"
                 }`}
               >
                 <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{opt.label}</p>
-                <p className="text-xs text-p-dusk dark:text-gray-400 mt-0.5">{opt.description}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{opt.description}</p>
               </button>
             ))}
           </div>
@@ -301,12 +301,12 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
           {/* Angle / emphasis — hidden for tailor-resume */}
           {type !== "tailor-resume" && (
             <div>
-              <label className="block text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
                 Angle or emphasis <span className="font-normal normal-case tracking-normal">(optional)</span>
               </label>
               <textarea
                 rows={2}
-                className="w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv resize-none"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 placeholder="e.g. Emphasize design systems leadership and the Copilot agent work"
                 value={angle}
                 onChange={(e) => setAngle(e.target.value)}
@@ -317,8 +317,8 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
 
           {/* Job URL */}
           {url && (
-            <p className="text-xs text-p-dusk dark:text-gray-400">
-              JD: <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-gray-700 dark:hover:text-gray-200 truncate">{url}</a>
+            <p className="text-xs text-muted-foreground">
+              JD: <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-foreground truncate">{url}</a>
             </p>
           )}
         </div>
@@ -327,10 +327,10 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
         {type === "tailor-resume" && (tailoring || tailored || error) && (
           <div className="px-4 sm:px-6 pb-2 flex-1 min-h-0 overflow-y-auto">
             {error ? (
-              <p className="text-sm text-red-600 dark:text-red-400 p-3 bg-red-50 dark:bg-red-950/30 rounded-xl">{error}</p>
+              <p className="text-sm text-destructive p-3 bg-destructive/10 rounded-xl">{error}</p>
             ) : tailoring ? (
-              <div className="flex items-center justify-center py-12 gap-3 text-sm text-p-dusk dark:text-gray-400">
-                <span className="inline-block w-4 h-4 border-2 border-p-dusk/30 dark:border-gray-600 border-t-p-blue dark:border-t-p-accent-inv rounded-full animate-spin" />
+              <div className="flex items-center justify-center py-12 gap-3 text-sm text-muted-foreground">
+                <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin" />
                 Tailoring resume for {company}…
               </div>
             ) : tailored && (
@@ -374,11 +374,11 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
         {type !== "tailor-resume" && (hasOutput || error) && (
           <div className="px-4 sm:px-6 pb-2 flex-1 min-h-0 flex flex-col">
             {error ? (
-              <p className="text-sm text-red-600 dark:text-red-400 p-3 bg-red-50 dark:bg-red-950/30 rounded-xl">{error}</p>
+              <p className="text-sm text-destructive p-3 bg-destructive/10 rounded-xl">{error}</p>
             ) : (
               <textarea
                 ref={outputRef}
-                className="w-full flex-1 min-h-[200px] border border-p-linen dark:border-p-dark-mid rounded-xl px-4 py-3 text-sm bg-p-light dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv resize-none font-mono leading-relaxed"
+                className="w-full flex-1 min-h-[200px] border border-border rounded-xl px-4 py-3 text-sm bg-muted dark:text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono leading-relaxed"
                 value={output}
                 onChange={(e) => setOutput(e.target.value)}
                 spellCheck
@@ -388,7 +388,7 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
         )}
 
         {/* Footer */}
-        <div className="px-4 sm:px-6 py-4 border-t border-p-linen dark:border-p-dark-mid flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="px-4 sm:px-6 py-4 border-t border-border flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex gap-2 flex-wrap">
             {type === "tailor-resume" ? (
               <>
@@ -463,7 +463,7 @@ export default function GenerateModal({ company, role, url, onClose }: Props) {
             ) : (
               <>
                 {streaming && (
-                  <Button onClick={stop} variant="ghost" className="hover:text-red-600 dark:hover:text-red-400">
+                  <Button onClick={stop} variant="ghost" className="hover:text-destructive">
                     Stop
                   </Button>
                 )}
