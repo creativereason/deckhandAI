@@ -9,6 +9,8 @@ import {
   addEvaluationToPending as putEvaluationToPending,
   type EvaluationPayload,
 } from "@/lib/evaluate-job-client";
+import { readSseStream } from "@/lib/sse-client";
+import type { ScrapeLogEntry } from "@/lib/scrape-run";
 
 type ClientMsg = { role: "user" | "assistant"; content: string };
 
@@ -42,10 +44,11 @@ const SUGGESTIONS_DESKTOP = [
   "Show strong prospects",
   "Move all declined to passed",
   "Add a job",
-  "Flag Acme Corp as a ghost",
+  "Flag a job as a ghost job",
 ];
 
 const GHOST_SCAN_PROMPT = "Scan my board for ghost jobs and stale applications";
+const SCRAPE_PROMPT = "Scrape for new jobs";
 const EVALUATE_URL_PROMPT = "Evaluate this job URL: ";
 const URL_PATTERN = /https?:\/\/\S+/;
 
@@ -74,6 +77,21 @@ function jobDetailHref(section: string, company: string, role: string): string {
   return `/job?${params.toString()}`;
 }
 
+function formatLogLine(entry: ScrapeLogEntry): string {
+  if (entry.status === "error") return `- ${entry.company}: failed — ${entry.error}`;
+  return `- ${entry.company}: ${entry.listings} listings, ${entry.qualifying} qualifying, ${entry.added} new`;
+}
+
+type ScrapeApiResult = { added: number; log: ScrapeLogEntry[] };
+
+function formatScrapeResult(result: ScrapeApiResult): string {
+  const summary = result.added > 0
+    ? `**${result.added} new job${result.added !== 1 ? "s" : ""}** added to the pending review queue.`
+    : "Scrape complete — no new qualifying jobs found.";
+  const lines = result.log.map(formatLogLine).join("\n");
+  return lines ? `${summary}\n\n${lines}` : summary;
+}
+
 const COLLAPSED_STORAGE_KEY = "board-chat-collapsed";
 
 export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => void }) {
@@ -81,17 +99,21 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
   const [messages, setMessages] = useState<ClientMsg[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
-  const [statusText, setStatusText] = useState("");
+  const [statusLines, setStatusLines] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [evaluation, setEvaluation] = useState<EvaluationPayload | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasDraftOrThread = messages.length > 0 || input.trim().length > 0 || !!error || !!evaluation;
 
+  const appendStatus = useCallback((line: string) => {
+    setStatusLines((lines) => [...lines, line]);
+  }, []);
+
   // Scroll to bottom whenever messages or status change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, statusText, pending]);
+  }, [messages, statusLines, pending]);
 
   // Restore collapsed/expanded state once on mount
   useEffect(() => {
@@ -108,10 +130,25 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
   const evaluateJobUrl = useCallback(async (text: string): Promise<string> => {
     const url = extractUrl(text);
     if (!url) return "Paste the job posting URL after the prompt and I’ll evaluate it.";
-    const result = await evaluateJobUrlRequest(url, setStatusText);
+    const result = await evaluateJobUrlRequest(url, appendStatus);
     setEvaluation(result);
     return formatEvaluation(result);
-  }, []);
+  }, [appendStatus]);
+
+  const runScrapeNow = useCallback(async (): Promise<string> => {
+    const res = await fetch("/api/scrape", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    if (!res.ok || !res.body) throw new Error("Scrape failed");
+    let result: ScrapeApiResult | null = null;
+    await readSseStream(res.body, (event, data) => {
+      if (event === "status" && typeof data === "string") appendStatus(data);
+      if (event === "error") throw new Error(String(data));
+      if (event === "result") result = data as ScrapeApiResult;
+    });
+    if (!result) throw new Error("No scrape result returned");
+    const scrapeResult: ScrapeApiResult = result;
+    if (scrapeResult.added > 0) onJobsChanged();
+    return formatScrapeResult(scrapeResult);
+  }, [appendStatus, onJobsChanged]);
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || pending) return;
@@ -122,12 +159,18 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     setMessages(nextMessages);
     setInput("");
     setPending(true);
-    setStatusText("");
+    setStatusLines([]);
 
     let assistantText = "";
     let toolsCalled = false;
 
     try {
+      if (text === SCRAPE_PROMPT) {
+        const assistantText = await runScrapeNow();
+        setMessages([...nextMessages, { role: "assistant", content: assistantText }]);
+        return;
+      }
+
       if (shouldEvaluateJobUrl(text)) {
         const assistantText = await evaluateJobUrl(text);
         setMessages([...nextMessages, { role: "assistant", content: assistantText }]);
@@ -157,7 +200,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
             const event = JSON.parse(line) as NdjsonEvent;
             if (event.type === "tool_call") {
               toolsCalled = true;
-              setStatusText(TOOL_LABELS[event.name] ?? "Working…");
+              appendStatus(TOOL_LABELS[event.name] ?? "Working…");
             } else if (event.type === "text") {
               assistantText = event.text;
             } else if (event.type === "error") {
@@ -177,9 +220,9 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setPending(false);
-      setStatusText("");
+      setStatusLines([]);
     }
-  }, [evaluateJobUrl, messages, pending, onJobsChanged]);
+  }, [evaluateJobUrl, runScrapeNow, messages, pending, onJobsChanged, appendStatus]);
 
   async function addEvaluationToPending() {
     if (!evaluation || pending || evaluationMissingIdentity(evaluation)) return;
@@ -210,7 +253,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     if (pending) return;
     setMessages([]);
     setInput("");
-    setStatusText("");
+    setStatusLines([]);
     setError("");
     setEvaluation(null);
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -233,7 +276,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
   return (
     <div className={cn(
       "bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-3 py-3 md:px-5 md:py-4",
-      !collapsed && "md:h-[calc(100vh-2rem)] md:flex md:flex-col"
+      !collapsed && "md:max-h-[calc(100vh-2rem)] md:flex md:flex-col md:overflow-hidden"
     )}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3 shrink-0">
@@ -294,6 +337,17 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
                 Scan for ghost jobs
               </button>
 
+              <button
+                onClick={() => send(SCRAPE_PROMPT)}
+                title="Scan configured career pages for new qualifying roles and add them to the pending review queue."
+                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-p-blue dark:text-p-accent-inv bg-p-linen/60 dark:bg-p-dark-mid/60 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
+              >
+                <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 4h12M2 8h12M2 12h8" />
+                </svg>
+                Scrape for new jobs
+              </button>
+
               <p className="text-xs text-stone-400 dark:text-gray-500 text-center pt-1">Or try asking:</p>
               {SUGGESTIONS_DESKTOP.map((s, i) => (
                 <button
@@ -330,9 +384,9 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
 
           {pending && (
             <div className="flex flex-col gap-1.5">
-              {statusText && (
-                <p className="text-[11px] text-stone-400 dark:text-gray-500 italic px-1">{statusText}</p>
-              )}
+              {statusLines.map((line, i) => (
+                <p key={i} className="text-[11px] text-stone-400 dark:text-gray-500 italic px-1">{line}</p>
+              ))}
               <div className="flex items-center gap-1 px-1">
                 {[0, 150, 300].map((delay) => (
                   <span

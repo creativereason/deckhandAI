@@ -800,9 +800,12 @@ export default function Home() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.svg" alt="" width={32} height={32} className="shrink-0" />
-              {displayName ? `${displayName} — DeckhandAI` : "DeckhandAI"}
+              <img src="/logo.svg" alt="" width={64} height={64} className="shrink-0" />
+              DeckhandAI
             </h1>
+            {displayName && (
+              <p className="text-xs text-stone-400 dark:text-gray-500 mt-0.5">{displayName}&apos;s Job board</p>
+            )}
             <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">
               {jobs.applied.length} applied · {totalProspects} prospects · {jobs.passed.length} passed
               {(jobs.pending ?? []).length > 0 && (
@@ -864,12 +867,6 @@ export default function Home() {
             {/* Filter bar */}
             <div className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
               <SectionVisibilityBar visible={visibleSections} onToggle={toggleSectionVisibility} />
-              <FitFilterBar active={fitFilter} onChange={setFitFilter} />
-              {fitFilter !== "all" && (
-                <span className="text-xs text-p-dusk dark:text-gray-400 shrink-0">
-                  Filtering prospects
-                </span>
-              )}
               <div className="ml-auto shrink-0 relative">
                 <input
                   type="text"
@@ -943,6 +940,9 @@ export default function Home() {
                   newCount={totalNew} />
               </AccordionTrigger>
               <AccordionContent className="pb-3">
+                <div className="mb-3">
+                  <FitFilterBar active={fitFilter} onChange={setFitFilter} />
+                </div>
                 <ProspectTable
                   jobs={filteredProspects}
                   onMove={moveJob}
@@ -983,6 +983,38 @@ export default function Home() {
 
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="pt-4 pb-2 text-center text-xs text-stone-400 dark:text-gray-500">
+          DeckhandAI originally created by{" "}
+          <a
+            href="https://creativereason.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white underline transition-colors"
+          >
+            creativereason
+          </a>
+          {" · "}
+          Fork on {" "}
+          <a
+            href="https://github.com/creativereason/deckhandAI"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white underline transition-colors"
+          >
+            GitHub
+          </a>
+          {" · "}
+          <a
+            href="https://github.com/creativereason/deckhandAI/blob/main/LICENSE"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white underline transition-colors"
+          >
+            MIT License
+          </a>
+        </footer>
 
         {editing && (
           <JobFormModal mode="edit" section={editing.section} job={editing.job}
