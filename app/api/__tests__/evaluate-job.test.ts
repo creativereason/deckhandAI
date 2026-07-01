@@ -168,6 +168,26 @@ describe("/api/evaluate-job", () => {
     expect(result.notes).not.toContain("Weak fit");
   });
 
+  it("treats role text with multiple nav-boilerplate hits across many sentences as unusable", async () => {
+    vi.mocked(fetchJobDetails).mockResolvedValue({
+      ok: true,
+      url: "https://example.com/job",
+      text: "About Acme\nAcme builds tools for logistics teams worldwide, helping them route freight and manage vendors more efficiently every day.\n\nAbout the Role\nLog in to see more opportunities. Sign in for full access. This role focuses on strategic design leadership. We ship high quality experiences.",
+      retrieval_method: "fetch_only",
+      retrieval_limited: false,
+    });
+
+    const response = await POST(request("POST", {
+      url: "https://example.com/job",
+      company: "Acme",
+      role: "Designer",
+    }));
+    const result = resultEventData(await streamText(response));
+
+    expect(result.notes).not.toContain("Log in to see more opportunities");
+    expect(result.notes).toContain("Role summary unavailable.");
+  });
+
   it("adds an evaluated job to pending only on confirmation", async () => {
     vi.mocked(readJobs).mockResolvedValue({
       applied: [],

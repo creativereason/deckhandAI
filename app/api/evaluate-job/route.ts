@@ -134,7 +134,7 @@ function focusedJobText(request: EvaluateRequest, rawText: string): string {
   return [companySummary, roleText.slice(0, 1400)].filter(Boolean).join("\n\n");
 }
 
-const NAV_BOILERPLATE = /log in|sign in|get in touch|get started|we'?re hiring|copyright|\u00a9 20\d\d|privacy policy|terms of (?:use|service)/i;
+const NAV_BOILERPLATE = /log in|sign in|get in touch|get started|we'?re hiring|copyright|\u00a9 20\d\d|privacy policy|terms of (?:use|service)/gi;
 
 function isBoilerplate(text: string): boolean {
   const compact = compactText(text);
