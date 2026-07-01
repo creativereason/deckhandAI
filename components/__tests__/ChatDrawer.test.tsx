@@ -14,8 +14,7 @@ function sseStream(events: Array<{ event: string; data: unknown }>): ReadableStr
   });
 }
 
-function openDrawerAndSubmit(text: string) {
-  fireEvent.click(screen.getByLabelText("Open assistant"));
+function submit(text: string) {
   const input = screen.getByPlaceholderText("Message…");
   fireEvent.change(input, { target: { value: text } });
   fireEvent.click(screen.getByText("Send"));
@@ -49,7 +48,7 @@ describe("ChatDrawer evaluation without detected company/role", () => {
     }));
 
     render(<ChatDrawer onJobsChanged={vi.fn()} />);
-    openDrawerAndSubmit("Evaluate this job URL: https://example.com/job");
+    submit("Evaluate this job URL: https://example.com/job");
 
     await waitFor(() => {
       expect(screen.getByText(/Couldn't detect company\/role automatically/)).toBeInTheDocument();
@@ -78,10 +77,49 @@ describe("ChatDrawer evaluation without detected company/role", () => {
     }));
 
     render(<ChatDrawer onJobsChanged={vi.fn()} />);
-    openDrawerAndSubmit("Evaluate this job URL: https://example.com/job");
+    submit("Evaluate this job URL: https://example.com/job");
 
     await waitFor(() => {
       expect(screen.getByText("Add to pending")).toBeEnabled();
     });
+  });
+});
+
+describe("ChatDrawer collapse/expand", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+  });
+
+  // O — One: the simplest render shows the chat body without any interaction.
+  it("renders expanded by default", () => {
+    render(<ChatDrawer onJobsChanged={vi.fn()} />);
+
+    expect(screen.getByPlaceholderText("Message…")).toBeInTheDocument();
+    expect(screen.getByLabelText("Collapse assistant")).toBeInTheDocument();
+  });
+
+  // B — Boundary: toggling collapse hides and restores the chat body.
+  it("hides the message input when collapsed, and restores it when expanded again", () => {
+    render(<ChatDrawer onJobsChanged={vi.fn()} />);
+
+    fireEvent.click(screen.getByLabelText("Collapse assistant"));
+    expect(screen.queryByPlaceholderText("Message…")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Expand assistant"));
+    expect(screen.getByPlaceholderText("Message…")).toBeInTheDocument();
+  });
+
+  // E — Exception: collapsed state survives a remount instead of always resetting to expanded.
+  it("persists the collapsed state across remounts", () => {
+    const { unmount } = render(<ChatDrawer onJobsChanged={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("Collapse assistant"));
+    unmount();
+
+    render(<ChatDrawer onJobsChanged={vi.fn()} />);
+
+    expect(screen.queryByPlaceholderText("Message…")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Expand assistant")).toBeInTheDocument();
   });
 });

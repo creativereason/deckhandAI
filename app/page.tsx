@@ -2,14 +2,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import AddJobModal from "@/components/AddJobModal";
 import JobFormModal from "@/components/JobFormModal";
 import OnboardingWizard from "@/components/OnboardingWizard";
 import ScrapeReviewQueue from "@/components/ScrapeReviewQueue";
 import GenerateModal from "@/components/GenerateModal";
-import ScrapePanel from "@/components/ScrapePanel";
-import GenericScrapePanel from "@/components/GenericScrapePanel";
-import SortableTh from "@/components/SortableTh";
 import {
   JobsData,
   AppliedJob,
@@ -38,7 +34,7 @@ import ChatDrawer from "@/components/ChatDrawer";
 
 type FitFilter = JobFit | "all";
 type TaggedProspectJob = ProspectJob & { _section: "prospect" | "local" | "staffing" };
-type ToggleableSection = "applied" | "prospect";
+type ToggleableSection = "applied" | "prospect" | "passed";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -83,6 +79,7 @@ const DISPLAY_SECTIONS: { value: JobSection; label: string }[] = [
 const SECTION_VISIBILITY_OPTIONS: { value: ToggleableSection; label: string }[] = [
   { value: "applied", label: "Applied" },
   { value: "prospect", label: "Prospects" },
+  { value: "passed", label: "Passed" },
 ];
 
 const BOARD_FILTERS_STORAGE_KEY = "board-filters";
@@ -127,13 +124,32 @@ function NewChip() {
   );
 }
 
-function RowIcon({ icon }: { icon: string }) {
+function SortMenu({ options, sort, onChange }: {
+  options: { value: string; label: string }[];
+  sort: SortState;
+  onChange: (column: string) => void;
+}) {
   return (
-    <td className="py-2.5 pr-2 w-6 text-center select-none">
-      <span className="flex items-center justify-center">
-        <SignalIcon icon={icon} size={14} />
-      </span>
-    </td>
+    <div className="flex items-center gap-1.5">
+      <label className="text-xs text-p-dusk dark:text-gray-400 uppercase tracking-widest font-medium">Sort</label>
+      <select
+        value={sort.column}
+        onChange={(e) => onChange(e.target.value)}
+        className="text-xs bg-p-linen dark:bg-p-dark-mid rounded-lg pl-2 pr-6 py-1 text-gray-700 dark:text-gray-200 outline-none"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={() => onChange(sort.column)}
+        aria-label={sort.dir === "asc" ? "Sort ascending" : "Sort descending"}
+        className="text-stone-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+      >
+        {sort.dir === "asc" ? "↑" : "↓"}
+      </button>
+    </div>
   );
 }
 
@@ -361,85 +377,56 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
 
   if (jobs.length === 0) return <p className="text-sm text-gray-400 py-4 px-1">No applications yet.</p>;
   return (
-    <>
-      {/* Mobile/tablet cards */}
-      <div className="lg:hidden space-y-2 pb-1">
-        {sorted.map((j) => {
-          const key = jobKey(j.company, j.role);
-          return (
-            <div key={key}
-              onClick={() => onDetail(j)}
-              className={cn(
-                "border border-p-linen dark:border-p-dark-mid rounded-lg p-3 bg-white dark:bg-p-dark-surface transition-all duration-300 cursor-pointer hover:border-p-dusk dark:hover:border-gray-500",
-                exitingKey === key && "opacity-0 scale-95 -translate-y-1 pointer-events-none"
-              )}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="leading-none shrink-0 flex items-center"><SignalIcon icon={getAppliedIcon(j)} size={16} /></span>
-                  <span className="font-semibold text-gray-900 dark:text-white text-base truncate">{j.company}</span>
-                  <StatusBadge label={j.status} />
-                  <TypeBadge type={resolveJobType("applied", j)} />
-                </div>
-                {j.url && <JobLink url={j.url} />}
-              </div>
-              <p className="text-base text-gray-700 dark:text-gray-200 mt-1 leading-snug">{j.role}</p>
-              <div className="flex items-center gap-3 mt-1.5 text-sm text-stone-500 dark:text-gray-400">
-                {j.date && <span>{j.date}</span>}
-                {j.salary && <span>{j.salary}</span>}
-              </div>
-              {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
-              <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
-                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
-                  onGenerate={onGenerate ? () => onGenerate(j) : undefined}
-                  onExportResume={onExportResume ? () => onExportResume(j) : undefined}
-                  onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
-              </div>
-            </div>
-          );
-        })}
+    <div className="space-y-2 pb-1">
+      <div className="flex justify-end pb-1">
+        <SortMenu
+          sort={sort}
+          onChange={(c) => setSort((s) => nextSort(s, c))}
+          options={[
+            { value: "signal", label: "Signal" },
+            { value: "company", label: "Company" },
+            { value: "role", label: "Role" },
+            { value: "status", label: "Status" },
+            { value: "type", label: "Type" },
+            { value: "date", label: "Date" },
+            { value: "salary", label: "Salary" },
+          ]}
+        />
       </div>
-
-      {/* Desktop table */}
-      <table className="hidden lg:table w-full text-sm">
-        <thead>
-          <tr className="text-xs text-p-dusk dark:text-gray-400 uppercase tracking-widest border-b border-p-linen dark:border-p-dark-mid">
-            <SortableTh label="Signal" column="signal" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium w-6" />
-            <SortableTh label="Company" column="company" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Role" column="role" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Status" column="status" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Type" column="type" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Date" column="date" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Salary" column="salary" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Notes" column="notes" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Job Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((j) => (
-            <tr key={jobKey(j.company, j.role)}
-              onClick={() => onDetail(j)}
-              className="border-b border-p-linen/60 dark:border-p-dark-mid/60 hover:bg-p-linen/40 dark:hover:bg-p-dark-mid/40 group cursor-pointer">
-              <RowIcon icon={getAppliedIcon(j)} />
-              <td className="py-2.5 pr-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">{j.company}</td>
-              <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-200">{j.role}</td>
-              <td className="py-2.5 pr-4"><StatusBadge label={j.status} /></td>
-              <td className="py-2.5 pr-4"><TypeBadge type={resolveJobType("applied", j)} /></td>
-              <td className="py-2.5 pr-4 text-stone-500 dark:text-gray-400 whitespace-nowrap">{j.date || "—"}</td>
-              <td className="py-2.5 pr-4 text-stone-500 dark:text-gray-400 max-w-[120px] text-xs">{j.salary || "—"}</td>
-              <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[220px] text-xs leading-relaxed truncate">{j.notes}</td>
-              <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
-              <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
-                  onGenerate={onGenerate ? () => onGenerate(j) : undefined}
-                  onExportResume={onExportResume ? () => onExportResume(j) : undefined}
-                  onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
+      {sorted.map((j) => {
+        const key = jobKey(j.company, j.role);
+        return (
+          <div key={key}
+            onClick={() => onDetail(j)}
+            className={cn(
+              "border border-p-linen dark:border-p-dark-mid rounded-lg p-3 bg-white dark:bg-p-dark-surface transition-all duration-300 cursor-pointer hover:border-p-dusk dark:hover:border-gray-500",
+              exitingKey === key && "opacity-0 scale-95 -translate-y-1 pointer-events-none"
+            )}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="leading-none shrink-0 flex items-center"><SignalIcon icon={getAppliedIcon(j)} size={16} /></span>
+                <span className="font-semibold text-gray-900 dark:text-white text-base truncate">{j.company}</span>
+                <StatusBadge label={j.status} />
+                <TypeBadge type={resolveJobType("applied", j)} />
+              </div>
+              {j.url && <JobLink url={j.url} />}
+            </div>
+            <p className="text-base text-gray-700 dark:text-gray-200 mt-1 leading-snug">{j.role}</p>
+            <div className="flex items-center gap-3 mt-1.5 text-sm text-stone-500 dark:text-gray-400">
+              {j.date && <span>{j.date}</span>}
+              {j.salary && <span>{j.salary}</span>}
+            </div>
+            {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
+            <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
+              <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                onGenerate={onGenerate ? () => onGenerate(j) : undefined}
+                onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -474,103 +461,57 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
 
   if (jobs.length === 0) return <p className="text-sm text-gray-400 py-4 px-1">No roles match the current filter.</p>;
   return (
-    <>
-      {/* Mobile/tablet cards */}
-      <div className="lg:hidden space-y-2 pb-1">
-        {sorted.map((j) => {
-          const key = jobKey(j.company, j.role);
-          const jType = resolveJobType(j._section, j);
-          return (
-            <div key={key}
-              onClick={() => onDetail(j)}
-              className={cn(
-                "border border-p-linen dark:border-p-dark-mid rounded-lg p-3 bg-white dark:bg-p-dark-surface transition-all duration-300 cursor-pointer hover:border-p-dusk dark:hover:border-gray-500",
-                j.isNew && "border-orange-200 dark:border-orange-800/50 bg-orange-50/30 dark:bg-orange-900/10",
-                exitingKey === key && "opacity-0 scale-95 -translate-y-1 pointer-events-none"
-              )}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                  <span className="leading-none shrink-0 flex items-center"><SignalIcon icon={getProspectIcon(j)} size={16} /></span>
-                  <span className="font-semibold text-gray-900 dark:text-white text-base truncate">{j.company}</span>
-                  {j.isNew && <NewChip />}
-                  <FitBadge label={j.fit} />
-                  <TypeBadge type={jType} />
-                </div>
-                {j.url && <JobLink url={j.url} />}
-              </div>
-              <p className="text-base text-gray-700 dark:text-gray-200 mt-1 leading-snug">{j.role}</p>
-              {j.salary && <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{j.salary}</p>}
-              {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
-              <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
-                <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
-                  onMove={(t) => handleMove(t, j)}
-                  onDismiss={j.isNew ? () => onDismiss(j) : undefined}
-                  onExportResume={onExportResume ? () => onExportResume(j) : undefined}
-                  onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
-              </div>
-            </div>
-          );
-        })}
+    <div className="space-y-2 pb-1">
+      <div className="flex justify-end pb-1">
+        <SortMenu
+          sort={sort}
+          onChange={(c) => setSort((s) => nextSort(s, c))}
+          options={[
+            { value: "signal", label: "Signal" },
+            { value: "company", label: "Company" },
+            { value: "role", label: "Role" },
+            { value: "fit", label: "Fit" },
+            { value: "type", label: "Type" },
+            { value: "salary", label: "Salary" },
+          ]}
+        />
       </div>
-
-      {/* Desktop table */}
-      <table className="hidden lg:table w-full text-sm">
-        <thead>
-          <tr className="text-xs text-p-dusk dark:text-gray-400 uppercase tracking-widest border-b border-p-linen dark:border-p-dark-mid">
-            <SortableTh label="Signal" column="signal" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium w-6" />
-            <SortableTh label="Company" column="company" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Role" column="role" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Fit" column="fit" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Type" column="type" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Salary" column="salary" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Notes" column="notes" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="AI" column="scoreRationale" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="max-xl:hidden text-left py-2 pr-4 font-medium" />
-            <SortableTh label="Job Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((j) => {
-            const jType = resolveJobType(j._section, j);
-            return (
-              <tr key={jobKey(j.company, j.role)}
-                onClick={() => onDetail(j)}
-                className={cn("border-b border-p-linen/60 dark:border-p-dark-mid/60 hover:bg-p-linen/40 dark:hover:bg-p-dark-mid/40 group cursor-pointer", j.isNew && "bg-orange-50/40 dark:bg-orange-900/10")}>
-                <RowIcon icon={getProspectIcon(j)} />
-                <td className="py-2.5 pr-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                  {j.company}{j.isNew && <NewChip />}
-                </td>
-                <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-200">{j.role}</td>
-                <td className="py-2.5 pr-4">
-                  {j.scoreRationale ? (
-                    <div className="relative group/fit inline-block">
-                      <FitBadge label={j.fit} />
-                      <div className="xl:hidden absolute left-0 top-full mt-1.5 z-20 w-64 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover/fit:opacity-100 pointer-events-none transition-opacity shadow-xl leading-relaxed">
-                        {j.scoreRationale}
-                      </div>
-                    </div>
-                  ) : (
-                    <FitBadge label={j.fit} />
-                  )}
-                </td>
-                <td className="py-2.5 pr-4"><TypeBadge type={jType} /></td>
-                <td className="py-2.5 pr-4 text-stone-500 dark:text-gray-400 max-w-[120px] text-xs">{j.salary || "—"}</td>
-                <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[240px] text-xs leading-relaxed truncate">{j.notes}</td>
-                <td className="max-xl:hidden py-2.5 pr-4 text-p-dusk dark:text-gray-500 max-w-[280px] text-xs italic leading-relaxed truncate">{j.scoreRationale}</td>
-                <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
-                <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                  <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
-                    onMove={(t) => handleMove(t, j)}
-                    onDismiss={j.isNew ? () => onDismiss(j) : undefined}
-                    onExportResume={onExportResume ? () => onExportResume(j) : undefined}
-                    onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </>
+      {sorted.map((j) => {
+        const key = jobKey(j.company, j.role);
+        const jType = resolveJobType(j._section, j);
+        return (
+          <div key={key}
+            onClick={() => onDetail(j)}
+            className={cn(
+              "border border-p-linen dark:border-p-dark-mid rounded-lg p-3 bg-white dark:bg-p-dark-surface transition-all duration-300 cursor-pointer hover:border-p-dusk dark:hover:border-gray-500",
+              j.isNew && "border-orange-200 dark:border-orange-800/50 bg-orange-50/30 dark:bg-orange-900/10",
+              exitingKey === key && "opacity-0 scale-95 -translate-y-1 pointer-events-none"
+            )}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                <span className="leading-none shrink-0 flex items-center"><SignalIcon icon={getProspectIcon(j)} size={16} /></span>
+                <span className="font-semibold text-gray-900 dark:text-white text-base truncate">{j.company}</span>
+                {j.isNew && <NewChip />}
+                <FitBadge label={j.fit} />
+                <TypeBadge type={jType} />
+              </div>
+              {j.url && <JobLink url={j.url} />}
+            </div>
+            <p className="text-base text-gray-700 dark:text-gray-200 mt-1 leading-snug">{j.role}</p>
+            {j.salary && <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{j.salary}</p>}
+            {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
+            {j.scoreRationale && <p className="text-xs text-p-dusk dark:text-gray-500 italic mt-1.5 leading-relaxed">{j.scoreRationale}</p>}
+            <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
+              <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
+                onMove={(t) => handleMove(t, j)}
+                onDismiss={j.isNew ? () => onDismiss(j) : undefined}
+                onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -604,74 +545,48 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExport
 
   if (jobs.length === 0) return <p className="text-sm text-gray-400 py-4 px-1">Nothing passed yet.</p>;
   return (
-    <>
-      {/* Mobile/tablet cards */}
-      <div className="lg:hidden space-y-2 pb-1 opacity-60">
-        {sorted.map((j) => {
-          const key = jobKey(j.company, j.role);
-          return (
-            <div key={key}
-              onClick={() => onDetail(j)}
-              className={cn(
-                "border border-p-linen dark:border-p-dark-mid rounded-lg p-3 bg-white dark:bg-p-dark-surface transition-all duration-300 cursor-pointer hover:border-p-dusk dark:hover:border-gray-500",
-                exitingKey === key && "opacity-0 scale-95 -translate-y-1 pointer-events-none"
-              )}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="leading-none shrink-0 flex items-center"><SignalIcon icon="🔴" size={16} /></span>
-                  <span className="font-semibold text-gray-600 dark:text-gray-400 text-base truncate">{j.company}</span>
-                </div>
-                {j.url && <JobLink url={j.url} />}
-              </div>
-              <p className="text-base text-gray-700 dark:text-gray-300 mt-1 leading-snug">{j.role}</p>
-              {j.salary && <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{j.salary}</p>}
-              {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
-              <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
-                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
-                  onGenerate={onGenerate ? () => onGenerate(j) : undefined}
-                  onExportResume={onExportResume ? () => onExportResume(j) : undefined}
-                  onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
-              </div>
-            </div>
-          );
-        })}
+    <div className="space-y-2 pb-1 opacity-60">
+      <div className="flex justify-end pb-1">
+        <SortMenu
+          sort={sort}
+          onChange={(c) => setSort((s) => nextSort(s, c))}
+          options={[
+            { value: "company", label: "Company" },
+            { value: "role", label: "Role" },
+            { value: "salary", label: "Salary" },
+            { value: "notes", label: "Reason" },
+          ]}
+        />
       </div>
-
-      {/* Desktop table */}
-      <table className="hidden lg:table w-full text-sm">
-        <thead>
-          <tr className="text-xs text-p-dusk dark:text-gray-400 uppercase tracking-widest border-b border-p-linen dark:border-p-dark-mid">
-            <SortableTh label="Signal" column="signal" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium w-6" />
-            <SortableTh label="Company" column="company" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Role" column="role" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Salary" column="salary" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Reason" column="notes" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} />
-            <SortableTh label="Job Link" column="url" sort={sort} onSort={(c) => setSort((s) => nextSort(s, c))} className="text-left py-2 pr-2 font-medium" />
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((j) => (
-            <tr key={jobKey(j.company, j.role)}
-              onClick={() => onDetail(j)}
-              className="border-b border-gray-50 dark:border-gray-800/60 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 group opacity-60 cursor-pointer">
-              <RowIcon icon="🔴" />
-              <td className="py-2.5 pr-4 font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">{j.company}</td>
-              <td className="py-2.5 pr-4 text-gray-500 dark:text-gray-400">{j.role}</td>
-              <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[120px] text-xs">{j.salary || "—"}</td>
-              <td className="py-2.5 pr-4 text-stone-400 dark:text-gray-400 max-w-[280px] text-xs leading-relaxed truncate">{j.notes}</td>
-              <td className="py-2.5 pr-2"><JobLink url={j.url} /></td>
-              <td className="py-2.5 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
-                  onGenerate={onGenerate ? () => onGenerate(j) : undefined}
-                  onExportResume={onExportResume ? () => onExportResume(j) : undefined}
-                  onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </>
+      {sorted.map((j) => {
+        const key = jobKey(j.company, j.role);
+        return (
+          <div key={key}
+            onClick={() => onDetail(j)}
+            className={cn(
+              "border border-p-linen dark:border-p-dark-mid rounded-lg p-3 bg-white dark:bg-p-dark-surface transition-all duration-300 cursor-pointer hover:border-p-dusk dark:hover:border-gray-500",
+              exitingKey === key && "opacity-0 scale-95 -translate-y-1 pointer-events-none"
+            )}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="leading-none shrink-0 flex items-center"><SignalIcon icon="🔴" size={16} /></span>
+                <span className="font-semibold text-gray-600 dark:text-gray-400 text-base truncate">{j.company}</span>
+              </div>
+              {j.url && <JobLink url={j.url} />}
+            </div>
+            <p className="text-base text-gray-700 dark:text-gray-300 mt-1 leading-snug">{j.role}</p>
+            {j.salary && <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{j.salary}</p>}
+            {j.notes && <p className="text-sm text-stone-400 dark:text-gray-400 mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
+            <div className="mt-2 pt-2 border-t border-p-linen dark:border-p-dark-mid">
+              <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
+                onGenerate={onGenerate ? () => onGenerate(j) : undefined}
+                onExportResume={onExportResume ? () => onExportResume(j) : undefined}
+                onExportCoverLetter={onExportCoverLetter ? () => onExportCoverLetter(j) : undefined} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -682,7 +597,6 @@ export default function Home() {
   const [jobs, setJobs] = useState<JobsData | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
   const [showPassed, setShowPassed] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<EditState | null>(null);
   const [fitFilter, setFitFilter] = useState<FitFilter>("all");
   const [search, setSearch] = useState("");
@@ -692,7 +606,7 @@ export default function Home() {
   const [hasProfile, setHasProfile] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["applied", "prospect", "passed"]);
   const [visibleSections, setVisibleSections] = useState<Set<ToggleableSection>>(
-    new Set(["applied", "prospect"])
+    new Set(["applied", "prospect", "passed"])
   );
 
   function toggleSectionVisibility(section: ToggleableSection) {
@@ -904,10 +818,6 @@ export default function Home() {
           <div className="flex flex-col gap-2 items-start sm:items-end shrink-0 w-full sm:w-auto">
             <div className="flex items-center gap-2 flex-wrap">
               <ThemeToggle />
-              <button onClick={() => setShowAdd(true)}
-                className="bg-p-blue dark:bg-p-accent-inv text-white dark:text-white rounded px-4 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 transition-colors">
-                + Add Job
-              </button>
               <a
                 href="/settings"
                 className="text-sm text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1 transition-colors"
@@ -926,8 +836,6 @@ export default function Home() {
                 Sign out
               </button>
             </div>
-            <ScrapePanel onDone={load} />
-            <GenericScrapePanel onDone={load} />
             <div className="flex items-center gap-3">
               <a href={`/scrape-sources`}
                 className="text-xs text-p-dusk dark:text-p-accent-inv hover:text-p-blue dark:hover:opacity-80">
@@ -942,51 +850,62 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Filter bar */}
-        <div className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
-          <SectionVisibilityBar visible={visibleSections} onToggle={toggleSectionVisibility} />
-          <FitFilterBar active={fitFilter} onChange={setFitFilter} />
-          {fitFilter !== "all" && (
-            <span className="text-xs text-p-dusk dark:text-gray-400 shrink-0">
-              Filtering prospects
-            </span>
-          )}
-          <div className="ml-auto shrink-0 relative">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search…"
-              className="w-40 sm:w-52 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg pl-7 pr-6 py-1.5 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/30 dark:focus:ring-p-accent-inv/30 transition"
-            />
-            <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 dark:text-gray-500 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-            </svg>
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 leading-none"
-                aria-label="Clear search"
-              >
-                ×
-              </button>
+        {/* Board (2/3) + Deckhand assistant (1/3) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+
+          {/* Deckhand assistant — stacked on top on mobile, right rail (sticky) from md up */}
+          <div className="order-1 md:order-2 md:col-span-1 md:sticky md:top-4 min-w-0">
+            <ChatDrawer onJobsChanged={load} />
+          </div>
+
+          {/* Board */}
+          <div className="order-2 md:order-1 md:col-span-2 space-y-4">
+
+            {/* Filter bar */}
+            <div className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
+              <SectionVisibilityBar visible={visibleSections} onToggle={toggleSectionVisibility} />
+              <FitFilterBar active={fitFilter} onChange={setFitFilter} />
+              {fitFilter !== "all" && (
+                <span className="text-xs text-p-dusk dark:text-gray-400 shrink-0">
+                  Filtering prospects
+                </span>
+              )}
+              <div className="ml-auto shrink-0 relative">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search…"
+                  className="w-40 sm:w-52 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg pl-7 pr-6 py-1.5 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/30 dark:focus:ring-p-accent-inv/30 transition"
+                />
+                <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400 dark:text-gray-500 pointer-events-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                </svg>
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 leading-none"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Demo mode banner */}
+            {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+              <div className="rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-5 py-3 text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                <span className="font-semibold">Demo mode</span> — data is read-only. Clone the repo to set up your own tracker.
+              </div>
             )}
-          </div>
-        </div>
 
-        {/* Demo mode banner */}
-        {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
-          <div className="rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-5 py-3 text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
-            <span className="font-semibold">Demo mode</span> — data is read-only. Clone the repo to set up your own tracker.
-          </div>
-        )}
+            {/* Scrape review queue */}
+            {(jobs.pending ?? []).length > 0 && (
+              <ScrapeReviewQueue pending={jobs.pending} onUpdate={load} />
+            )}
 
-        {/* Scrape review queue */}
-        {(jobs.pending ?? []).length > 0 && (
-          <ScrapeReviewQueue pending={jobs.pending} onUpdate={load} />
-        )}
-
-        {/* Accordion sections */}
+            {/* Accordion sections */}
         <Accordion
           multiple
           value={openSections}
@@ -1001,18 +920,16 @@ export default function Home() {
                 <SectionHeader title="Applied" count={jobs.applied.length} visibleCount={searchQ ? filteredApplied.length : undefined} />
               </AccordionTrigger>
               <AccordionContent className="pb-3">
-                <div className="overflow-x-auto">
-                  <AppliedTable
-                    jobs={filteredApplied}
-                    otherSections={otherSectionsFor("applied")}
-                    onEdit={(j) => setEditing({ section: "applied", job: j })}
-                    onMove={(t, j) => moveJob("applied", j.company, j.role, t)}
-                    onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
-                    onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
-                    onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
-                    onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=applied`)}
-                  />
-                </div>
+                <AppliedTable
+                  jobs={filteredApplied}
+                  otherSections={otherSectionsFor("applied")}
+                  onEdit={(j) => setEditing({ section: "applied", job: j })}
+                  onMove={(t, j) => moveJob("applied", j.company, j.role, t)}
+                  onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
+                  onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
+                  onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
+                  onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=applied`)}
+                />
               </AccordionContent>
             </AccordionItem>
           )}
@@ -1026,52 +943,46 @@ export default function Home() {
                   newCount={totalNew} />
               </AccordionTrigger>
               <AccordionContent className="pb-3">
-                <div className="overflow-x-auto">
-                  <ProspectTable
-                    jobs={filteredProspects}
-                    onMove={moveJob}
-                    onEdit={(job) => setEditing({ section: (job as TaggedProspectJob)._section ?? "prospect", job })}
-                    onDismiss={(job) => dismissNew((job as TaggedProspectJob)._section ?? "prospect", job.company, job.role)}
-                    onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
-                    onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
-                    onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
-                    otherSections={otherSectionsFor("prospect")}
-                    onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=${j._section}`)}
-                  />
-                </div>
+                <ProspectTable
+                  jobs={filteredProspects}
+                  onMove={moveJob}
+                  onEdit={(job) => setEditing({ section: (job as TaggedProspectJob)._section ?? "prospect", job })}
+                  onDismiss={(job) => dismissNew((job as TaggedProspectJob)._section ?? "prospect", job.company, job.role)}
+                  onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
+                  onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
+                  onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
+                  otherSections={otherSectionsFor("prospect")}
+                  onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=${j._section}`)}
+                />
               </AccordionContent>
             </AccordionItem>
           )}
 
-          {showPassed && (
+          {showPassed && visibleSections.has("passed") && (
             <AccordionItem value="passed"
               className="bg-white dark:bg-p-dark-surface rounded-xl border border-p-linen dark:border-p-dark-mid shadow-sm px-4 overflow-hidden">
               <AccordionTrigger className="hover:no-underline py-4">
                 <SectionHeader title="Passed" count={jobs.passed.length} visibleCount={searchQ ? filteredPassed.length : undefined} />
               </AccordionTrigger>
               <AccordionContent className="pb-3">
-                <div className="overflow-x-auto">
-                  <PassedTable
-                    jobs={filteredPassed}
-                    otherSections={otherSectionsFor("passed")}
-                    onEdit={(j) => setEditing({ section: "passed", job: j })}
-                    onMove={(t, j) => moveJob("passed", j.company, j.role, t)}
-                    onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
-                    onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
-                    onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
-                    onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=passed`)}
-                  />
-                </div>
+                <PassedTable
+                  jobs={filteredPassed}
+                  otherSections={otherSectionsFor("passed")}
+                  onEdit={(j) => setEditing({ section: "passed", job: j })}
+                  onMove={(t, j) => moveJob("passed", j.company, j.role, t)}
+                  onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
+                  onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
+                  onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
+                  onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=passed`)}
+                />
               </AccordionContent>
             </AccordionItem>
           )}
 
         </Accordion>
 
-        {showAdd && (
-          <AddJobModal onClose={() => setShowAdd(false)}
-            onAdded={() => { setShowAdd(false); load(); }} />
-        )}
+          </div>
+        </div>
 
         {editing && (
           <JobFormModal mode="edit" section={editing.section} job={editing.job}
@@ -1081,8 +992,6 @@ export default function Home() {
         )}
 
       </div>
-
-      <ChatDrawer onJobsChanged={load} />
     </div>
   );
 }

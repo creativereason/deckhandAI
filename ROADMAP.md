@@ -276,6 +276,7 @@ Establish a test baseline that catches regressions in the data layer, API routes
 
 Improve the scraper panel so it's informative and usable while a run is in progress.
 
+- [ ] Manual "scrape now" trigger via the Deckhand chat assistant — the board layout redesign removed the standalone Scrape button/panel from the header in favor of scheduled (GitHub Actions cron) scraping; add a chat-triggerable manual scrape as the replacement for on-demand runs
 - [ ] Live progress feed — stream per-target status (queued → running → found N / skipped / failed) as the scrape runs instead of a spinner
 - [ ] Elapsed time and per-target timing shown in the feed
 - [ ] Error detail inline — when a target fails, show the reason (timeout, selector miss, blocked) without leaving the panel

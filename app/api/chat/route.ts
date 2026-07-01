@@ -222,10 +222,31 @@ export async function POST(req: NextRequest) {
   const ai = config.ai ?? {};
   const provider = getProvider(ai);
 
+  // The client can disconnect (navigate away, close the tab) while the AI request
+  // is still in flight — the controller auto-closes on cancellation, so any later
+  // enqueue()/close() call would throw "Controller is already closed". Shared
+  // across start()/cancel() since cancel() fires on a client disconnect.
+  let closed = false;
+
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
-      const emit = (event: NdjsonEvent) =>
-        controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      const emit = (event: NdjsonEvent) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+        } catch {
+          closed = true;
+        }
+      };
+      const safeClose = () => {
+        if (closed) return;
+        closed = true;
+        try {
+          controller.close();
+        } catch {
+          // already closed by client disconnection
+        }
+      };
 
       const effectiveSystem = jobContext
         ? SYSTEM_PROMPT + `\n\nThe user is currently viewing this specific job:\n${jobContext}\n\nJob detail context rules: do not ask clarifying questions about what to update — the job context above provides company, role, section, and URL. Act immediately. When the user asks to update from the web, call fetch_job_description with the URL from context, then call update_job with all retrieved fields (notes, fit, scoreRationale, salary if found). Never return a question about what to update when a job URL is available.`
@@ -243,7 +264,10 @@ export async function POST(req: NextRequest) {
         .catch((err) =>
           emit({ type: "error", message: err instanceof Error ? err.message : String(err) })
         )
-        .finally(() => controller.close());
+        .finally(safeClose);
+    },
+    cancel() {
+      closed = true;
     },
   });
 
