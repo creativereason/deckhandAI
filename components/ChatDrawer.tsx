@@ -212,8 +212,12 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     }
   }, [evaluateJobUrl, messages, pending, onJobsChanged]);
 
+  function evaluationMissingIdentity(evaluation: EvaluationPayload): boolean {
+    return !evaluation.company.trim() || !evaluation.role.trim();
+  }
+
   async function addEvaluationToPending() {
-    if (!evaluation || pending) return;
+    if (!evaluation || pending || evaluationMissingIdentity(evaluation)) return;
     setPending(true);
     setError("");
     try {
@@ -396,11 +400,17 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
           )}
 
           {evaluation && !pending && (
-            <div className="flex justify-start">
+            <div className="flex flex-col items-start gap-1.5">
+              {evaluationMissingIdentity(evaluation) && (
+                <p className="text-xs text-stone-400 dark:text-gray-500 px-1">
+                  Couldn&apos;t detect company/role automatically — add this job manually from the board instead.
+                </p>
+              )}
               <button
                 type="button"
                 onClick={addEvaluationToPending}
-                className="rounded-lg bg-p-blue dark:bg-p-accent-inv px-3 py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+                disabled={evaluationMissingIdentity(evaluation)}
+                className="rounded-lg bg-p-blue dark:bg-p-accent-inv px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:hover:opacity-40 transition-opacity"
               >
                 Add to pending
               </button>
