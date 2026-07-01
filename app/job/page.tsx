@@ -251,6 +251,12 @@ type EvaluationPayload = {
   };
 };
 
+type PendingNotesRefresh = {
+  company: string;
+  role: string;
+  updates: Record<string, unknown>;
+};
+
 function contextValue(context: string, label: string): string {
   const line = context.split("\n").find((item) => item.startsWith(`${label}: `));
   return line?.slice(label.length + 2).trim() ?? "";
@@ -290,6 +296,7 @@ function JobChat({
   const [pending, setPending] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [error, setError] = useState("");
+  const [notesRefresh, setNotesRefresh] = useState<PendingNotesRefresh | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const prompts = buildPrompts(section, status);
@@ -346,19 +353,34 @@ function JobChat({
       updates.fit = evaluation.fit;
     }
 
+    setNotesRefresh({ company, role, updates });
+    return `Here's what I found:\n\n${evaluation.notes}\n\nApply to update the notes, or cancel to keep what you have.`;
+  }, [jobContext, readEvaluationStream, section]);
+
+  async function applyNotesRefresh() {
+    if (!notesRefresh) return;
+    setError("");
     const updateRes = await fetch("/api/jobs", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section, company, role, updates }),
+      body: JSON.stringify({ section, company: notesRefresh.company, role: notesRefresh.role, updates: notesRefresh.updates }),
     });
-    if (!updateRes.ok) throw new Error("Could not update this job");
+    if (!updateRes.ok) {
+      setError("Could not update this job");
+      return;
+    }
+    setNotesRefresh(null);
     onJobsChanged();
-    return "Refreshed notes from the job URL using the full retrieval pipeline.";
-  }, [jobContext, onJobsChanged, readEvaluationStream, section]);
+  }
+
+  function cancelNotesRefresh() {
+    setNotesRefresh(null);
+  }
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || pending) return;
     setError("");
+    setNotesRefresh(null);
     const userMsg: ClientMsg = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
@@ -481,6 +503,24 @@ function JobChat({
             </div>
           )}
           {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
+          {notesRefresh && !pending && (
+            <div className="flex items-center gap-2 pl-1">
+              <button
+                type="button"
+                onClick={applyNotesRefresh}
+                className="px-3 py-1.5 text-xs font-semibold bg-p-blue dark:bg-p-accent-inv text-white rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Apply
+              </button>
+              <button
+                type="button"
+                onClick={cancelNotesRefresh}
+                className="px-3 py-1.5 text-xs border border-p-linen dark:border-p-dark-mid text-gray-600 dark:text-gray-300 rounded-lg hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           <div ref={bottomRef} />
         </div>
       )}
