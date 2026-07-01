@@ -31,7 +31,7 @@ When the user asks to flag a job as a ghost but doesn't name which company/role,
 When the user shares a job URL:
 1. Call fetch_job_description with that URL to retrieve the JD text.
 2. If thin=true (page was blocked or gated), call search_remote_jobs with relevant keywords (role title, skills) to find similar remote listings on RemoteOK. Present the top results so the user can pick one.
-3. Once you have a description, summarize the role and ask which section to add it to (or add it directly if the user already said).
+3. Once you have a description, summarize the role and score fit if asked. Evaluating a job is not the same as filing it: only call add_job if the user actually asked to add/track/save it. If they do and named a specific section (prospect, applied, local, staffing), use that. If they didn't name one, call add_job with section "pending" so they can review and file it themselves — never default to prospect or applied on your own judgment.
 
 Today's date: ${new Date().toISOString().split("T")[0]}`;
 

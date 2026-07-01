@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { AppConfig } from "@/lib/config";
 
 const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
@@ -173,13 +174,9 @@ export default function ScrapingSettings() {
       </div>
 
       <div className="flex justify-end">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-6 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-50 transition-colors"
-        >
-          {saving ? "Saving…" : "Save scraping settings"}
-        </button>
+        <Button onClick={save} loading={saving} size="lg" className="px-6">
+          Save scraping settings
+        </Button>
       </div>
     </div>
   );

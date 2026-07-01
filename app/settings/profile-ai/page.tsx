@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { Profile, ExperienceEntry, EducationEntry } from "@/lib/profile";
 
 const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
@@ -154,7 +155,7 @@ export default function ProfileAiSettings() {
       <div className={SECTION}>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Work history</h2>
-          <button onClick={addExp} className="text-xs text-p-accent dark:text-p-accent-inv hover:underline">+ Add role</button>
+          <Button onClick={addExp} variant="link" size="sm" className="text-xs">+ Add role</Button>
         </div>
         {(profile.experience ?? []).length === 0 && (
           <p className="text-sm text-p-dusk dark:text-gray-400">No work history yet. Add your most recent roles.</p>
@@ -187,7 +188,7 @@ export default function ProfileAiSettings() {
                   <button onClick={() => removeExpBullet(ei, bi)} className={`${BTN_SM} shrink-0 hover:text-red-600`}>×</button>
                 </div>
               ))}
-              <button onClick={() => addExpBullet(ei)} className={BTN_SM}>+ bullet</button>
+              <Button onClick={() => addExpBullet(ei)} variant="link" size="sm" className="text-xs">+ bullet</Button>
             </div>
             <div className="flex justify-end">
               <button onClick={() => removeExp(ei)} className="text-xs text-red-500 hover:text-red-700 transition-colors">Remove role</button>
@@ -200,7 +201,7 @@ export default function ProfileAiSettings() {
       <div className={SECTION}>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Education</h2>
-          <button onClick={addEdu} className="text-xs text-p-accent dark:text-p-accent-inv hover:underline">+ Add</button>
+          <Button onClick={addEdu} variant="link" size="sm" className="text-xs">+ Add</Button>
         </div>
         {(profile.education ?? []).map((edu, i) => (
           <div key={i} className="grid grid-cols-2 gap-3 border border-p-linen dark:border-p-dark-mid rounded-xl p-4">
@@ -231,7 +232,7 @@ export default function ProfileAiSettings() {
       <div className={SECTION}>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Writing rules</h2>
-          <button onClick={addRule} className="text-xs text-p-accent dark:text-p-accent-inv hover:underline">+ Add rule</button>
+          <Button onClick={addRule} variant="link" size="sm" className="text-xs">+ Add rule</Button>
         </div>
         <p className="text-xs text-p-dusk dark:text-gray-400">Instructions the AI follows when generating documents. Describe tone, style, and anything to avoid.</p>
         {(profile.writing_rules ?? []).map((rule, i) => (
@@ -246,13 +247,9 @@ export default function ProfileAiSettings() {
       </div>
 
       <div className="flex justify-end">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-6 py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-50 transition-colors"
-        >
-          {saving ? "Saving…" : "Save profile"}
-        </button>
+        <Button onClick={save} loading={saving} size="lg" className="px-6">
+          Save profile
+        </Button>
       </div>
     </div>
   );

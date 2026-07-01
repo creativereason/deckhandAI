@@ -3,6 +3,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { Button } from "@/components/ui/button";
 import {
   evaluateJobUrl as evaluateJobUrlRequest,
   evaluationMissingIdentity,
@@ -102,7 +103,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
   const [statusLines, setStatusLines] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [evaluation, setEvaluation] = useState<EvaluationPayload | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasDraftOrThread = messages.length > 0 || input.trim().length > 0 || !!error || !!evaluation;
 
@@ -110,9 +111,12 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     setStatusLines((lines) => [...lines, line]);
   }, []);
 
-  // Scroll to bottom whenever messages or status change
+  // Scroll the message list itself to bottom whenever messages or status change —
+  // scrollIntoView() would walk up the scroll-ancestor chain and drag the whole
+  // page along with it now that this panel is embedded inline (not a floating overlay).
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages, statusLines, pending]);
 
   // Restore collapsed/expanded state once on mount
@@ -297,21 +301,23 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
           </span>
         </button>
         {!collapsed && hasDraftOrThread && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="xs"
             onClick={startOver}
             disabled={pending}
-            className="shrink-0 rounded-full border border-p-linen dark:border-p-dark-mid px-2.5 py-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid hover:text-gray-900 dark:hover:text-white disabled:opacity-40 disabled:hover:bg-transparent dark:disabled:hover:bg-transparent transition-colors"
+            className="shrink-0 text-[11px]"
           >
             Start over
-          </button>
+          </Button>
         )}
       </div>
 
       {!collapsed && (
       <>
       {/* Messages */}
-        <div className="mt-2 md:mt-3 max-h-56 md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto space-y-3">
+        <div ref={messagesRef} className="mt-2 md:mt-3 max-h-56 md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto space-y-3">
           {messages.length === 0 && !pending && (
             <div className="pt-2 space-y-1.5">
               <button
@@ -410,18 +416,16 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
                   Couldn&apos;t detect company/role automatically — add this job manually from the board instead.
                 </p>
               )}
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={addEvaluationToPending}
                 disabled={evaluationMissingIdentity(evaluation)}
-                className="rounded-lg bg-p-blue dark:bg-p-accent-inv px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:hover:opacity-40 transition-opacity"
               >
                 Add to pending
-              </button>
+              </Button>
             </div>
           )}
-
-          <div ref={bottomRef} />
         </div>
 
         {/* Input */}
@@ -437,13 +441,9 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
             placeholder="Message…"
             className="flex-1 min-w-0 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/40 dark:focus:ring-p-accent-inv/40 disabled:opacity-50 transition"
           />
-          <button
-            type="submit"
-            disabled={pending || !input.trim()}
-            className="px-3 py-2 bg-p-blue dark:bg-p-accent-inv text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-          >
+          <Button type="submit" disabled={!input.trim()} loading={pending}>
             Send
-          </button>
+          </Button>
         </form>
       </>
       )}

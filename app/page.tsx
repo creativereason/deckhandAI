@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
 import ChatDrawer from "@/components/ChatDrawer";
+import { Button } from "@/components/ui/button";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -199,13 +200,15 @@ function RowActions({ onEdit, onGenerate, onExportResume, onExportCoverLetter, m
       </button>
       {hasMenu && (
         <div className="relative">
-          <button
+          <Button
             ref={triggerRef}
             onClick={handleToggle}
-            className="w-6 h-6 flex items-center justify-center rounded text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors text-base leading-none"
+            variant="ghost"
+            size="icon-xs"
+            className="text-base leading-none"
           >
             ⋮
-          </button>
+          </Button>
           {open && menuPos && (
             <>
               <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
@@ -828,16 +831,18 @@ export default function Home() {
               >
                 Settings
               </a>
-              <button
+              <Button
                 onClick={async () => {
                   await fetch(`/api/auth/logout`, { method: "POST" });
                   window.location.href = `/login`;
                 }}
-                className="text-sm text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1 transition-colors"
+                variant="link"
+                size="sm"
+                className="text-sm"
                 title="Sign out"
               >
                 Sign out
-              </button>
+              </Button>
             </div>
             <div className="flex items-center gap-3">
               <a href={`/scrape-sources`}
@@ -879,13 +884,15 @@ export default function Home() {
                   <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                 </svg>
                 {search && (
-                  <button
+                  <Button
                     onClick={() => setSearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 leading-none"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 leading-none"
                     aria-label="Clear search"
                   >
                     ×
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

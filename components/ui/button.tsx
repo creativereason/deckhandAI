@@ -5,20 +5,20 @@ import { Loader2Icon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none active:not-aria-[haspopup]:translate-y-px active:brightness-95 dark:active:brightness-110 disabled:pointer-events-none disabled:opacity-50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none active:not-aria-[haspopup]:translate-y-px active:brightness-95 dark:active:brightness-110 disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-3 focus-visible:ring-p-accent/40 dark:focus-visible:ring-p-accent-inv/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        default: "bg-p-blue dark:bg-p-accent-inv text-white hover:bg-p-navy dark:hover:opacity-90",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-p-linen dark:border-p-dark-mid bg-white dark:bg-p-dark-surface text-gray-600 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid aria-expanded:bg-p-linen dark:aria-expanded:bg-p-dark-mid",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-p-linen dark:bg-p-dark-mid text-gray-700 dark:text-gray-200 hover:bg-p-linen/70 dark:hover:bg-p-dark-mid/70 aria-expanded:bg-p-linen dark:aria-expanded:bg-p-dark-mid",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "text-p-dusk dark:text-gray-400 hover:text-p-blue dark:hover:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid aria-expanded:bg-p-linen dark:aria-expanded:bg-p-dark-mid",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-red-50 text-red-600 hover:bg-red-100 focus-visible:ring-red-500/30 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30",
+        link: "text-p-blue dark:text-p-accent-inv underline-offset-4 hover:underline",
       },
       size: {
         default:

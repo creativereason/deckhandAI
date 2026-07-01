@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { PendingJob, JobFit } from "@/lib/jobs";
 
 const FIT_OPTIONS: { value: JobFit; label: string }[] = [
@@ -64,13 +65,9 @@ function ActionButtons({ loading, onApprove, onReject }: { loading: boolean; onA
       >
         Dismiss
       </button>
-      <button
-        onClick={onApprove}
-        disabled={loading}
-        className="text-xs bg-p-blue dark:bg-p-accent-inv text-white rounded px-3 py-1 hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-40 transition-colors"
-      >
-        {loading ? "…" : "Approve"}
-      </button>
+      <Button onClick={onApprove} loading={loading} size="xs">
+        Approve
+      </Button>
     </div>
   );
 }
@@ -161,12 +158,12 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
           <span className="text-xs text-p-dusk dark:text-gray-400 hidden sm:inline">— approve to add, dismiss to skip</span>
         </div>
         <div className="flex gap-2">
-          <button onClick={rejectAll} className="text-xs text-p-dusk dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors px-2 py-1">
+          <Button onClick={rejectAll} variant="ghost" size="xs">
             Dismiss all
-          </button>
-          <button onClick={approveAll} className="text-xs bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-3 py-1 hover:bg-p-navy dark:hover:opacity-90 transition-colors">
+          </Button>
+          <Button onClick={approveAll} size="xs">
             Approve all
-          </button>
+          </Button>
         </div>
       </div>
 

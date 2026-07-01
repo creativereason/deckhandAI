@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
@@ -59,22 +60,20 @@ export default function LoginPage() {
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-p-blue dark:bg-p-accent-inv text-white rounded-lg py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-50 transition-colors"
-        >
-          {loading ? "Signing in…" : "Sign in"}
-        </button>
+        <Button type="submit" loading={loading} className="w-full">
+          Sign in
+        </Button>
 
         <div className="text-center">
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="sm"
             onClick={() => setShowForgot(true)}
-            className="text-xs text-stone-400 dark:text-gray-500 hover:text-p-blue dark:hover:text-p-accent-inv transition-colors"
+            className="text-xs text-stone-400 dark:text-gray-500"
           >
             Forgot password?
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -108,12 +107,9 @@ export default function LoginPage() {
                 <span>If someone else set up this instance, ask them for the <code className="text-xs bg-p-linen dark:bg-p-dark-mid px-1.5 py-0.5 rounded font-mono">APP_PASSWORD</code> value.</span>
               </li>
             </ul>
-            <button
-              onClick={() => setShowForgot(false)}
-              className="mt-6 w-full bg-p-blue dark:bg-p-accent-inv text-white rounded-lg py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 transition-colors"
-            >
+            <Button onClick={() => setShowForgot(false)} className="mt-6 w-full">
               Got it
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { ScrapeTargetConfig } from "@/lib/scrape-targets";
 
 const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
@@ -39,9 +40,9 @@ function TargetList({
     <div className={SECTION}>
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">{label}</h2>
-        <button onClick={() => onStartAdd(group)} className="text-xs text-p-accent dark:text-p-accent-inv hover:underline">
+        <Button onClick={() => onStartAdd(group)} variant="link" size="sm" className="text-xs">
           + Add target
-        </button>
+        </Button>
       </div>
 
       {list.length === 0 && adding !== group && (
@@ -90,14 +91,10 @@ function TargetList({
             </div>
           </div>
           <div className="flex gap-2 justify-end">
-            <button onClick={onCancelAdd} className="text-sm text-p-dusk dark:text-gray-400 px-3 py-1.5 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">Cancel</button>
-            <button
-              onClick={onSaveNew}
-              disabled={saving}
-              className="bg-p-blue dark:bg-p-accent-inv text-white rounded-lg px-4 py-1.5 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving…" : "Add target"}
-            </button>
+            <Button onClick={onCancelAdd} variant="outline" size="sm">Cancel</Button>
+            <Button onClick={onSaveNew} loading={saving} size="sm">
+              Add target
+            </Button>
           </div>
         </div>
       )}

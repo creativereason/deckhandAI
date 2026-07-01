@@ -13,6 +13,7 @@ import {
 } from "@/lib/jobs";
 import { getAppliedIcon, getProspectIcon, getSignalLabel } from "@/lib/job-signal";
 import { SignalIcon } from "@/components/SignalIcon";
+import { Button } from "@/components/ui/button";
 
 type JobRecord = AppliedJob | ProspectJob | PassedJob;
 type Board = "applied" | "prospects" | "passed";
@@ -234,13 +235,15 @@ export default function JobFormModal({
         </div>
 
         {secondaryAction && (
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="sm"
             onClick={secondaryAction.onClick}
-            className="text-xs text-p-accent dark:text-p-accent-inv hover:underline -mt-2"
+            className="text-xs -mt-2"
           >
             {secondaryAction.label}
-          </button>
+          </Button>
         )}
 
         <div className="grid grid-cols-2 gap-3">
@@ -295,19 +298,17 @@ export default function JobFormModal({
             <div className="col-span-2">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Fit</label>
-                <button
+                <Button
                   type="button"
+                  variant="link"
+                  size="sm"
                   onClick={scoreFit}
-                  disabled={scoring || !form.company || !form.role}
-                  className="text-xs text-p-accent dark:text-p-accent-inv hover:underline disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  disabled={!form.company || !form.role}
+                  loading={scoring}
+                  className="text-xs"
                 >
-                  {scoring ? (
-                    <>
-                      <span className="inline-block w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
-                      Scoring…
-                    </>
-                  ) : "AI score"}
-                </button>
+                  {scoring ? "Scoring…" : "AI score"}
+                </Button>
               </div>
               <select
                 className="w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
@@ -400,20 +401,12 @@ export default function JobFormModal({
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="flex gap-3 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 border border-p-linen dark:border-p-dark-mid rounded-lg py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-p-linen dark:hover:bg-p-dark-mid"
-          >
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1">
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex-1 bg-p-blue dark:bg-p-accent-inv text-white dark:text-white rounded py-2 text-sm font-semibold hover:bg-p-navy dark:hover:opacity-90 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" loading={saving} className="flex-1">
             {saving ? "Saving..." : mode === "add" ? "Add Job" : "Save Changes"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
