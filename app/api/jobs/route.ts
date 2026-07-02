@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { JobSection } from "@/lib/jobs";
 import { readJobs, writeJobs } from "@/lib/jobs-repository";
+import { generateAiSummary } from "@/lib/job-summary-server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { section, job } = body as { section: JobSection; job: Record<string, string> };
     if (!section || !job) return NextResponse.json({ error: "Missing section or job" }, { status: 400 });
+    if (!job.aiSummary) {
+      job.aiSummary = await generateAiSummary({
+        company: job.company ?? "",
+        role: job.role ?? "",
+        salary: job.salary,
+        notes: job.notes,
+      });
+    }
     const jobs = await readJobs();
     (jobs[section] as unknown as Record<string, string>[]).unshift(job);
     await writeJobs(jobs);
