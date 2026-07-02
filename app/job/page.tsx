@@ -614,6 +614,7 @@ function JobDetailContent() {
     effectiveType ? `Type: ${effectiveType}` : null,
     foundJob.salary ? `Salary: ${foundJob.salary}` : null,
     foundJob.url ? `URL: ${foundJob.url}` : null,
+    foundJob.aiSummary ? `Role summary: ${foundJob.aiSummary}` : null,
     foundJob.notes ? `Notes: ${foundJob.notes}` : null,
     prospectJob?.scoreRationale ? `AI Assessment: ${prospectJob.scoreRationale}` : null,
   ].filter(Boolean).join("\n");
@@ -652,12 +653,17 @@ function JobDetailContent() {
         {/* Header — full width */}
         <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5 mb-5">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
               <span className="leading-none mt-0.5 shrink-0 flex items-center"><SignalIcon icon={icon} size={28} /></span>
-              <div className="min-w-0">
+              <div className="min-w-0 shrink-0 max-w-[24rem]">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{foundJob.company}</h1>
                 <p className="text-base text-muted-foreground mt-0.5">{foundJob.role}</p>
               </div>
+              {foundJob.aiSummary && (
+                <p className="hidden sm:block flex-1 min-w-0 text-sm text-muted-foreground leading-relaxed border-l-2 border-border pl-4 mt-0.5">
+                  {foundJob.aiSummary}
+                </p>
+              )}
             </div>
             {foundJob.url && (
               <a href={foundJob.url} target="_blank" rel="noreferrer"
@@ -671,6 +677,11 @@ function JobDetailContent() {
               </a>
             )}
           </div>
+          {foundJob.aiSummary && (
+            <p className="sm:hidden text-sm text-muted-foreground leading-relaxed mt-3">
+              {foundJob.aiSummary}
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {isApplied && appliedJob!.status && (
               <Chip label={appliedJob!.status} variant={statusBadgeVariant(appliedJob!.status)} />
