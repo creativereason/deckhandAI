@@ -854,7 +854,7 @@ export default function Home() {
             {/* Demo mode banner */}
             {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
               <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-3 text-sm text-primary flex items-center gap-2">
-                <span className="font-semibold">Demo mode</span> — data is read-only. Clone the repo to set up your own tracker.
+                <span className="font-semibold">Demo mode</span> — try adding, editing, and evaluating jobs. This is a shared board that resets nightly. Clone the repo to set up your own tracker.
               </div>
             )}
 

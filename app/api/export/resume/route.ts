@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { githubRead } from "@/lib/github";
-import { readConfig } from "@/lib/config";
+import { readConfig } from "@/lib/config-repository";
 import { generateResumeDOCX, type ProfileData } from "@/lib/docx-resume";
 
 export async function POST(req: NextRequest) {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readJobs, writeJobs } from "@/lib/jobs";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 import { scoreNewPendingJobs } from "@/lib/score";
 
 export async function POST() {

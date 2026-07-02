@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readJobs, writeJobs } from "@/lib/jobs";
 import type { JobFit, ProspectJob } from "@/lib/jobs";
-
-const IS_DEMO = process.env.DEMO_MODE === "true";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 
 export async function POST(req: NextRequest) {
-  if (IS_DEMO) return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const { company, role, action, fit, notes, scoreRationale } = body as {
     company: string;
@@ -62,7 +59,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (IS_DEMO) return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
   const { company, role } = await req.json().catch(() => ({}));
 
   if (!company || !role) {

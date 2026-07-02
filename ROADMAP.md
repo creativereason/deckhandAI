@@ -141,7 +141,7 @@ Users supply their own model and API key. Generation runs server-side — keys n
 
 ### M6 — Demo Mode & Launch Polish
 
-- [x] Demo mode — `DEMO_MODE=true` bypasses auth, loads `data/jobs.sample.json` read-only
+- [x] Demo mode — `DEMO_MODE=true` bypasses auth and points at a public sample-data repo; scraper stays disabled, everything else is interactive and resets nightly
 - [x] Error states — empty tracker state, GitHub API errors, scrape failures surfaced cleanly in UI
 - [x] Mobile-responsive layout pass
 - [x] Favicon / app icon (anchor emoji via Next.js ImageResponse)
@@ -454,5 +454,5 @@ A third, distinct piece of AI-generated context per job — separate from the us
 | `AI_API_KEY` | No | API key (Anthropic, OpenAI, etc.) — not needed for Ollama |
 | `AI_PROVIDER` | No | `anthropic` \| `openai` \| `ollama` \| `custom` (default: `anthropic`) |
 | `AI_BASE_URL` | No | Ollama or custom endpoint (e.g. `http://localhost:11434/v1`) |
-| `DEMO_MODE` | No | `true` to enable read-only demo, bypasses auth |
+| `DEMO_MODE` | No | `true` to enable interactive demo mode: bypasses auth, disables the scraper, reads/writes `GITHUB_DATA_REPO` |
 | `ENABLE_PLAYWRIGHT_FALLBACK` | No | `true` to allow Playwright browser fetch for JS-rendered pages (self-hosted only — never set on Vercel or serverless) |

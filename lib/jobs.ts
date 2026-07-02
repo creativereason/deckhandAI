@@ -83,38 +83,3 @@ export function resolveJobType(section: JobSection, job: JobTypeSource): JobType
   return "remote";
 }
 
-import { githubRead, githubWrite } from "@/lib/github";
-
-const JOBS_PATH = "data/jobs.json";
-
-function emptyJobs(): JobsData {
-  return { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
-}
-
-function jobList<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
-}
-
-function normalizeJobsData(value: Partial<JobsData>): JobsData {
-  return {
-    applied: jobList<AppliedJob>(value.applied),
-    prospect: jobList<ProspectJob>(value.prospect),
-    local: jobList<ProspectJob>(value.local),
-    staffing: jobList<ProspectJob>(value.staffing),
-    passed: jobList<PassedJob>(value.passed),
-    pending: jobList<PendingJob>(value.pending),
-  };
-}
-
-export async function readJobs(): Promise<JobsData> {
-  try {
-    const raw = await githubRead(JOBS_PATH);
-    return normalizeJobsData(JSON.parse(raw) as Partial<JobsData>);
-  } catch {
-    return emptyJobs();
-  }
-}
-
-export async function writeJobs(data: JobsData): Promise<void> {
-  await githubWrite(JOBS_PATH, JSON.stringify(data, null, 2), "Update jobs.json");
-}

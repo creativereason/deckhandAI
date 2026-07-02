@@ -1,4 +1,4 @@
-import { readConfig } from "@/lib/config";
+import { readConfig } from "@/lib/config-repository";
 import { fetchGenerate } from "@/lib/model";
 import { buildScorePrompt } from "@/lib/prompts";
 import type { JobFit, PendingJob } from "@/lib/jobs";

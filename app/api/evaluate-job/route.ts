@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { readConfig } from "@/lib/config";
+import { readConfig } from "@/lib/config-repository";
 import { getSession } from "@/lib/auth";
 import { fetchGenerate } from "@/lib/model";
 import { fetchJobDetails, type JobFetchResult } from "@/lib/job-fetcher";
-import { readJobs, writeJobs, type JobFit, type PendingJob } from "@/lib/jobs";
+import type { JobFit, PendingJob } from "@/lib/jobs";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -380,9 +381,6 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (process.env.DEMO_MODE === "true") {
-    return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
   }
 
   const parsedPayload = EvaluationPayloadSchema.safeParse(await req.json().catch(() => ({})));

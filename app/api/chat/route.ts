@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { readConfig, type AiConfig } from "@/lib/config";
+import type { AiConfig } from "@/lib/config";
+import { readConfig } from "@/lib/config-repository";
 import { ANTHROPIC_TOOLS, OPENAI_TOOLS, executeTool } from "@/lib/chat-tools";
 
 export const dynamic = "force-dynamic";

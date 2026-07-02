@@ -1,4 +1,5 @@
-import { readJobs, writeJobs, type JobSection } from "@/lib/jobs";
+import type { JobSection } from "@/lib/jobs";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 import { readProfile } from "@/lib/profile-server";
 import { fetchJobDetails } from "@/lib/job-fetcher";
 

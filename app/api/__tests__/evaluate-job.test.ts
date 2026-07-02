@@ -3,14 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST, PUT } from "@/app/api/evaluate-job/route";
 import { getSession } from "@/lib/auth";
 import { fetchJobDetails } from "@/lib/job-fetcher";
-import { readJobs, writeJobs } from "@/lib/jobs";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 import { fetchGenerate } from "@/lib/model";
 
 vi.mock("@/lib/auth", () => ({
   getSession: vi.fn(),
 }));
 
-vi.mock("@/lib/config", () => ({
+vi.mock("@/lib/config-repository", () => ({
   readConfig: vi.fn().mockResolvedValue({}),
 }));
 
@@ -22,7 +22,7 @@ vi.mock("@/lib/model", () => ({
   fetchGenerate: vi.fn(),
 }));
 
-vi.mock("@/lib/jobs", () => ({
+vi.mock("@/lib/jobs-repository", () => ({
   readJobs: vi.fn(),
   writeJobs: vi.fn(),
 }));
