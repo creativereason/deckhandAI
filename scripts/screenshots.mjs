@@ -106,7 +106,9 @@ function startServer(extraEnv = {}) {
     PORT: String(PORT),
     APP_PASSWORD: PASSWORD,
     DEMO_MODE: "true",
-    NEXT_PUBLIC_DEMO_MODE: "true",
+    // Deliberately omit NEXT_PUBLIC_DEMO_MODE — it only controls the "Demo
+    // mode" banner in the UI, and marketing screenshots shouldn't show it.
+    // DEMO_MODE alone still drives auth bypass + local sample fixtures.
     ...extraEnv,
   };
 
@@ -242,17 +244,102 @@ async function captureChat(browser, dir, theme = "light") {
   await sleep(400);
   await shot(page, dir, "chat-open");
 
-  // Desktop only: also capture with a typed question ready to send
+  // Desktop only: type a question, capture it ready to send, then actually
+  // send it and capture the live AI reply.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addStyleTag({ content: HIDE_DEV_UI }).catch(() => {});
-  const input = page.locator("input[placeholder*='job']").last();
-  if (await input.isVisible()) {
-    await input.fill("What roles should I prioritize this week?");
+  const input = page.locator('input[placeholder="Message…"]').last();
+  if (await input.isVisible().catch(() => false)) {
+    await input.fill("Show me my strong-fit prospects");
     await sleep(200);
     mkdirSync(dir, { recursive: true });
     await page.screenshot({ path: join(dir, "chat-with-input--desktop.png") });
     console.log("    chat-with-input--desktop.png");
+
+    console.log("  → chat (sent, waiting for AI reply)");
+    await page.getByRole("button", { name: "Send" }).click();
+    // Assistant replies render in a bubble with this corner-radius class —
+    // wait for one to appear rather than a fixed sleep, since AI latency varies.
+    await page.locator(".rounded-tl-sm").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
+    await sleep(400);
+    await page.screenshot({ path: join(dir, "chat-with-reply--desktop.png") });
+    console.log("    chat-with-reply--desktop.png");
   }
+
+  await ctx.close();
+}
+
+// "Show:" section-visibility toggle buttons carry aria-pressed; scope on that
+// so we never collide with same-labeled text elsewhere on the board (e.g. the
+// "Applied 12" accordion trigger).
+function sectionVisibilityToggle(page, label) {
+  return page.locator(`button[aria-pressed]:text-is("${label}")`);
+}
+
+// "Approve all" fires one sonner toast per job, staggered as each request
+// resolves. A fullPage screenshot captures fixed-position elements (like
+// toasts) at whatever scroll offset they land on, so a lingering toast can
+// appear to overlap board content rather than sit at the true viewport
+// bottom. Wait until none remain before shooting.
+async function waitForToastsToClear(page, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const count = await page.locator("[data-sonner-toast]").count();
+    if (count === 0) return;
+    await sleep(300);
+  }
+}
+
+async function captureBoardAcceptedAndViews(browser, dir, theme = "light") {
+  console.log("  → board (pending approved)");
+  const { page, ctx } = await newLoggedInPage(browser, theme);
+  await sleep(400);
+
+  const approveAll = page.getByRole("button", { name: "Approve all" });
+  if (await approveAll.isVisible().catch(() => false)) {
+    await approveAll.click();
+    await page.getByText("Scrape review queue").waitFor({ state: "detached", timeout: 20_000 }).catch(() => {});
+    await waitForToastsToClear(page);
+  }
+  await shot(page, dir, "board-accepted-all", { fullPage: true });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addStyleTag({ content: HIDE_DEV_UI }).catch(() => {});
+
+  // Views toggle — isolate each section in turn (starts with all three shown)
+  console.log("  → views toggle: applied only");
+  await sectionVisibilityToggle(page, "Prospects").click();
+  await sectionVisibilityToggle(page, "Passed").click();
+  await sleep(250);
+  await shotDesktop(page, dir, "views-applied-only", { fullPage: true });
+
+  console.log("  → views toggle: prospects only (strong fit)");
+  await sectionVisibilityToggle(page, "Applied").click();
+  await sectionVisibilityToggle(page, "Prospects").click();
+  await sleep(250);
+  // The fit filter only makes sense — and only renders — while prospects is
+  // the isolated view, so capture it here instead of as a separate state.
+  const strongFit = page.getByRole("button", { name: "Strong", exact: true });
+  if (await strongFit.isVisible().catch(() => false)) {
+    await strongFit.click();
+    await sleep(250);
+  }
+  await shotDesktop(page, dir, "views-prospects-only", { fullPage: true });
+  const allFit = page.getByRole("button", { name: "All", exact: true });
+  if (await allFit.isVisible().catch(() => false)) {
+    await allFit.click(); // reset the fit filter before moving on
+    await sleep(150);
+  }
+
+  console.log("  → views toggle: passed only");
+  await sectionVisibilityToggle(page, "Prospects").click();
+  await sectionVisibilityToggle(page, "Passed").click();
+  await sleep(250);
+  await shotDesktop(page, dir, "views-passed-only", { fullPage: true });
+
+  // Restore all three sections before closing this page
+  await sectionVisibilityToggle(page, "Applied").click();
+  await sectionVisibilityToggle(page, "Prospects").click();
 
   await ctx.close();
 }
@@ -387,6 +474,7 @@ async function runPersona(browser, persona) {
 
   await captureBoard(browser, dir, theme);
   await captureChat(browser, dir, theme);
+  await captureBoardAcceptedAndViews(browser, dir, theme);
 
   if (persona.appliedJob) {
     await captureJobDetail(browser, dir, { ...persona.appliedJob, label: "applied" }, theme);
