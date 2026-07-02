@@ -23,6 +23,7 @@ import AppFooter from "@/components/AppFooter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job-badges";
+import { fetchAiSummary, fetchSummarizerConfigured } from "@/lib/summarize-job-client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,10 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
   const [salary, setSalary] = useState(job.salary ?? "");
   const [url, setUrl] = useState(job.url ?? "");
   const [notes, setNotes] = useState(job.notes ?? "");
+  const [aiSummary, setAiSummary] = useState(job.aiSummary ?? "");
+  const [summarizerReady, setSummarizerReady] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryHint, setSummaryHint] = useState("");
   const [status, setStatus] = useState((job as AppliedJob).status ?? "applied");
   const [date, setDate] = useState((job as AppliedJob).date ?? "");
   const [fit, setFit] = useState((job as ProspectJob).fit ?? "good");
@@ -82,12 +87,39 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    fetchSummarizerConfigured().then(setSummarizerReady);
+  }, []);
+
+  async function regenerateSummary() {
+    if (!company || !role) return;
+    setSummarizing(true);
+    setSummaryHint("");
+    try {
+      const summary = await fetchAiSummary({
+        company,
+        role,
+        salary: salary || undefined,
+        notes: notes || undefined,
+      });
+      if (!summary) {
+        setSummaryHint("Nothing to summarize yet — add some notes first.");
+        return;
+      }
+      setAiSummary(summary);
+    } catch {
+      setSummaryHint("Could not generate a summary — check AI settings.");
+    } finally {
+      setSummarizing(false);
+    }
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
 
-    const updates: Record<string, unknown> = { company, role, salary, url, notes, type: jobType };
+    const updates: Record<string, unknown> = { company, role, salary, url, notes, aiSummary, type: jobType };
     if (isApplied) { updates.status = status; updates.date = date; }
     if (isProspect) { updates.fit = fit; }
 
@@ -163,6 +195,35 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
       <Field label="Job posting URL">
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className={inputCls} />
       </Field>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className={cn(labelCls, "mb-0")}>At-a-glance summary</label>
+          {summarizerReady && (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={regenerateSummary}
+              disabled={!company || !role}
+              loading={summarizing}
+              className="text-xs"
+            >
+              {summarizing ? "Generating…" : "↻ Regenerate"}
+            </Button>
+          )}
+        </div>
+        <textarea
+          value={aiSummary}
+          onChange={(e) => setAiSummary(e.target.value)}
+          rows={2}
+          placeholder="1–2 sentence summary of the role and company"
+          className={cn(inputCls, "resize-none")}
+        />
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {summaryHint || "Shown on the board card and in the header above."}
+        </p>
+      </div>
 
       <Field label="Notes">
         <textarea

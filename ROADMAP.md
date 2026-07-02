@@ -427,7 +427,7 @@ A third, distinct piece of AI-generated context per job — separate from the us
 
 ## Known Bugs
 
-- [ ] **Edit modal section change discards notes** — if a user edits the notes field then changes the section dropdown in the job edit modal, the notes changes are lost (section change re-initializes form state). Verified still present in `components/JobFormModal.tsx`'s `onBoardChange` — not touched by the card-view/board redesign.
+- [x] **Edit modal section change discards notes** — fixed alongside M14's edit-form pass: `onBoardChange` no longer re-initializes form state on a board switch (the form already holds every field for every board; section-specific fields are simply ignored by the payload builder), so in-progress edits survive changing the section dropdown.
 - [ ] **Moved-to-Passed job retains stale `status` field** — when a job moves from Applied to Passed, `app/api/jobs/route.ts`'s `normalizeJobForSection` never strips the old `status` value from the underlying record. The card-view rewrite means the Passed card no longer *renders* a status badge, so the original visible symptom ("shows Declined") likely no longer reproduces — but the stale field is still written to `jobs.json`, which is worth cleaning up regardless of whether it's currently user-visible.
 
 ---
