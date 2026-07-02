@@ -4,7 +4,7 @@ A self-hosted job search command center. Track prospects, scrape target company 
 
 **[→ Product overview](https://creativereason.com/deckhandai/)** — features, screenshots, and context on why it exists.
 
-**[→ View live demo](https://deckhand-ai.vercel.app)** — read-only, sample data, no login required.
+**[→ View live demo](https://deckhand-ai.vercel.app)** — interactive, no login required. It's a shared board seeded with sample data that resets nightly; scraping is disabled, everything else works.
 
 ---
 
@@ -80,7 +80,8 @@ Set these environment variables in your Vercel project settings:
 | `AI_API_KEY` | No | API key for Anthropic, OpenAI, etc. |
 | `AI_PROVIDER` | No | `anthropic` \| `openai` \| `ollama` \| `custom` (default: `anthropic`) |
 | `AI_BASE_URL` | No | Ollama or custom endpoint base URL |
-| `DEMO_MODE` | No | `true` to enable read-only demo mode, bypasses auth |
+| `DEMO_MODE` | No | `true` to enable demo mode: bypasses auth, disables the scraper, and reads/writes `GITHUB_DATA_REPO` (point it at a public sample-data repo) |
+| `NEXT_PUBLIC_DEMO_MODE` | No | `true` to show the demo-mode banner in the UI |
 
 The setup wizard generates these values for you locally. For Vercel, copy the values from your `.env.local` into your project's environment variable settings.
 
@@ -105,8 +106,11 @@ The same sample files power the [live demo](https://deckhand-ai.vercel.app).
    ```
    GITHUB_DATA_REPO=yourhandle/deckhandai-sample-data
    DEMO_MODE=true
+   NEXT_PUBLIC_DEMO_MODE=true
    ```
-   No `APP_PASSWORD` needed — demo mode bypasses auth and makes all writes read-only.
+   No `APP_PASSWORD` needed — demo mode bypasses auth. Visitors can add/edit/move jobs and use AI generation; the scraper stays disabled since it launches a real headless browser against live career pages.
+3. Add repo secrets `DEMO_DATA_REPO` (`yourhandle/deckhandai-sample-data`) and `DEMO_DATA_REPO_TOKEN` (a token with write access to it), then enable the `Reset demo data` GitHub Actions workflow. It runs nightly and overwrites the demo repo's data files back to `data/*.sample.json`, so a public, unauthenticated demo doesn't drift or fill up with junk. Trigger it manually any time via `workflow_dispatch` if you want an immediate reset.
+4. Consider using a separate, low-limit AI API key for the demo deployment's `AI_API_KEY` — it's reachable by anonymous visitors.
 
 ---
 

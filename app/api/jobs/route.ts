@@ -1,28 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJobs, writeJobs, JobSection, type JobsData } from "@/lib/jobs";
-import { readFileSync } from "fs";
-import { resolve } from "path";
+import { readLocalDemoFixture, usesLocalDemoFixtures } from "@/lib/demo-fixtures";
 
 export const dynamic = "force-dynamic";
 
-function isDemo() { return process.env.DEMO_MODE === "true"; }
-
-function readSampleJobs(): JobsData {
-  const persona = process.env.DEMO_PERSONA ?? "design";
-  const file = persona === "dev" ? "data/jobs-dev.sample.json"
-    : persona === "onboarding" ? "data/jobs-onboarding.sample.json"
-    : "data/jobs.sample.json";
-  try {
-    const raw = readFileSync(resolve(process.cwd(), file), "utf-8");
-    return { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [], ...JSON.parse(raw) };
-  } catch {
-    return { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
-  }
-}
-
-function demoReadOnly() {
-  return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
-}
+const EMPTY_JOBS: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
 
 type AnyJob = Record<string, unknown>;
 
@@ -38,12 +20,11 @@ function normalizeJobForSection(job: AnyJob, targetSection: JobSection): AnyJob 
 }
 
 export async function GET() {
-  const jobs = isDemo() ? readSampleJobs() : await readJobs();
+  const jobs = usesLocalDemoFixtures() ? readLocalDemoFixture("jobs", EMPTY_JOBS) : await readJobs();
   return NextResponse.json(jobs);
 }
 
 export async function POST(req: NextRequest) {
-  if (isDemo()) return demoReadOnly();
   try {
     const body = await req.json();
     const { section, job } = body as { section: JobSection; job: Record<string, string> };
@@ -59,7 +40,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (isDemo()) return demoReadOnly();
   try {
     const body = await req.json();
     const { section, company, role, updates, targetSection } = body as {
@@ -92,7 +72,6 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (isDemo()) return demoReadOnly();
   try {
     const body = await req.json();
     const { section, company, role, targetSection } = body as {

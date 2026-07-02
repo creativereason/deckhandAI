@@ -15,6 +15,7 @@ import { createInterface } from "readline";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { SAMPLE_DATA_FILES } from "./lib/sample-data-files.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dir, "..");
@@ -72,13 +73,6 @@ function encodeFile(path) {
   return Buffer.from(readFileSync(path, "utf8")).toString("base64");
 }
 
-const FILES = [
-  { src: "data/jobs.sample.json",            dest: "data/jobs.json" },
-  { src: "data/config.sample.json",          dest: "data/config.json" },
-  { src: "data/profile.sample.json",         dest: "data/profile.json" },
-  { src: "data/scrape-targets.sample.json",  dest: "data/scrape-targets.json" },
-];
-
 async function main() {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
@@ -113,7 +107,7 @@ async function main() {
   await new Promise((r) => setTimeout(r, 1500));
 
   console.log("\nUploading sample data files...");
-  for (const f of FILES) {
+  for (const f of SAMPLE_DATA_FILES) {
     const content = encodeFile(resolve(root, f.src));
     try {
       await githubPut(token, `/repos/${owner}/${repoName}/contents/${f.dest}`, {

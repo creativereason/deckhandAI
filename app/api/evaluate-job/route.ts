@@ -381,9 +381,6 @@ export async function PUT(req: NextRequest) {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (process.env.DEMO_MODE === "true") {
-    return NextResponse.json({ error: "Read-only in demo mode" }, { status: 403 });
-  }
 
   const parsedPayload = EvaluationPayloadSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsedPayload.success) {

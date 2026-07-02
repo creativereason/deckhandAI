@@ -1,0 +1,23 @@
+name: Reset demo data
+
+on:
+  schedule:
+    # Nightly at 4am CT (9am UTC).
+    - cron: "0 9 * * *"
+  workflow_dispatch: # allow manual trigger from GitHub Actions UI
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+
+      - name: Reset demo data repo
+        run: node scripts/reset-demo-repo.mjs
+        env:
+          DEMO_DATA_REPO: ${{ secrets.DEMO_DATA_REPO }}
+          DEMO_DATA_REPO_TOKEN: ${{ secrets.DEMO_DATA_REPO_TOKEN }}
+          DEMO_DATA_BRANCH: ${{ secrets.DEMO_DATA_BRANCH }}

@@ -239,7 +239,6 @@ async function captureBoard(browser, dir, theme = "light") {
 async function captureChat(browser, dir, theme = "light") {
   console.log("  → chat (open)");
   const { page, ctx } = await newLoggedInPage(browser, theme);
-  await page.getByRole("button", { name: "Open assistant" }).click();
   await sleep(400);
   await shot(page, dir, "chat-open");
 
