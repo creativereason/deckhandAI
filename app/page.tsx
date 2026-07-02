@@ -28,7 +28,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
-import ThemeToggle from "@/components/ThemeToggle";
+import AppHeader from "@/components/AppHeader";
+import AppFooter from "@/components/AppFooter";
 import ChatDrawer from "@/components/ChatDrawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -777,52 +778,27 @@ export default function Home() {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-4">
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.svg" alt="" width={64} height={64} className="shrink-0" />
-              DeckhandAI
-            </h1>
-            {displayName && (
-              <p className="text-xs text-muted-foreground mt-0.5">{displayName}&apos;s Job board</p>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">
-              {jobs.applied.length} applied · {totalProspects} prospects · {jobs.passed.length} passed
-              {(jobs.pending ?? []).length > 0 && (
-                <> · <span className="text-tone-warning font-medium">{jobs.pending.length} pending review</span></>
+        <AppHeader
+          subtitle={
+            <>
+              {displayName && (
+                <p className="text-xs text-muted-foreground mt-0.5">{displayName}&apos;s Job board</p>
               )}
-              {totalNew > 0 && (
-                <Badge variant="tone-highlight" className="ml-2 rounded uppercase tracking-wide">
-                  {totalNew} new
-                </Badge>
-              )}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 items-start sm:items-end shrink-0 w-full sm:w-auto">
-            <div className="flex items-center gap-2 flex-wrap">
-              <ThemeToggle />
-              <a
-                href="/settings"
-                className="text-sm text-muted-foreground hover:text-foreground px-1 transition-colors"
-                title="Settings"
-              >
-                Settings
-              </a>
-              <Button
-                onClick={async () => {
-                  await fetch(`/api/auth/logout`, { method: "POST" });
-                  window.location.href = `/login`;
-                }}
-                variant="link"
-                size="sm"
-                className="text-sm"
-                title="Sign out"
-              >
-                Sign out
-              </Button>
-            </div>
-            <div className="flex items-center gap-3">
+              <p className="text-sm text-muted-foreground mt-1">
+                {jobs.applied.length} applied · {totalProspects} prospects · {jobs.passed.length} passed
+                {(jobs.pending ?? []).length > 0 && (
+                  <> · <span className="text-tone-warning font-medium">{jobs.pending.length} pending review</span></>
+                )}
+                {totalNew > 0 && (
+                  <Badge variant="tone-highlight" className="ml-2 rounded uppercase tracking-wide">
+                    {totalNew} new
+                  </Badge>
+                )}
+              </p>
+            </>
+          }
+          secondaryLinks={
+            <>
               <a href={`/scrape-sources`}
                 className="text-xs text-muted-foreground dark:text-primary hover:text-foreground dark:hover:opacity-80">
                 Scraper coverage →
@@ -832,9 +808,9 @@ export default function Home() {
                   ⚙ {modelLabel}
                 </a>
               )}
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Board (2/3) + Deckhand assistant (1/3) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
@@ -970,36 +946,7 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <footer className="pt-4 pb-2 text-center text-xs text-muted-foreground">
-          DeckhandAI originally created by{" "}
-          <a
-            href="https://creativereason.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground underline transition-colors"
-          >
-            creativereason
-          </a>
-          {" · "}
-          Fork on {" "}
-          <a
-            href="https://github.com/creativereason/deckhandAI"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground underline transition-colors"
-          >
-            GitHub
-          </a>
-          {" · "}
-          <a
-            href="https://github.com/creativereason/deckhandAI/blob/main/LICENSE"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground underline transition-colors"
-          >
-            MIT License
-          </a>
-        </footer>
+        <AppFooter />
 
         {editing && (
           <JobFormModal mode="edit" section={editing.section} job={editing.job}

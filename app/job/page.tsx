@@ -1,5 +1,6 @@
 "use client";
 import { FormEvent, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   type JobsData,
@@ -17,6 +18,8 @@ import { SignalIcon } from "@/components/SignalIcon";
 import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import AIGenerationCard from "@/components/AIGenerationCard";
+import AppHeader from "@/components/AppHeader";
+import AppFooter from "@/components/AppFooter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job-badges";
@@ -25,6 +28,15 @@ import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job
 
 type AnyJob = AppliedJob | ProspectJob | PassedJob;
 type ClientMsg = { role: "user" | "assistant"; content: string };
+
+const SECTION_LABELS: Record<JobSection, string> = {
+  applied: "Applied",
+  prospect: "Prospects",
+  local: "Local / Hybrid",
+  staffing: "Staffing",
+  passed: "Passed",
+  pending: "Pending",
+};
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -610,6 +622,21 @@ function JobDetailContent() {
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
 
+        {/* Header */}
+        <AppHeader
+          breadcrumbs={
+            <>
+              <Link href="/" className="hover:text-foreground transition-colors">Board</Link>
+              <span className="opacity-60">/</span>
+              <span>{SECTION_LABELS[section]}</span>
+              <span className="opacity-60">/</span>
+              <span className="text-foreground font-medium truncate max-w-[16rem]">
+                {foundJob.company} — {foundJob.role}
+              </span>
+            </>
+          }
+        />
+
         {/* Back nav */}
         <Button
           onClick={() => router.push("/")}
@@ -759,6 +786,9 @@ function JobDetailContent() {
 
           </div>
         </div>
+
+        {/* Footer */}
+        <AppFooter />
       </div>
     </div>
   );
