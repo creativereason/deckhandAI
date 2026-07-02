@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { readConfig } from "@/lib/config";
+import { readConfig } from "@/lib/config-repository";
 import { getSession } from "@/lib/auth";
 import { fetchGenerate } from "@/lib/model";
 import { fetchJobDetails, type JobFetchResult } from "@/lib/job-fetcher";
-import { readJobs, writeJobs, type JobFit, type PendingJob } from "@/lib/jobs";
+import type { JobFit, PendingJob } from "@/lib/jobs";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

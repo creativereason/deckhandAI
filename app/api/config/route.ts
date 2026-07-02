@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readConfig, writeConfig, type AppConfig } from "@/lib/config";
-import { readLocalDemoFixture, usesLocalDemoFixtures } from "@/lib/demo-fixtures";
+import { readConfig, writeConfig } from "@/lib/config-repository";
 
 export async function GET() {
-  if (usesLocalDemoFixtures()) {
-    return NextResponse.json({
-      ...readLocalDemoFixture<AppConfig>("config", {}),
-      ai_key_configured: !!process.env.AI_API_KEY,
-    });
-  }
   try {
     const config = await readConfig();
     return NextResponse.json({

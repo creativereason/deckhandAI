@@ -17,11 +17,13 @@ function personaSampleFile(base: string): string {
     : `data/${base}.sample.json`;
 }
 
-export function readLocalDemoFixture<T extends object>(base: string, defaults: T): T {
+// dataPath is the canonical "data/<name>.json" path lib/github.ts reads/writes
+// against a real data repo (e.g. "data/jobs.json").
+export function readLocalDemoFixtureRaw(dataPath: string): string {
+  const base = dataPath.replace(/^data\//, "").replace(/\.json$/, "");
   try {
-    const raw = readFileSync(resolve(process.cwd(), personaSampleFile(base)), "utf-8");
-    return { ...defaults, ...JSON.parse(raw) };
+    return readFileSync(resolve(process.cwd(), personaSampleFile(base)), "utf-8");
   } catch {
-    return defaults;
+    return "{}";
   }
 }

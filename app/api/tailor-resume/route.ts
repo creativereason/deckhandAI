@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readConfig } from "@/lib/config";
+import { readConfig } from "@/lib/config-repository";
 import { githubRead } from "@/lib/github";
 import { fetchGenerate } from "@/lib/model";
 import { buildSystemPrompt } from "@/lib/prompts";

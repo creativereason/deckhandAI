@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readJobs, writeJobs } from "@/lib/jobs";
 import type { JobFit, ProspectJob } from "@/lib/jobs";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));

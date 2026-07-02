@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readJobs, writeJobs, JobSection, type JobsData } from "@/lib/jobs";
-import { readLocalDemoFixture, usesLocalDemoFixtures } from "@/lib/demo-fixtures";
+import { JobSection } from "@/lib/jobs";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 
 export const dynamic = "force-dynamic";
-
-const EMPTY_JOBS: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
 
 type AnyJob = Record<string, unknown>;
 
@@ -20,7 +18,7 @@ function normalizeJobForSection(job: AnyJob, targetSection: JobSection): AnyJob 
 }
 
 export async function GET() {
-  const jobs = usesLocalDemoFixtures() ? readLocalDemoFixture("jobs", EMPTY_JOBS) : await readJobs();
+  const jobs = await readJobs();
   return NextResponse.json(jobs);
 }
 

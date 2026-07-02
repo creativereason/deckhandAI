@@ -1,3 +1,5 @@
+import { usesLocalDemoFixtures, readLocalDemoFixtureRaw } from "@/lib/demo-fixtures";
+
 const DATA_REPO = process.env.GITHUB_DATA_REPO!; // "owner/repo"
 const TOKEN = process.env.GITHUB_TOKEN!;
 const BRANCH = process.env.GITHUB_DATA_BRANCH || "main";
@@ -9,7 +11,25 @@ const HEADERS = {
   "X-GitHub-Api-Version": "2022-11-28",
 };
 
+// scripts/screenshots.mjs runs with DEMO_MODE + DEMO_PERSONA to capture
+// marketing screenshots, including actions that write (e.g. "Approve all" on
+// the pending queue). Those writes must never reach the real, GitHub-backed
+// demo repo — so while local fixtures are active, reads/writes are served
+// from this in-memory store instead, seeded from data/*.sample.json on first
+// read. State lives only for the process lifetime, so nothing needs resetting
+// between screenshot runs.
+const localFixtureStore = new Map<string, string>();
+
+function readLocalFixture(path: string): string {
+  if (!localFixtureStore.has(path)) {
+    localFixtureStore.set(path, readLocalDemoFixtureRaw(path));
+  }
+  return localFixtureStore.get(path)!;
+}
+
 export async function githubRead(path: string): Promise<string> {
+  if (usesLocalDemoFixtures()) return readLocalFixture(path);
+
   const res = await fetch(`${BASE}/${path}?ref=${BRANCH}`, {
     headers: HEADERS,
     cache: "no-store",
@@ -24,6 +44,11 @@ export async function githubWrite(
   content: string,
   message: string
 ): Promise<void> {
+  if (usesLocalDemoFixtures()) {
+    localFixtureStore.set(path, content);
+    return;
+  }
+
   const url = `${BASE}/${path}`;
   const getRes = await fetch(`${url}?ref=${BRANCH}`, { headers: HEADERS, cache: "no-store" });
   // 404 means the file doesn't exist yet — create it without a sha

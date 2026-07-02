@@ -1,7 +1,3 @@
-import { githubRead, githubWrite } from "@/lib/github";
-
-const CONFIG_PATH = "data/config.json";
-
 export interface CandidateConfig {
   name?: string;
   email?: string;
@@ -78,15 +74,3 @@ export interface AppConfig {
   export?: ExportStyle;
 }
 
-export async function readConfig(): Promise<AppConfig> {
-  try {
-    const raw = await githubRead(CONFIG_PATH);
-    return JSON.parse(raw) as AppConfig;
-  } catch {
-    return {};
-  }
-}
-
-export async function writeConfig(data: AppConfig): Promise<void> {
-  await githubWrite(CONFIG_PATH, JSON.stringify(data, null, 2), "Update config.json");
-}

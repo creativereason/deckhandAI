@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { githubRead, githubWrite } from "@/lib/github";
-import { readLocalDemoFixture, usesLocalDemoFixtures } from "@/lib/demo-fixtures";
 
 const PATH = "data/profile.json";
 
 export async function GET() {
-  if (usesLocalDemoFixtures()) {
-    return NextResponse.json(readLocalDemoFixture("profile", {}));
-  }
   try {
     const raw = await githubRead(PATH);
     return NextResponse.json(JSON.parse(raw));

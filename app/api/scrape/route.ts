@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { loadPlaywright, runScrape, type ScrapeLogEntry } from "@/lib/scrape-run";
 import { getTargetsForGroup, type ScrapeGroup } from "@/lib/scrape-targets";
-import { readConfig } from "@/lib/config";
+import { readConfig } from "@/lib/config-repository";
 import { buildLocalRegex } from "@/lib/scrape-filters";
 import type { PendingJob } from "@/lib/jobs";
 

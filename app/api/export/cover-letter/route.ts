@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readConfig } from "@/lib/config";
+import { readConfig } from "@/lib/config-repository";
 import { generateCoverLetterDOCX, parseCoverLetterParagraphs } from "@/lib/docx-cover-letter";
 
 export async function POST(req: NextRequest) {

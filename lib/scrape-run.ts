@@ -1,4 +1,5 @@
-import { readJobs, writeJobs, PendingJob } from "@/lib/jobs";
+import type { PendingJob } from "@/lib/jobs";
+import { readJobs, writeJobs } from "@/lib/jobs-repository";
 import { scoreNewPendingJobs } from "@/lib/score";
 import {
   buildLocalRegex,
