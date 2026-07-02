@@ -80,6 +80,7 @@ Set these environment variables in your Vercel project settings:
 | `AI_API_KEY` | No | API key for Anthropic, OpenAI, etc. |
 | `AI_PROVIDER` | No | `anthropic` \| `openai` \| `ollama` \| `custom` (default: `anthropic`) |
 | `AI_BASE_URL` | No | Ollama or custom endpoint base URL |
+| `BRAVE_SEARCH_API_KEY` | No | Brave Search API key. Used by the weekly job search script and, in "Evaluate a job," as a fallback to find a plain-fetchable cross-post when the given URL can't be fetched directly (e.g. Workday). Without it, that fallback is silently skipped. |
 | `DEMO_MODE` | No | `true` to enable demo mode: bypasses auth, disables the scraper, and reads/writes `GITHUB_DATA_REPO` (point it at a public sample-data repo) |
 | `NEXT_PUBLIC_DEMO_MODE` | No | `true` to show the demo-mode banner in the UI |
 
@@ -110,7 +111,7 @@ The same sample files power the [live demo](https://deckhand-ai.vercel.app).
    ```
    No `APP_PASSWORD` needed — demo mode bypasses auth. Visitors can add/edit/move jobs and use AI generation; the scraper stays disabled since it launches a real headless browser against live career pages.
 3. Add repo secrets `DEMO_DATA_REPO` (`yourhandle/deckhandai-sample-data`) and `DEMO_DATA_REPO_TOKEN` (a token with write access to it), then enable the `Reset demo data` GitHub Actions workflow. It runs nightly and overwrites the demo repo's data files back to `data/*.sample.json`, so a public, unauthenticated demo doesn't drift or fill up with junk. Trigger it manually any time via `workflow_dispatch` if you want an immediate reset.
-4. Consider using a separate, low-limit AI API key for the demo deployment's `AI_API_KEY` — it's reachable by anonymous visitors.
+4. Consider using separate, low-limit keys for the demo deployment's `AI_API_KEY` and `BRAVE_SEARCH_API_KEY` — both are reachable by anonymous visitors. Brave's free tier caps at 2,000 queries/month, which is plenty to bound the blast radius for a demo.
 
 ---
 
