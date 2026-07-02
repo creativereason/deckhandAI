@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import { fetchGenerate } from "@/lib/model";
 import { fetchJobDetails, type JobFetchResult } from "@/lib/job-fetcher";
 import type { JobFit, PendingJob } from "@/lib/jobs";
+import { normalizeAiSummary } from "@/lib/job-summary";
 import { readJobs, writeJobs } from "@/lib/jobs-repository";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ const EvaluationPayloadSchema = z.object({
   notes: z.string().optional().default(""),
   fit: JobFitSchema.optional().default("good"),
   scoreRationale: z.string().optional().default(""),
+  aiSummary: z.string().optional().default(""),
   retrieval: RetrievalSchema.optional(),
 });
 
@@ -50,6 +52,7 @@ type EvaluationPayload = {
   notes: string;
   fit: JobFit;
   scoreRationale: string;
+  aiSummary: string;
   retrieval?: JobFetchResult;
 };
 
@@ -236,6 +239,20 @@ function buildTrackerNotes(request: EvaluateRequest, retrieval: JobFetchResult):
   return `Scraped ${scrapedDate}.\n\nCompany: ${company}\n\nRole: ${roleText}`;
 }
 
+// Non-AI aiSummary: one sentence of what the role is + one of what the company
+// does, pulled from the same section heuristics that feed notes. Empty when
+// neither section could be extracted — the UI falls back to notes.
+function heuristicAiSummary(request: EvaluateRequest, retrieval: JobFetchResult): string {
+  // Section extraction can leave a stray "." where a heading was stripped, so
+  // take the first sentence that actually contains prose.
+  const firstProseSentence = (text: string): string =>
+    compactText(text).split(/(?<=[.!?])\s+/).find((s) => /[a-z0-9]/i.test(s)) ?? "";
+  const role = firstProseSentence(roleDescriptionSummary(request, retrieval.text));
+  const company = firstProseSentence(companySummary(request, retrieval.text));
+  const parts = [role, company.includes("unavailable") ? "" : company].filter(Boolean);
+  return normalizeAiSummary(parts.join(" "));
+}
+
 function fallbackEvaluation(request: EvaluateRequest, retrieval: JobFetchResult): EvaluationPayload {
   const notes = buildTrackerNotes(request, retrieval);
   return {
@@ -248,6 +265,7 @@ function fallbackEvaluation(request: EvaluateRequest, retrieval: JobFetchResult)
     scoreRationale: retrieval.retrieval_limited
       ? "Automatic retrieval was limited, so fit needs manual review."
       : "Retrieved job details; configure AI to score fit automatically.",
+    aiSummary: heuristicAiSummary(request, retrieval),
     retrieval,
   };
 }
@@ -270,8 +288,12 @@ For notes:
 - Do not write fit assessment in notes; fit belongs only in scoreRationale.
 - Notes will be generated separately from the retrieved company and role sections.
 
+For aiSummary:
+- A 1–2 sentence at-a-glance summary: what the role is (scope, team, key responsibilities) and what the company does.
+- No fit assessment, no markdown, no quotes.
+
 Return only valid JSON:
-{"company":"","role":"","salary":"","notes":"","fit":"strong|good|caution|weak","scoreRationale":""}`;
+{"company":"","role":"","salary":"","notes":"","fit":"strong|good|caution|weak","scoreRationale":"","aiSummary":""}`;
 }
 
 async function evaluateWithAI(
@@ -297,6 +319,7 @@ async function evaluateWithAI(
     notes,
     fit: fitValue(parsed.fit),
     scoreRationale: textValue(parsed.scoreRationale) || textValue(parsed.rationale),
+    aiSummary: normalizeAiSummary(parsed.aiSummary) || heuristicAiSummary(request, retrieval),
     retrieval,
   };
 }
@@ -312,6 +335,7 @@ function pendingFromEvaluation(payload: EvaluationPayload): PendingJob {
     scrapeDate: new Date().toISOString().slice(0, 10),
     fit: payload.fit,
     scoreRationale: payload.scoreRationale,
+    aiSummary: payload.aiSummary,
   };
 }
 
