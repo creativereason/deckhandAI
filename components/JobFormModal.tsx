@@ -212,7 +212,7 @@ export default function JobFormModal({
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="bg-p-light dark:bg-p-dark-surface rounded-xl shadow-2xl p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto"
+        className="bg-card rounded-xl shadow-2xl p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -226,7 +226,7 @@ export default function JobFormModal({
               ? getProspectIcon({ fit: form.fit })
               : "🔴";
             return (
-              <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <span className="leading-none flex items-center"><SignalIcon icon={icon} size={18} /></span>
                 <span>{getSignalLabel(icon, isProspect ? "prospect" : "applied")}</span>
               </span>
@@ -248,9 +248,9 @@ export default function JobFormModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div className={board === "passed" ? "col-span-2" : "col-span-1"}>
-            <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Board</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Board</label>
             <select
-              className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
               value={board}
               onChange={(e) => onBoardChange(e.target.value as Board)}
             >
@@ -262,9 +262,9 @@ export default function JobFormModal({
 
           {board !== "passed" && (
             <div>
-              <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Type</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Type</label>
               <select
-                className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+                className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
                 value={jobType}
                 onChange={(e) => setJobType(e.target.value as JobType)}
               >
@@ -276,19 +276,19 @@ export default function JobFormModal({
           )}
 
           <div>
-            <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Company</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Company</label>
             <input
               required
-              className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
               value={form.company}
               onChange={(e) => set("company", e.target.value)}
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Role</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Role</label>
             <input
               required
-              className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
               value={form.role}
               onChange={(e) => set("role", e.target.value)}
             />
@@ -297,7 +297,7 @@ export default function JobFormModal({
           {board === "prospects" && (
             <div className="col-span-2">
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Fit</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Fit</label>
                 <Button
                   type="button"
                   variant="link"
@@ -311,7 +311,7 @@ export default function JobFormModal({
                 </Button>
               </div>
               <select
-                className="w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
                 value={form.fit}
                 onChange={(e) => set("fit", e.target.value)}
               >
@@ -321,7 +321,7 @@ export default function JobFormModal({
                 <option value="weak">Weak</option>
               </select>
               {scoreRationale && (
-                <p className="mt-1.5 text-xs text-p-dusk dark:text-gray-400 italic">{scoreRationale}</p>
+                <p className="mt-1.5 text-xs text-muted-foreground italic">{scoreRationale}</p>
               )}
             </div>
           )}
@@ -329,9 +329,9 @@ export default function JobFormModal({
           {board === "applied" && (
             <>
               <div>
-                <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Status</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Status</label>
                 <select
-                  className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+                  className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
                   value={form.status}
                   onChange={(e) => set("status", e.target.value)}
                 >
@@ -343,10 +343,10 @@ export default function JobFormModal({
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Date Applied</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Date Applied</label>
                 <input
                   type="date"
-                  className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+                  className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
                   value={form.date}
                   onChange={(e) => set("date", e.target.value)}
                 />
@@ -355,7 +355,7 @@ export default function JobFormModal({
                 <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 accent-p-blue dark:accent-p-accent-inv"
+                    className="w-4 h-4 accent-primary"
                     checked={(form as { isGhost?: boolean }).isGhost ?? false}
                     onChange={(e) => setForm((f) => ({ ...f, isGhost: e.target.checked }))}
                   />
@@ -363,24 +363,24 @@ export default function JobFormModal({
                     Ghost job risk
                   </span>
                 </label>
-                <p className="mt-0.5 ml-6 text-xs text-stone-400 dark:text-gray-500">Flag if this posting looks like a ghost job or has been reposted repeatedly.</p>
+                <p className="mt-0.5 ml-6 text-xs text-muted-foreground">Flag if this posting looks like a ghost job or has been reposted repeatedly.</p>
               </div>
             </>
           )}
 
           <div>
-            <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Salary</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Salary</label>
             <input
-              className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
               placeholder="$150k–$200k"
               value={form.salary}
               onChange={(e) => set("salary", e.target.value)}
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">URL</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">URL</label>
             <input
-              className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
               placeholder="https://..."
               value={form.url}
               onChange={(e) => set("url", e.target.value)}
@@ -388,9 +388,9 @@ export default function JobFormModal({
           </div>
 
           <div className="col-span-2">
-            <label className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">Notes</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Notes</label>
             <textarea
-              className="mt-1 w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white"
+              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
               rows={3}
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
@@ -398,7 +398,7 @@ export default function JobFormModal({
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex gap-3 pt-2">
           <Button type="button" variant="outline" onClick={onClose} className="flex-1">

@@ -19,7 +19,7 @@ function parseInline(text: string): React.ReactNode[] {
       const isExternal = m[3].startsWith("http");
       out.push(
         <a key={m.index} href={m[3]} target={isExternal ? "_blank" : undefined} rel={isExternal ? "noreferrer" : undefined}
-          className="underline text-p-blue dark:text-p-accent-inv hover:opacity-75 break-all">
+          className="underline text-primary hover:opacity-75 break-all">
           {m[2]}
         </a>
       );

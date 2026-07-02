@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { AppConfig } from "@/lib/config";
 
-const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
-const LABEL = "block text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-1";
-const SECTION = "bg-white dark:bg-p-dark-surface rounded-xl p-5 space-y-4 shadow-sm";
+const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
+const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
+const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 const SCHEDULE_PRESETS = [
   { label: "Weekdays at 8am", value: "0 8 * * 1-5" },
@@ -78,7 +78,7 @@ export default function ScrapingSettings() {
   }
 
   if (loading) {
-    return <div className="text-sm text-p-dusk dark:text-gray-400 py-8">Loading…</div>;
+    return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
   }
 
   return (
@@ -87,7 +87,7 @@ export default function ScrapingSettings() {
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
           Local hub
         </h2>
-        <p className="text-xs text-p-dusk dark:text-gray-400">
+        <p className="text-xs text-muted-foreground">
           Used to qualify hybrid roles. The scraper checks if a listing&apos;s location matches
           your hub city or state.
         </p>
@@ -137,7 +137,7 @@ export default function ScrapingSettings() {
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
           Scrape schedule
         </h2>
-        <p className="text-xs text-p-dusk dark:text-gray-400">
+        <p className="text-xs text-muted-foreground">
           Used by the GitHub Actions workflow to run automated scrapes. Cron syntax, UTC.
         </p>
         <div className="space-y-3">
@@ -149,11 +149,11 @@ export default function ScrapingSettings() {
                 value={preset.value}
                 checked={scheduleMode === preset.value}
                 onChange={() => handlePresetChange(preset.value)}
-                className="accent-p-accent dark:accent-p-accent-inv"
+                className="accent-primary"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">{preset.label}</span>
               {preset.value !== "custom" && (
-                <code className="text-xs text-p-dusk dark:text-gray-400 bg-p-linen dark:bg-p-dark-mid px-1.5 py-0.5 rounded">
+                <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                   {preset.value}
                 </code>
               )}

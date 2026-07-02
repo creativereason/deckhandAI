@@ -4,10 +4,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Profile, ExperienceEntry, EducationEntry } from "@/lib/profile";
 
-const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
-const LABEL = "block text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-1";
-const SECTION = "bg-white dark:bg-p-dark-surface rounded-xl p-5 space-y-4 shadow-sm";
-const BTN_SM = "text-xs text-p-dusk dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors";
+const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
+const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
+const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
+const BTN_SM = "text-xs text-muted-foreground hover:text-foreground transition-colors";
 
 export default function ProfileAiSettings() {
   const [loading, setLoading] = useState(true);
@@ -107,11 +107,11 @@ export default function ProfileAiSettings() {
     }
   }
 
-  if (loading) return <div className="text-sm text-p-dusk dark:text-gray-400 py-8">Loading…</div>;
+  if (loading) return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-p-dusk dark:text-gray-400">
+      <p className="text-sm text-muted-foreground">
         This profile is used by the AI to generate cover letters and tailoring notes. It is never committed to your app repo — it lives in your private data repo.
       </p>
 
@@ -158,10 +158,10 @@ export default function ProfileAiSettings() {
           <Button onClick={addExp} variant="link" size="sm" className="text-xs">+ Add role</Button>
         </div>
         {(profile.experience ?? []).length === 0 && (
-          <p className="text-sm text-p-dusk dark:text-gray-400">No work history yet. Add your most recent roles.</p>
+          <p className="text-sm text-muted-foreground">No work history yet. Add your most recent roles.</p>
         )}
         {(profile.experience ?? []).map((exp, ei) => (
-          <div key={ei} className="border border-p-linen dark:border-p-dark-mid rounded-xl p-4 space-y-3">
+          <div key={ei} className="border border-border rounded-xl p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={LABEL}>Company</label>
@@ -185,13 +185,13 @@ export default function ProfileAiSettings() {
               {exp.bullets.map((b, bi) => (
                 <div key={bi} className="flex gap-2">
                   <input className={INPUT} value={b} onChange={(e) => updateExpBullet(ei, bi, e.target.value)} />
-                  <button onClick={() => removeExpBullet(ei, bi)} className={`${BTN_SM} shrink-0 hover:text-red-600`}>×</button>
+                  <button onClick={() => removeExpBullet(ei, bi)} className={`${BTN_SM} shrink-0 hover:text-destructive`}>×</button>
                 </div>
               ))}
               <Button onClick={() => addExpBullet(ei)} variant="link" size="sm" className="text-xs">+ bullet</Button>
             </div>
             <div className="flex justify-end">
-              <button onClick={() => removeExp(ei)} className="text-xs text-red-500 hover:text-red-700 transition-colors">Remove role</button>
+              <button onClick={() => removeExp(ei)} className="text-xs text-destructive hover:opacity-80 transition-colors">Remove role</button>
             </div>
           </div>
         ))}
@@ -204,7 +204,7 @@ export default function ProfileAiSettings() {
           <Button onClick={addEdu} variant="link" size="sm" className="text-xs">+ Add</Button>
         </div>
         {(profile.education ?? []).map((edu, i) => (
-          <div key={i} className="grid grid-cols-2 gap-3 border border-p-linen dark:border-p-dark-mid rounded-xl p-4">
+          <div key={i} className="grid grid-cols-2 gap-3 border border-border rounded-xl p-4">
             <div className="col-span-2">
               <label className={LABEL}>Institution</label>
               <input className={INPUT} value={edu.institution} onChange={(e) => updateEdu(i, { institution: e.target.value })} />
@@ -222,7 +222,7 @@ export default function ProfileAiSettings() {
                 <label className={LABEL}>Honors (optional)</label>
                 <input className={INPUT} value={edu.honors ?? ""} onChange={(e) => updateEdu(i, { honors: e.target.value })} />
               </div>
-              <button onClick={() => removeEdu(i)} className="text-xs text-red-500 hover:text-red-700 pb-2 shrink-0">Remove</button>
+              <button onClick={() => removeEdu(i)} className="text-xs text-destructive hover:opacity-80 pb-2 shrink-0">Remove</button>
             </div>
           </div>
         ))}
@@ -234,15 +234,15 @@ export default function ProfileAiSettings() {
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Writing rules</h2>
           <Button onClick={addRule} variant="link" size="sm" className="text-xs">+ Add rule</Button>
         </div>
-        <p className="text-xs text-p-dusk dark:text-gray-400">Instructions the AI follows when generating documents. Describe tone, style, and anything to avoid.</p>
+        <p className="text-xs text-muted-foreground">Instructions the AI follows when generating documents. Describe tone, style, and anything to avoid.</p>
         {(profile.writing_rules ?? []).map((rule, i) => (
           <div key={i} className="flex gap-2">
             <input className={INPUT} value={rule} onChange={(e) => updateRule(i, e.target.value)} />
-            <button onClick={() => removeRule(i)} className={`${BTN_SM} shrink-0 hover:text-red-600`}>×</button>
+            <button onClick={() => removeRule(i)} className={`${BTN_SM} shrink-0 hover:text-destructive`}>×</button>
           </div>
         ))}
         {(profile.writing_rules ?? []).length === 0 && (
-          <p className="text-sm text-p-dusk dark:text-gray-400">No rules yet.</p>
+          <p className="text-sm text-muted-foreground">No rules yet.</p>
         )}
       </div>
 

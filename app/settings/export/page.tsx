@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import type { AppConfig, ExportStyle } from "@/lib/config";
 import { DEFAULT_EXPORT_STYLE } from "@/lib/config";
 
-const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
-const LABEL = "block text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-1";
-const SECTION = "bg-white dark:bg-p-dark-surface rounded-xl p-5 space-y-4 shadow-sm";
+const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
+const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
+const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 export default function ExportSettings() {
   const [loading, setLoading] = useState(true);
@@ -48,13 +48,13 @@ export default function ExportSettings() {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-400 py-8 text-center">Loading…</p>;
+  if (loading) return <p className="text-sm text-muted-foreground py-8 text-center">Loading…</p>;
 
   return (
     <div className="space-y-6">
       <div className={SECTION}>
         <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Document style</h2>
-        <p className="text-xs text-p-dusk dark:text-gray-400 -mt-2">
+        <p className="text-xs text-muted-foreground -mt-2">
           Applied to all exported DOCX files. Defaults are ATS-safe.
         </p>
 
@@ -67,7 +67,7 @@ export default function ExportSettings() {
               onChange={(e) => updateExport("font", e.target.value)}
               placeholder="Calibri"
             />
-            <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">Use a font installed on your system. Calibri and Arial are safe defaults.</p>
+            <p className="text-xs text-muted-foreground mt-1">Use a font installed on your system. Calibri and Arial are safe defaults.</p>
           </div>
 
           <div>
@@ -75,7 +75,7 @@ export default function ExportSettings() {
             <div className="flex gap-2 items-center">
               <input
                 type="color"
-                className="h-9 w-12 rounded border border-p-linen dark:border-p-dark-mid cursor-pointer bg-white dark:bg-p-dark-mid p-0.5"
+                className="h-9 w-12 rounded border border-border cursor-pointer bg-card p-0.5"
                 value={get("accentColor") as string}
                 onChange={(e) => updateExport("accentColor", e.target.value)}
               />
@@ -86,7 +86,7 @@ export default function ExportSettings() {
                 placeholder="#1E3A8A"
               />
             </div>
-            <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">Used for your name, section headers, and rules.</p>
+            <p className="text-xs text-muted-foreground mt-1">Used for your name, section headers, and rules.</p>
           </div>
 
           <div>
@@ -94,7 +94,7 @@ export default function ExportSettings() {
             <div className="flex gap-2 items-center">
               <input
                 type="color"
-                className="h-9 w-12 rounded border border-p-linen dark:border-p-dark-mid cursor-pointer bg-white dark:bg-p-dark-mid p-0.5"
+                className="h-9 w-12 rounded border border-border cursor-pointer bg-card p-0.5"
                 value={get("bodyColor") as string}
                 onChange={(e) => updateExport("bodyColor", e.target.value)}
               />
@@ -112,7 +112,7 @@ export default function ExportSettings() {
             <div className="flex gap-2 items-center">
               <input
                 type="color"
-                className="h-9 w-12 rounded border border-p-linen dark:border-p-dark-mid cursor-pointer bg-white dark:bg-p-dark-mid p-0.5"
+                className="h-9 w-12 rounded border border-border cursor-pointer bg-card p-0.5"
                 value={get("metaColor") as string}
                 onChange={(e) => updateExport("metaColor", e.target.value)}
               />
@@ -123,14 +123,14 @@ export default function ExportSettings() {
                 placeholder="#6B7280"
               />
             </div>
-            <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">Dates, contact line, and location text.</p>
+            <p className="text-xs text-muted-foreground mt-1">Dates, contact line, and location text.</p>
           </div>
         </div>
       </div>
 
       <div className={SECTION}>
         <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Page margins</h2>
-        <p className="text-xs text-p-dusk dark:text-gray-400 -mt-2">Values in DXA twips (1 inch = 1440). Default: 0.75&quot; sides, 0.60&quot; top/bottom.</p>
+        <p className="text-xs text-muted-foreground -mt-2">Values in DXA twips (1 inch = 1440). Default: 0.75&quot; sides, 0.60&quot; top/bottom.</p>
 
         <div className="grid grid-cols-2 gap-4">
           {(
@@ -162,7 +162,7 @@ export default function ExportSettings() {
         <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
           <input
             type="checkbox"
-            className="w-4 h-4 accent-p-blue dark:accent-p-accent-inv"
+            className="w-4 h-4 accent-primary"
             checked={(get("includePortfolioPassword") as boolean) ?? false}
             onChange={(e) => updateExport("includePortfolioPassword", e.target.checked)}
           />
@@ -170,9 +170,9 @@ export default function ExportSettings() {
             Include portfolio password in contact line
           </span>
         </label>
-        <p className="text-xs text-stone-400 dark:text-gray-500 ml-6 -mt-2">
-          Appends <code className="bg-p-linen dark:bg-p-dark-mid px-1 rounded">pw: [password]</code> next to your portfolio URL — useful if recipients may get locked out.
-          Password is read from <code className="bg-p-linen dark:bg-p-dark-mid px-1 rounded">profile.json</code>.
+        <p className="text-xs text-muted-foreground ml-6 -mt-2">
+          Appends <code className="bg-muted px-1 rounded">pw: [password]</code> next to your portfolio URL — useful if recipients may get locked out.
+          Password is read from <code className="bg-muted px-1 rounded">profile.json</code>.
         </p>
       </div>
 

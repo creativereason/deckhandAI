@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ScrapeTargetConfig } from "@/lib/scrape-targets";
 
-const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
-const LABEL = "block text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-1";
-const SECTION = "bg-white dark:bg-p-dark-surface rounded-xl p-5 space-y-4 shadow-sm";
+const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
+const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
+const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 type Group = "remote" | "local";
 
@@ -46,22 +46,22 @@ function TargetList({
       </div>
 
       {list.length === 0 && adding !== group && (
-        <p className="text-sm text-p-dusk dark:text-gray-400">No targets yet. Add one to start scraping.</p>
+        <p className="text-sm text-muted-foreground">No targets yet. Add one to start scraping.</p>
       )}
 
       {list.map((t) => {
         const dk = `${group}|${t.company}`;
         return (
-          <div key={t.company} className="flex items-start justify-between gap-4 py-2 border-b border-p-linen dark:border-p-dark-mid last:border-0">
+          <div key={t.company} className="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
             <div className="min-w-0">
               <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{t.company}</p>
-              <a href={t.url} target="_blank" rel="noreferrer" className="text-xs text-p-dusk dark:text-gray-400 hover:underline truncate block max-w-xs">{t.url}</a>
-              {t.selector && <p className="text-xs text-p-dusk dark:text-gray-500 mt-0.5">Selector: <code className="bg-p-linen dark:bg-p-dark-mid px-1 rounded">{t.selector}</code></p>}
+              <a href={t.url} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:underline truncate block max-w-xs">{t.url}</a>
+              {t.selector && <p className="text-xs text-muted-foreground mt-0.5">Selector: <code className="bg-muted px-1 rounded">{t.selector}</code></p>}
             </div>
             <button
               onClick={() => onRemove(group, t.company)}
               disabled={deleting === dk}
-              className="text-xs text-p-dusk dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 shrink-0 disabled:opacity-40 transition-colors"
+              className="text-xs text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-40 transition-colors"
             >
               {deleting === dk ? "…" : "Remove"}
             </button>
@@ -70,15 +70,15 @@ function TargetList({
       })}
 
       {adding === group && (
-        <div className="border border-p-linen dark:border-p-dark-mid rounded-xl p-4 space-y-3 bg-p-light dark:bg-p-dark-mid">
-          <p className="text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest">New target</p>
+        <div className="border border-border rounded-xl p-4 space-y-3 bg-muted">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">New target</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 sm:col-span-1">
-              <label className={LABEL}>Company <span className="text-red-400">*</span></label>
+              <label className={LABEL}>Company <span className="text-destructive">*</span></label>
               <input className={INPUT} placeholder="Acme Corp" value={draft.company} onChange={(e) => onDraftChange({ company: e.target.value })} />
             </div>
             <div className="col-span-2">
-              <label className={LABEL}>Career page URL <span className="text-red-400">*</span></label>
+              <label className={LABEL}>Career page URL <span className="text-destructive">*</span></label>
               <input className={INPUT} placeholder="https://careers.acme.com/jobs?q=designer" value={draft.url} onChange={(e) => onDraftChange({ url: e.target.value })} />
             </div>
             <div>
@@ -159,7 +159,7 @@ export default function ScrapeTargetsSettings() {
     }
   }
 
-  if (loading) return <div className="text-sm text-p-dusk dark:text-gray-400 py-8">Loading…</div>;
+  if (loading) return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
 
   const shared = { adding, draft, saving, deleting, onStartAdd: startAdd, onCancelAdd: cancelAdd, onSaveNew: saveNew, onRemove: remove, onDraftChange: patchDraft };
 

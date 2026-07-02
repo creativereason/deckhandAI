@@ -393,16 +393,21 @@ The board moved from a single-column table layout to a two-column layout with a 
 
 ---
 
-## M13 — Color / Accent Retheme (planned)
+## M13 — Color / Accent Retheme
 
-The board redesign (M12) surfaced how much of the UI still leans on the original slate/blue palette (`p-blue`, `p-accent`, etc. in `app/globals.css`) even after the `Button` component and card-view work. Next pass: rethink colors, accents, and callouts (fit badges, status badges, type badges, the amber scrape-review-queue treatment, chart/signal colors) as a deliberate palette rather than the incremental choices made slice-by-slice so far.
+The board redesign (M12) surfaced how much of the UI still leaned on the original slate/blue palette even after the `Button` component and card-view work. This pass replaced the two disconnected token systems with one shadcn-based palette, and turned every hardcoded semantic color (fit, status, job type, ghost/scan icons, warning/error/demo banners) into a defined CSS variable.
 
-- [ ] Decide on and document the new palette in `app/globals.css`'s `@theme inline` block
-- [ ] Reconcile the two token systems currently in play — the hand-rolled `p-*` tokens and the shadcn/OKLCH tokens (`--primary`, `--border`, etc.) used by `components/ui/*` — so `Button`, `Badge`, and `Accordion` all draw from one source
-- [ ] Audit badge/callout colors (fit: strong/good/caution/weak, status: applied/screening/interview/offer/declined, type: remote/hybrid/local/contract) for consistency and accessibility (contrast) under both light and dark mode
-- [ ] Apply across cards, the scrape-review-queue amber treatment, and chat UI accents
+- [x] One token set in `app/globals.css` — the hand-rolled `--color-p-*` hex tokens are gone; `Button`, `Badge`, `Accordion`, and every page now draw from the same `:root`/`.dark` OKLCH tokens. `--primary` stays the existing brand blue; added `--secondary` (a genuinely distinct warm terracotta accent, not another gray) plus a real `--shadow-*` elevation scale (previously absent)
+- [x] New semantic tone tokens — `--tone-success`, `--tone-warning`, `--tone-purple`, `--tone-teal`, `--tone-orange` (bg/fg tokens `--primary`/`--destructive` reused for the info/danger cases), each with light+dark values, composed via Tailwind opacity modifiers (`bg-tone-x/10 text-tone-x`) — the same pattern the codebase already used for `--destructive` in `components/ui/badge.tsx`
+- [x] `components/ui/badge.tsx` extended with `tone-*` variants; new `lib/job-badges.ts` maps `JobFit`/`JobStatus`/`JobType`/scrape group → badge variant. Replaced the `FIT_STYLES`/`STATUS_STYLES`/`TYPE_STYLES`/`GROUP_STYLES` maps — previously hand-rolled and duplicated verbatim across `app/page.tsx`, `app/job/page.tsx`, dead `components/JobDetailPanel.tsx` (deleted), and `components/ScrapeReviewQueue.tsx` — with one shared `Badge` + mapping util
+- [x] `Button`'s `destructive` variant now uses `--destructive`/`--destructive-foreground` instead of hardcoded `red-50/red-600`; `default` uses `--primary` directly (previously a separate dark-slate color from the app's actual link/ring accent — now the same blue everywhere)
+- [x] Swept every remaining `p-*` utility class across ~20 files to shadcn-standard utilities (`bg-primary`, `text-muted-foreground`, `border-border`, `bg-card`, `bg-muted`, etc.) — as a side effect, most `X dark:Y` class pairs collapsed into a single utility, since the token itself now carries different light/dark values
+- [x] Tokenized the remaining one-offs: `SignalIcon.tsx`'s hardcoded hex circle-fill colors and amber lightning icon, `app/scrape-sources/page.tsx`'s `Section` color prop, error text (→ `text-destructive`), warning banners (Settings→Model, `AddJobModal`, `ScrapeReviewQueue`'s amber border/header treatment — previously inconsistent shades between the three, now the same `--tone-warning` token), and the demo-mode banner (→ `--primary`, previously its own unrelated blue)
+- [x] Visual verification in both light and dark mode across the board, Settings→Model, and Scraper Coverage — confirmed contrast holds for the new secondary/tone tokens
 
-**Effort:** TBD — scoping pass needed before estimating
+**Explicitly out of scope** (separate "output document" palettes that need raw hex, not CSS vars): `lib/config.ts`'s `DEFAULT_EXPORT_STYLE` (DOCX generation) and the `#111` print-stylesheet color in `GenerateModal.tsx`/`AIGenerationCard.tsx`. Not touched by this pass.
+
+**Effort:** ~1 day
 
 ---
 

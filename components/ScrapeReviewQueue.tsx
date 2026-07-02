@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { groupBadgeVariant } from "@/lib/job-badges";
 import type { PendingJob, JobFit } from "@/lib/jobs";
 
 const FIT_OPTIONS: { value: JobFit; label: string }[] = [
@@ -11,16 +13,11 @@ const FIT_OPTIONS: { value: JobFit; label: string }[] = [
   { value: "weak", label: "Weak" },
 ];
 
-const FIT_STYLES: Record<JobFit, string> = {
-  strong: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  good: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  caution: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  weak: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
-
-const GROUP_STYLES: Record<string, string> = {
-  local: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  remote: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+const FIT_ACTIVE_STYLES: Record<JobFit, string> = {
+  strong: "bg-tone-success/15 text-tone-success",
+  good: "bg-primary/10 text-primary",
+  caution: "bg-tone-warning/20 text-tone-warning",
+  weak: "bg-destructive/10 text-destructive",
 };
 
 interface ScoreState {
@@ -46,7 +43,7 @@ function FitSelector({ score, onFit }: { score: ScoreState; onFit: (f: JobFit) =
         <button
           key={f.value}
           onClick={() => onFit(f.value)}
-          className={`text-xs px-2 py-1 rounded transition-colors ${score.fit === f.value ? FIT_STYLES[f.value] : "text-p-dusk dark:text-gray-500 hover:bg-p-linen dark:hover:bg-p-dark-mid"}`}
+          className={`text-xs px-2 py-1 rounded transition-colors ${score.fit === f.value ? FIT_ACTIVE_STYLES[f.value] : "text-muted-foreground hover:bg-muted"}`}
         >
           {f.label}
         </button>
@@ -61,7 +58,7 @@ function ActionButtons({ loading, onApprove, onReject }: { loading: boolean; onA
       <button
         onClick={onReject}
         disabled={loading}
-        className="text-xs text-p-dusk dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors px-2 py-1 disabled:opacity-40"
+        className="text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 disabled:opacity-40"
       >
         Dismiss
       </button>
@@ -147,15 +144,15 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
   async function rejectAll() { for (const j of visible) await act(j, "reject"); }
 
   return (
-    <div className="bg-white dark:bg-p-dark-surface rounded-xl shadow-sm border border-amber-200 dark:border-amber-700">
+    <div className="bg-card rounded-xl shadow-sm border border-tone-warning/30">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-amber-100 dark:border-amber-800 flex-wrap gap-2">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-tone-warning/20 flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-bold">
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-tone-warning/15 text-tone-warning text-xs font-bold">
             {visible.length}
           </span>
           <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Scrape review queue</h2>
-          <span className="text-xs text-p-dusk dark:text-gray-400 hidden sm:inline">— approve to add, dismiss to skip</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">— approve to add, dismiss to skip</span>
         </div>
         <div className="flex gap-2">
           <Button onClick={rejectAll} variant="ghost" size="xs">
@@ -178,28 +175,28 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-900 dark:text-white text-base">{j.company}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${GROUP_STYLES[j.scrapeGroup]}`}>{j.scrapeGroup}</span>
+                    <Badge variant={groupBadgeVariant(j.scrapeGroup)} className="rounded font-medium">{j.scrapeGroup}</Badge>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{j.role}</p>
                 </div>
                 {j.url && (
-                  <a href={j.url} target="_blank" rel="noreferrer" className="text-xs text-p-accent dark:text-p-accent-inv hover:underline shrink-0">↗</a>
+                  <a href={j.url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline shrink-0">↗</a>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-xs text-p-dusk dark:text-gray-500 flex-wrap">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                 {j.salary && <span>{j.salary}</span>}
                 <span>{j.scrapeDate}</span>
               </div>
               {score.scoring && (
-                <p className="text-xs text-p-dusk dark:text-gray-400 italic flex items-center gap-1.5">
+                <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
                   <span className="inline-block w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
                   Scoring…
                 </p>
               )}
               {!score.scoring && score.rationale && (
-                <p className="text-xs text-p-dusk dark:text-gray-400 italic">{score.rationale}</p>
+                <p className="text-xs text-muted-foreground italic">{score.rationale}</p>
               )}
-              <div className="flex items-center justify-between pt-1 border-t border-p-linen dark:border-p-dark-mid gap-2 flex-wrap">
+              <div className="flex items-center justify-between pt-1 border-t border-border gap-2 flex-wrap">
                 <FitSelector score={score} onFit={(f) => patchScore(j, { fit: f })} />
                 <ActionButtons loading={loading} onApprove={() => act(j, "approve")} onReject={() => act(j, "reject")} />
               </div>
@@ -218,27 +215,27 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm text-gray-800 dark:text-gray-200">{j.company}</span>
-                  <span className="text-p-dusk dark:text-gray-400 text-xs">—</span>
+                  <span className="text-muted-foreground text-xs">—</span>
                   <span className="text-sm text-gray-600 dark:text-gray-300">{j.role}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${GROUP_STYLES[j.scrapeGroup]}`}>{j.scrapeGroup}</span>
+                  <Badge variant={groupBadgeVariant(j.scrapeGroup)} className="rounded font-medium">{j.scrapeGroup}</Badge>
                 </div>
                 <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                   {j.url && (
-                    <a href={j.url} target="_blank" rel="noreferrer" className="text-xs text-p-accent dark:text-p-accent-inv hover:underline truncate max-w-[260px]">
+                    <a href={j.url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate max-w-[260px]">
                       View posting ↗
                     </a>
                   )}
-                  <span className="text-xs text-p-dusk dark:text-gray-500">{j.scrapeDate}</span>
-                  {j.salary && <span className="text-xs text-p-dusk dark:text-gray-500">{j.salary}</span>}
+                  <span className="text-xs text-muted-foreground">{j.scrapeDate}</span>
+                  {j.salary && <span className="text-xs text-muted-foreground">{j.salary}</span>}
                 </div>
                 {score.scoring && (
-                  <p className="mt-1.5 text-xs text-p-dusk dark:text-gray-400 italic flex items-center gap-1.5">
+                  <p className="mt-1.5 text-xs text-muted-foreground italic flex items-center gap-1.5">
                     <span className="inline-block w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
                     Scoring…
                   </p>
                 )}
                 {!score.scoring && score.rationale && (
-                  <p className="mt-1.5 text-xs text-p-dusk dark:text-gray-400 italic">{score.rationale}</p>
+                  <p className="mt-1.5 text-xs text-muted-foreground italic">{score.rationale}</p>
                 )}
               </div>
               <div className="flex flex-col items-end gap-2 shrink-0">

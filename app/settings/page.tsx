@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { AppConfig } from "@/lib/config";
 
-const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
-const LABEL = "block text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-1";
-const SECTION = "bg-white dark:bg-p-dark-surface rounded-xl p-5 space-y-4 shadow-sm";
+const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
+const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
+const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 export default function ProfileSettings() {
   const [loading, setLoading] = useState(true);
@@ -82,7 +82,7 @@ export default function ProfileSettings() {
   }
 
   if (loading) {
-    return <div className="text-sm text-p-dusk dark:text-gray-400 py-8">Loading…</div>;
+    return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
   }
 
   return (
@@ -152,7 +152,7 @@ export default function ProfileSettings() {
           <input
             id="remote"
             type="checkbox"
-            className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv"
+            className="w-4 h-4 accent-primary"
             checked={loc.remote ?? true}
             onChange={(e) => updateLocation("remote", e.target.checked)}
           />
@@ -164,7 +164,7 @@ export default function ProfileSettings() {
           <input
             id="hybrid"
             type="checkbox"
-            className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv"
+            className="w-4 h-4 accent-primary"
             checked={loc.hybrid ?? true}
             onChange={(e) => updateLocation("hybrid", e.target.checked)}
           />
@@ -176,7 +176,7 @@ export default function ProfileSettings() {
           <input
             id="contract"
             type="checkbox"
-            className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv"
+            className="w-4 h-4 accent-primary"
             checked={p.open_to_contract ?? true}
             onChange={(e) => updatePreference("open_to_contract", e.target.checked)}
           />
@@ -188,7 +188,7 @@ export default function ProfileSettings() {
           <input
             id="hide_passed"
             type="checkbox"
-            className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv"
+            className="w-4 h-4 accent-primary"
             checked={p.hide_passed ?? false}
             onChange={(e) => updatePreference("hide_passed", e.target.checked)}
           />

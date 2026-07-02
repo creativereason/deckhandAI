@@ -19,6 +19,19 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // Semantic job tones — soft translucent background + saturated ink,
+        // same composition pattern as the built-in `destructive` variant above.
+        // The token itself carries different light/dark values, so no
+        // separate dark: override is needed here.
+        "tone-success": "bg-tone-success/10 text-tone-success",
+        "tone-info": "bg-primary/10 text-primary",
+        "tone-warning": "bg-tone-warning/15 text-tone-warning",
+        "tone-danger": "bg-destructive/10 text-destructive",
+        "tone-purple": "bg-tone-purple/10 text-tone-purple",
+        "tone-teal": "bg-tone-teal/10 text-tone-teal",
+        "tone-orange": "bg-tone-orange/15 text-tone-orange",
+        "tone-neutral": "bg-muted text-muted-foreground",
+        "tone-highlight": "bg-tone-highlight/10 text-tone-highlight",
       },
     },
     defaultVariants: {

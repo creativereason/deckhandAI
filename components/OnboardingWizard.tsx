@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { AppConfig } from "@/lib/config";
 
-const INPUT = "w-full border border-p-linen dark:border-p-dark-mid rounded-lg px-3 py-2 text-sm bg-white dark:bg-p-dark-mid dark:text-white focus:outline-none focus:ring-2 focus:ring-p-accent dark:focus:ring-p-accent-inv";
-const LABEL = "block text-xs font-semibold text-p-dusk dark:text-gray-400 uppercase tracking-widest mb-1";
+const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
+const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
 
 const TOTAL_STEPS = 4;
 
@@ -91,7 +91,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-p-dark-surface rounded-2xl shadow-2xl w-full max-w-lg">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-lg">
 
         {/* Header */}
         <div className="px-8 pt-8 pb-4">
@@ -100,12 +100,12 @@ export default function OnboardingWizard({ onComplete }: Props) {
               <div
                 key={i}
                 className={`h-1 flex-1 rounded-full transition-colors ${
-                  i < step ? "bg-p-accent dark:bg-p-accent-inv" : "bg-p-linen dark:bg-p-dark-mid"
+                  i < step ? "bg-primary" : "bg-muted"
                 }`}
               />
             ))}
           </div>
-          <p className="text-xs text-p-dusk dark:text-gray-400 mt-2">Step {step} of {TOTAL_STEPS}</p>
+          <p className="text-xs text-muted-foreground mt-2">Step {step} of {TOTAL_STEPS}</p>
         </div>
 
         {/* Body */}
@@ -115,11 +115,11 @@ export default function OnboardingWizard({ onComplete }: Props) {
             <>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Welcome to deckhandAI</h2>
-                <p className="text-sm text-p-dusk dark:text-gray-400 mt-1">Let&apos;s get your profile set up. This takes about 2 minutes.</p>
+                <p className="text-sm text-muted-foreground mt-1">Let&apos;s get your profile set up. This takes about 2 minutes.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={LABEL}>First name <span className="text-red-400">*</span></label>
+                  <label className={LABEL}>First name <span className="text-destructive">*</span></label>
                   <input className={INPUT} value={firstName} onChange={(e) => setFirstName(e.target.value)} autoFocus />
                 </div>
                 <div>
@@ -150,7 +150,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
             <>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Location</h2>
-                <p className="text-sm text-p-dusk dark:text-gray-400 mt-1">Used to filter hybrid and local roles by commute distance.</p>
+                <p className="text-sm text-muted-foreground mt-1">Used to filter hybrid and local roles by commute distance.</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-3 sm:col-span-1">
@@ -172,11 +172,11 @@ export default function OnboardingWizard({ onComplete }: Props) {
               </div>
               <div className="space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv" checked={openToRemote} onChange={(e) => setOpenToRemote(e.target.checked)} />
+                  <input type="checkbox" className="w-4 h-4 accent-primary" checked={openToRemote} onChange={(e) => setOpenToRemote(e.target.checked)} />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Open to remote roles</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv" checked={openToHybrid} onChange={(e) => setOpenToHybrid(e.target.checked)} />
+                  <input type="checkbox" className="w-4 h-4 accent-primary" checked={openToHybrid} onChange={(e) => setOpenToHybrid(e.target.checked)} />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Open to hybrid roles</span>
                 </label>
               </div>
@@ -187,7 +187,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
             <>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Job preferences</h2>
-                <p className="text-sm text-p-dusk dark:text-gray-400 mt-1">Used to filter scraped roles and personalize your tracker.</p>
+                <p className="text-sm text-muted-foreground mt-1">Used to filter scraped roles and personalize your tracker.</p>
               </div>
               <div>
                 <label className={LABEL}>Target titles (one per line)</label>
@@ -210,7 +210,7 @@ export default function OnboardingWizard({ onComplete }: Props) {
                 </div>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 accent-p-accent dark:accent-p-accent-inv" checked={openToContract} onChange={(e) => setOpenToContract(e.target.checked)} />
+                <input type="checkbox" className="w-4 h-4 accent-primary" checked={openToContract} onChange={(e) => setOpenToContract(e.target.checked)} />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Open to staffing / contract roles</span>
               </label>
             </>
@@ -220,32 +220,32 @@ export default function OnboardingWizard({ onComplete }: Props) {
             <>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">You&apos;re all set</h2>
-                <p className="text-sm text-p-dusk dark:text-gray-400 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Your profile is ready. A couple of things to do next:
                 </p>
               </div>
               <ul className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
                 <li className="flex gap-3">
-                  <span className="text-p-accent dark:text-p-accent-inv font-bold mt-0.5">1.</span>
+                  <span className="text-primary font-bold mt-0.5">1.</span>
                   <span>
                     Go to <strong>Settings → AI Model</strong> to configure your AI provider and API key.
                     You can use Anthropic, OpenAI, Gemini, Grok, or a local Ollama model.
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-p-accent dark:text-p-accent-inv font-bold mt-0.5">2.</span>
+                  <span className="text-primary font-bold mt-0.5">2.</span>
                   <span>
-                    Add your work history to <code className="text-xs bg-p-linen dark:bg-p-dark-mid px-1.5 py-0.5 rounded">data/profile.json</code> — that&apos;s what the AI uses to write cover letters and tailoring notes.
+                    Add your work history to <code className="text-xs bg-muted px-1.5 py-0.5 rounded">data/profile.json</code> — that&apos;s what the AI uses to write cover letters and tailoring notes.
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-p-accent dark:text-p-accent-inv font-bold mt-0.5">3.</span>
+                  <span className="text-primary font-bold mt-0.5">3.</span>
                   <span>
-                    Add scrape targets to <code className="text-xs bg-p-linen dark:bg-p-dark-mid px-1.5 py-0.5 rounded">scripts/scrape-careers.mjs</code> to automate finding new roles.
+                    Add scrape targets to <code className="text-xs bg-muted px-1.5 py-0.5 rounded">scripts/scrape-careers.mjs</code> to automate finding new roles.
                   </span>
                 </li>
               </ul>
-              <p className="text-xs text-p-dusk dark:text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 You can update your profile and preferences anytime in Settings.
               </p>
             </>

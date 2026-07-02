@@ -1,5 +1,6 @@
 "use client";
 import { FormEvent, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   type JobsData,
@@ -17,47 +18,40 @@ import { SignalIcon } from "@/components/SignalIcon";
 import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import AIGenerationCard from "@/components/AIGenerationCard";
+import AppHeader from "@/components/AppHeader";
+import AppFooter from "@/components/AppFooter";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job-badges";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type AnyJob = AppliedJob | ProspectJob | PassedJob;
 type ClientMsg = { role: "user" | "assistant"; content: string };
 
+const SECTION_LABELS: Record<JobSection, string> = {
+  applied: "Applied",
+  prospect: "Prospects",
+  local: "Local / Hybrid",
+  staffing: "Staffing",
+  passed: "Passed",
+  pending: "Pending",
+};
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const FIT_STYLES: Record<string, string> = {
-  strong: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  good: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  caution: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  weak: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
-const STATUS_STYLES: Record<string, string> = {
-  applied: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  screening: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  interview: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-  offer: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  declined: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
-const TYPE_STYLES: Record<string, string> = {
-  remote: "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
-  hybrid: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-  local: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  contract: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
-};
-
-function Chip({ label, cls }: { label: string; cls: string }) {
+function Chip({ label, variant }: { label: string; variant: Parameters<typeof Badge>[0]["variant"] }) {
   return (
-    <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold capitalize shrink-0 ${cls}`}>
+    <Badge variant={variant} className="capitalize shrink-0 h-auto px-2.5 py-1">
       {label}
-    </span>
+    </Badge>
   );
 }
 
 // ─── Field components ─────────────────────────────────────────────────────────
 
-const inputCls = "w-full text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/30 dark:focus:ring-p-accent-inv/30 transition";
-const labelCls = "block text-[10px] font-semibold text-p-dusk dark:text-gray-500 uppercase tracking-widest mb-1";
+const inputCls = "w-full text-sm bg-muted rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-primary/30 transition";
+const labelCls = "block text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div><label className={labelCls}>{label}</label>{children}</div>;
@@ -180,7 +174,7 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
         />
       </Field>
 
-      {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
 
       <div className="flex items-center gap-2 pt-1">
         <Button type="submit" loading={saving}>
@@ -454,7 +448,7 @@ function JobChat({
             <button
               key={p}
               onClick={() => send(p)}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-p-linen dark:border-p-dark-mid text-p-blue dark:text-p-accent-inv bg-p-linen/40 dark:bg-p-dark-mid/40 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors text-left"
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-border text-primary bg-muted/50 hover:bg-muted transition-colors text-left"
             >
               {p}
             </button>
@@ -470,8 +464,8 @@ function JobChat({
               <div className={cn(
                 "max-w-[90%] rounded-2xl px-3 py-2 rounded-tl-sm",
                 m.role === "user"
-                  ? "bg-p-blue dark:bg-p-accent-inv text-white rounded-tr-sm rounded-tl-2xl"
-                  : "bg-p-linen dark:bg-p-dark-mid text-gray-900 dark:text-white"
+                  ? "bg-primary text-white rounded-tr-sm rounded-tl-2xl"
+                  : "bg-muted text-gray-900 dark:text-white"
               )}>
                 {m.role === "user"
                   ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
@@ -482,7 +476,7 @@ function JobChat({
           ))}
           {pending && (
             <div className="pl-1 space-y-1">
-              {statusText && <p className="text-[11px] text-stone-400 dark:text-gray-500 italic">{statusText}</p>}
+              {statusText && <p className="text-[11px] text-muted-foreground italic">{statusText}</p>}
               <div className="flex items-center gap-1">
                 {[0, 150, 300].map((d) => (
                   <span key={d} className="w-1.5 h-1.5 rounded-full bg-stone-300 dark:bg-gray-500 animate-bounce" style={{ animationDelay: `${d}ms` }} />
@@ -490,7 +484,7 @@ function JobChat({
               </div>
             </div>
           )}
-          {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
           {notesRefresh && !pending && (
             <div className="flex items-center gap-2 pl-1">
               <Button type="button" size="sm" onClick={applyNotesRefresh}>
@@ -513,7 +507,7 @@ function JobChat({
           onChange={(e) => setInput(e.target.value)}
           disabled={pending}
           placeholder="Ask about this role…"
-          className="flex-1 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/30 dark:focus:ring-p-accent-inv/30 disabled:opacity-50 transition"
+          className="flex-1 text-sm bg-muted rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 transition"
         />
         <Button type="submit" disabled={!input.trim()} loading={pending} className="shrink-0">
           Send
@@ -551,7 +545,7 @@ function JobDetailContent() {
   useEffect(() => { load(); }, [load]);
 
   if (!jobs) {
-    return <div className="flex items-center justify-center h-screen text-gray-400 text-sm">Loading…</div>;
+    return <div className="flex items-center justify-center h-screen text-muted-foreground text-sm">Loading…</div>;
   }
 
   const sectionData = (jobs[section] ?? []) as AnyJob[];
@@ -559,7 +553,7 @@ function JobDetailContent() {
 
   if (!job) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4 text-gray-400">
+      <div className="flex flex-col items-center justify-center h-screen gap-4 text-muted-foreground">
         <p className="text-sm">Job not found.</p>
         <Button onClick={() => router.push("/")} variant="link">← Back to board</Button>
       </div>
@@ -625,8 +619,23 @@ function JobDetailContent() {
   ].filter(Boolean).join("\n");
 
   return (
-    <div className="min-h-screen bg-p-light dark:bg-p-navy">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+
+        {/* Header */}
+        <AppHeader
+          breadcrumbs={
+            <>
+              <Link href="/" className="hover:text-foreground transition-colors">Board</Link>
+              <span className="opacity-60">/</span>
+              <span>{SECTION_LABELS[section]}</span>
+              <span className="opacity-60">/</span>
+              <span className="text-foreground font-medium truncate max-w-[16rem]">
+                {foundJob.company} — {foundJob.role}
+              </span>
+            </>
+          }
+        />
 
         {/* Back nav */}
         <Button
@@ -641,18 +650,18 @@ function JobDetailContent() {
         </Button>
 
         {/* Header — full width */}
-        <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-6 py-5 mb-5">
+        <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5 mb-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
               <span className="leading-none mt-0.5 shrink-0 flex items-center"><SignalIcon icon={icon} size={28} /></span>
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{foundJob.company}</h1>
-                <p className="text-base text-gray-500 dark:text-gray-400 mt-0.5">{foundJob.role}</p>
+                <p className="text-base text-muted-foreground mt-0.5">{foundJob.role}</p>
               </div>
             </div>
             {foundJob.url && (
               <a href={foundJob.url} target="_blank" rel="noreferrer"
-                className="shrink-0 text-sm text-p-accent dark:text-p-accent-inv hover:underline flex items-center gap-1"
+                className="shrink-0 text-sm text-primary hover:underline flex items-center gap-1"
               >
                 View posting
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -664,20 +673,20 @@ function JobDetailContent() {
           </div>
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {isApplied && appliedJob!.status && (
-              <Chip label={appliedJob!.status} cls={STATUS_STYLES[appliedJob!.status] ?? "bg-gray-100 dark:bg-gray-700 text-gray-600"} />
+              <Chip label={appliedJob!.status} variant={statusBadgeVariant(appliedJob!.status)} />
             )}
             {isProspect && prospectJob!.fit && (
-              <Chip label={prospectJob!.fit} cls={FIT_STYLES[prospectJob!.fit] ?? "bg-gray-100 dark:bg-gray-700 text-gray-600"} />
+              <Chip label={prospectJob!.fit} variant={fitBadgeVariant(prospectJob!.fit)} />
             )}
-            {effectiveType && <Chip label={effectiveType} cls={TYPE_STYLES[effectiveType] ?? ""} />}
+            {effectiveType && <Chip label={effectiveType} variant={typeBadgeVariant(effectiveType)} />}
             {foundJob.salary && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-p-linen dark:bg-p-dark-mid text-gray-700 dark:text-gray-300 shrink-0">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-gray-700 dark:text-gray-300 shrink-0">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="opacity-60"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 {foundJob.salary}
               </span>
             )}
             {isApplied && appliedJob!.date && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-p-linen dark:bg-p-dark-mid text-gray-700 dark:text-gray-300 shrink-0">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-gray-700 dark:text-gray-300 shrink-0">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="opacity-60"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 {appliedJob!.date}
               </span>
@@ -691,8 +700,8 @@ function JobDetailContent() {
           {/* ── Left column ────────────────────────────────────────── */}
           <div className="lg:col-span-3 space-y-5">
             {editing ? (
-              <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-6 py-5">
-                <p className="text-[10px] font-semibold text-p-dusk dark:text-gray-500 uppercase tracking-widest mb-4">Edit</p>
+              <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-4">Edit</p>
                 <InlineEditForm
                   job={foundJob}
                   section={section}
@@ -703,22 +712,22 @@ function JobDetailContent() {
             ) : (
               <>
                 {foundJob.notes && (
-                  <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-6 py-5">
-                    <p className="text-[10px] font-semibold text-p-dusk dark:text-gray-500 uppercase tracking-widest mb-3">Notes</p>
+                  <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">Notes</p>
                     <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{foundJob.notes}</p>
                   </div>
                 )}
 
                 {isProspect && prospectJob!.scoreRationale && (
-                  <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-6 py-5">
-                    <p className="text-[10px] font-semibold text-p-dusk dark:text-gray-500 uppercase tracking-widest mb-3">AI Assessment</p>
+                  <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">AI Assessment</p>
                     <p className="text-sm text-gray-600 dark:text-gray-300 italic leading-relaxed">{prospectJob!.scoreRationale}</p>
                   </div>
                 )}
 
                 {!foundJob.notes && !prospectJob?.scoreRationale && (
-                  <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-6 py-5">
-                    <p className="text-sm text-p-dusk dark:text-gray-500 italic">No notes yet. Click Edit to add context or paste the job description.</p>
+                  <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5">
+                    <p className="text-sm text-muted-foreground italic">No notes yet. Click Edit to add context or paste the job description.</p>
                   </div>
                 )}
               </>
@@ -737,7 +746,7 @@ function JobDetailContent() {
           <div className="lg:col-span-2 space-y-5 lg:sticky lg:top-6">
 
             {/* Actions */}
-            <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-5 py-4">
+            <div className="bg-card rounded-2xl border border-border shadow-sm px-5 py-4">
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => setEditing((e) => !e)} variant={editing ? "secondary" : "default"}>
                   {editing ? "Cancel edit" : "Edit"}
@@ -750,10 +759,10 @@ function JobDetailContent() {
                     {moveOpen && (
                       <>
                         <div className="fixed inset-0 z-[100]" onClick={() => setMoveOpen(false)} />
-                        <div className="absolute top-full left-0 mt-1 z-[101] bg-white dark:bg-p-dark-surface border border-p-linen dark:border-p-dark-mid rounded-xl shadow-xl min-w-[140px] py-1">
+                        <div className="absolute top-full left-0 mt-1 z-[101] bg-card border border-border rounded-xl shadow-xl min-w-[140px] py-1">
                           {moveSections.map((s) => (
                             <button key={s.value} onClick={() => { moveJob(s.value); setMoveOpen(false); }}
-                              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-white hover:bg-p-linen dark:hover:bg-p-dark-mid"
+                              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-white hover:bg-muted"
                             >
                               → {s.label}
                             </button>
@@ -767,16 +776,19 @@ function JobDetailContent() {
             </div>
 
             {/* Chat */}
-            <div className="bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-5 py-4">
+            <div className="bg-card rounded-2xl border border-border shadow-sm px-5 py-4">
               <div className="mb-3">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">Discuss this role</p>
-                <p className="text-xs text-p-dusk dark:text-gray-500 mt-0.5">Interview prep, offer analysis, fit questions</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Interview prep, offer analysis, fit questions</p>
               </div>
               <JobChat jobContext={jobContext} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
             </div>
 
           </div>
         </div>
+
+        {/* Footer */}
+        <AppFooter />
       </div>
     </div>
   );
@@ -786,7 +798,7 @@ function JobDetailContent() {
 
 export default function JobPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen text-gray-400 text-sm">Loading…</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-screen text-muted-foreground text-sm">Loading…</div>}>
       <JobDetailContent />
     </Suspense>
   );

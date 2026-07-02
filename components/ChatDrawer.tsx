@@ -279,7 +279,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
 
   return (
     <div className={cn(
-      "bg-white dark:bg-p-dark-surface rounded-2xl border border-p-linen dark:border-p-dark-mid shadow-sm px-3 py-3 md:px-5 md:py-4",
+      "bg-card rounded-2xl border border-border shadow-sm px-3 py-3 md:px-5 md:py-4",
       !collapsed && "md:max-h-[calc(100vh-2rem)] md:flex md:flex-col md:overflow-hidden"
     )}>
       {/* Header */}
@@ -292,12 +292,12 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
           className="flex items-start gap-2 text-left flex-1 min-w-0 group"
         >
           {collapsed
-            ? <ChevronDownIcon className="w-4 h-4 mt-0.5 shrink-0 text-stone-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" />
-            : <ChevronUpIcon className="w-4 h-4 mt-0.5 shrink-0 text-stone-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" />
+            ? <ChevronDownIcon className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
+            : <ChevronUpIcon className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
           }
           <span>
             <p className="text-sm font-semibold text-gray-900 dark:text-white">Your Deckhand</p>
-            <p className="text-xs text-stone-400 dark:text-gray-500">Manage your job board by chat</p>
+            <p className="text-xs text-muted-foreground">Manage your job board by chat</p>
           </span>
         </button>
         {!collapsed && hasDraftOrThread && (
@@ -323,7 +323,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
               <button
                 onClick={cueJobUrlEvaluation}
                 title="Paste a job posting URL and I'll fetch the description, summarize the role, and help decide where it belongs."
-                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-p-blue dark:text-p-accent-inv bg-p-blue/5 dark:bg-p-accent-inv/10 border border-p-blue/15 dark:border-p-accent-inv/20 hover:bg-p-blue/10 dark:hover:bg-p-accent-inv/20 transition-colors"
+                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-primary bg-primary/5 border border-primary/15 hover:bg-primary/10 transition-colors"
               >
                 <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6.5 9.5 9.5 6.5M7 4l.7-.7a2.5 2.5 0 0 1 3.5 3.5L10.5 7.5M9 12l-.7.7a2.5 2.5 0 0 1-3.5-3.5L5.5 8.5" />
@@ -334,7 +334,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
               <button
                 onClick={() => send(GHOST_SCAN_PROMPT)}
                 title="Scan your board for ghost jobs — stale applications, listings stuck in screening, and roles that keep getting reposted."
-                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-p-blue dark:text-p-accent-inv bg-p-linen/60 dark:bg-p-dark-mid/60 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
+                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-primary bg-muted/60 hover:bg-muted transition-colors"
               >
                 <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="6.5" cy="6.5" r="4.5" />
@@ -346,7 +346,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
               <button
                 onClick={() => send(SCRAPE_PROMPT)}
                 title="Scan configured career pages for new qualifying roles and add them to the pending review queue."
-                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-p-blue dark:text-p-accent-inv bg-p-linen/60 dark:bg-p-dark-mid/60 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors"
+                className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-primary bg-muted/60 hover:bg-muted transition-colors"
               >
                 <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 4h12M2 8h12M2 12h8" />
@@ -354,13 +354,13 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
                 Scrape for new jobs
               </button>
 
-              <p className="text-xs text-stone-400 dark:text-gray-500 text-center pt-1">Or try asking:</p>
+              <p className="text-xs text-muted-foreground text-center pt-1">Or try asking:</p>
               {SUGGESTIONS_DESKTOP.map((s, i) => (
                 <button
                   key={s}
                   onClick={() => send(s)}
                   className={cn(
-                    "block w-full text-left px-3 py-2 rounded-lg text-xs text-p-blue dark:text-p-accent-inv bg-p-linen/60 dark:bg-p-dark-mid/60 hover:bg-p-linen dark:hover:bg-p-dark-mid transition-colors",
+                    "block w-full text-left px-3 py-2 rounded-lg text-xs text-primary bg-muted/60 hover:bg-muted transition-colors",
                     i >= SUGGESTIONS_MOBILE.length && "hidden sm:block"
                   )}
                 >
@@ -376,8 +376,8 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
                 className={cn(
                   "max-w-[85%] rounded-2xl px-3.5 py-2",
                   m.role === "user"
-                    ? "bg-p-blue dark:bg-p-accent-inv text-white rounded-tr-sm"
-                    : "bg-p-linen dark:bg-p-dark-mid text-gray-900 dark:text-white rounded-tl-sm"
+                    ? "bg-primary text-white rounded-tr-sm"
+                    : "bg-muted text-gray-900 dark:text-white rounded-tl-sm"
                 )}
               >
                 {m.role === "user"
@@ -391,7 +391,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
           {pending && (
             <div className="flex flex-col gap-1.5">
               {statusLines.map((line, i) => (
-                <p key={i} className="text-[11px] text-stone-400 dark:text-gray-500 italic px-1">{line}</p>
+                <p key={i} className="text-[11px] text-muted-foreground italic px-1">{line}</p>
               ))}
               <div className="flex items-center gap-1 px-1">
                 {[0, 150, 300].map((delay) => (
@@ -406,13 +406,13 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
           )}
 
           {error && (
-            <p className="text-xs text-red-500 dark:text-red-400 px-1">{error}</p>
+            <p className="text-xs text-destructive px-1">{error}</p>
           )}
 
           {evaluation && !pending && (
             <div className="flex flex-col items-start gap-1.5">
               {evaluationMissingIdentity(evaluation) && (
-                <p className="text-xs text-stone-400 dark:text-gray-500 px-1">
+                <p className="text-xs text-muted-foreground px-1">
                   Couldn&apos;t detect company/role automatically — add this job manually from the board instead.
                 </p>
               )}
@@ -431,7 +431,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
         {/* Input */}
         <form
           onSubmit={handleSubmit}
-          className="mt-3 pt-3 border-t border-p-linen dark:border-p-dark-mid flex gap-2 shrink-0"
+          className="mt-3 pt-3 border-t border-border flex gap-2 shrink-0"
         >
           <input
             ref={inputRef}
@@ -439,7 +439,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
             onChange={(e) => setInput(e.target.value)}
             disabled={pending}
             placeholder="Message…"
-            className="flex-1 min-w-0 text-sm bg-p-linen dark:bg-p-dark-mid rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-p-blue/40 dark:focus:ring-p-accent-inv/40 disabled:opacity-50 transition"
+            className="flex-1 min-w-0 text-sm bg-muted rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 transition"
           />
           <Button type="submit" disabled={!input.trim()} loading={pending}>
             Send
