@@ -38,7 +38,13 @@ function resolveEndpoint(config: AiConfig): { url: string; headers: Record<strin
   };
 }
 
-function buildBody(config: AiConfig, messages: GenerateRequest["messages"], stream: boolean): string {
+function isGeminiEndpoint(config: AiConfig): boolean {
+  const provider = (process.env.AI_PROVIDER as AiConfig["provider"]) ?? config.provider ?? "anthropic";
+  const baseUrl = process.env.AI_BASE_URL || config.base_url || "";
+  return provider === "gemini" || baseUrl.includes("generativelanguage.googleapis.com");
+}
+
+export function buildBody(config: AiConfig, messages: GenerateRequest["messages"], stream: boolean): string {
   const model = process.env.AI_MODEL ?? config.model ?? "claude-sonnet-4-6";
   const provider = (process.env.AI_PROVIDER as AiConfig["provider"]) ?? config.provider ?? "anthropic";
 
@@ -54,7 +60,14 @@ function buildBody(config: AiConfig, messages: GenerateRequest["messages"], stre
     });
   }
 
-  return JSON.stringify({ model, messages, stream, max_tokens: 2048 });
+  // Gemini 2.5+ models think by default, and that reasoning shares the same
+  // max_tokens budget as the visible answer — on longer prompts the thinking
+  // can consume the whole budget and leave an empty/truncated response.
+  const extraBody = isGeminiEndpoint(config)
+    ? { extra_body: { google: { thinking_config: { thinking_budget: 0 } } } }
+    : {};
+
+  return JSON.stringify({ model, messages, stream, max_tokens: 2048, ...extraBody });
 }
 
 export async function fetchGenerate(
