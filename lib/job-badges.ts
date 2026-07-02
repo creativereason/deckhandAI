@@ -31,18 +31,25 @@ const GROUP_VARIANTS: Record<"local" | "remote", BadgeVariant> = {
   remote: "tone-neutral",
 };
 
+const FALLBACK_VARIANT: BadgeVariant = "tone-neutral";
+
+function lookupVariant<T extends string>(variants: Record<T, BadgeVariant>, value: T): BadgeVariant {
+  const normalized = String(value).toLowerCase().trim() as T;
+  return variants[normalized] ?? FALLBACK_VARIANT;
+}
+
 export function fitBadgeVariant(fit: JobFit): BadgeVariant {
-  return FIT_VARIANTS[fit];
+  return lookupVariant(FIT_VARIANTS, fit);
 }
 
 export function statusBadgeVariant(status: JobStatus): BadgeVariant {
-  return STATUS_VARIANTS[status];
+  return lookupVariant(STATUS_VARIANTS, status);
 }
 
 export function typeBadgeVariant(type: JobType): BadgeVariant {
-  return TYPE_VARIANTS[type];
+  return lookupVariant(TYPE_VARIANTS, type);
 }
 
 export function groupBadgeVariant(group: "local" | "remote"): BadgeVariant {
-  return GROUP_VARIANTS[group];
+  return lookupVariant(GROUP_VARIANTS, group);
 }
