@@ -23,6 +23,7 @@ import AppFooter from "@/components/AppFooter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job-badges";
+import { fetchAiSummary, fetchSummarizerConfigured } from "@/lib/summarize-job-client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,10 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
   const [salary, setSalary] = useState(job.salary ?? "");
   const [url, setUrl] = useState(job.url ?? "");
   const [notes, setNotes] = useState(job.notes ?? "");
+  const [aiSummary, setAiSummary] = useState(job.aiSummary ?? "");
+  const [summarizerReady, setSummarizerReady] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryHint, setSummaryHint] = useState("");
   const [status, setStatus] = useState((job as AppliedJob).status ?? "applied");
   const [date, setDate] = useState((job as AppliedJob).date ?? "");
   const [fit, setFit] = useState((job as ProspectJob).fit ?? "good");
@@ -82,12 +87,39 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    fetchSummarizerConfigured().then(setSummarizerReady);
+  }, []);
+
+  async function regenerateSummary() {
+    if (!company || !role) return;
+    setSummarizing(true);
+    setSummaryHint("");
+    try {
+      const summary = await fetchAiSummary({
+        company,
+        role,
+        salary: salary || undefined,
+        notes: notes || undefined,
+      });
+      if (!summary) {
+        setSummaryHint("Nothing to summarize yet — add some notes first.");
+        return;
+      }
+      setAiSummary(summary);
+    } catch {
+      setSummaryHint("Could not generate a summary — check AI settings.");
+    } finally {
+      setSummarizing(false);
+    }
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
 
-    const updates: Record<string, unknown> = { company, role, salary, url, notes, type: jobType };
+    const updates: Record<string, unknown> = { company, role, salary, url, notes, aiSummary, type: jobType };
     if (isApplied) { updates.status = status; updates.date = date; }
     if (isProspect) { updates.fit = fit; }
 
@@ -163,6 +195,35 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
       <Field label="Job posting URL">
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className={inputCls} />
       </Field>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className={cn(labelCls, "mb-0")}>At-a-glance summary</label>
+          {summarizerReady && (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={regenerateSummary}
+              disabled={!company || !role}
+              loading={summarizing}
+              className="text-xs"
+            >
+              {summarizing ? "Generating…" : "↻ Regenerate"}
+            </Button>
+          )}
+        </div>
+        <textarea
+          value={aiSummary}
+          onChange={(e) => setAiSummary(e.target.value)}
+          rows={2}
+          placeholder="1–2 sentence summary of the role and company"
+          className={cn(inputCls, "resize-none")}
+        />
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {summaryHint || "Shown on the board card and in the header above."}
+        </p>
+      </div>
 
       <Field label="Notes">
         <textarea
@@ -614,6 +675,7 @@ function JobDetailContent() {
     effectiveType ? `Type: ${effectiveType}` : null,
     foundJob.salary ? `Salary: ${foundJob.salary}` : null,
     foundJob.url ? `URL: ${foundJob.url}` : null,
+    foundJob.aiSummary ? `Role summary: ${foundJob.aiSummary}` : null,
     foundJob.notes ? `Notes: ${foundJob.notes}` : null,
     prospectJob?.scoreRationale ? `AI Assessment: ${prospectJob.scoreRationale}` : null,
   ].filter(Boolean).join("\n");
@@ -652,12 +714,17 @@ function JobDetailContent() {
         {/* Header — full width */}
         <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5 mb-5">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
               <span className="leading-none mt-0.5 shrink-0 flex items-center"><SignalIcon icon={icon} size={28} /></span>
-              <div className="min-w-0">
+              <div className="min-w-0 shrink-0 max-w-[24rem]">
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{foundJob.company}</h1>
                 <p className="text-base text-muted-foreground mt-0.5">{foundJob.role}</p>
               </div>
+              {foundJob.aiSummary && (
+                <p className="hidden sm:block flex-1 min-w-0 text-sm text-muted-foreground leading-relaxed border-l-2 border-border pl-4 mt-0.5">
+                  {foundJob.aiSummary}
+                </p>
+              )}
             </div>
             {foundJob.url && (
               <a href={foundJob.url} target="_blank" rel="noreferrer"
@@ -671,6 +738,11 @@ function JobDetailContent() {
               </a>
             )}
           </div>
+          {foundJob.aiSummary && (
+            <p className="sm:hidden text-sm text-muted-foreground leading-relaxed mt-3">
+              {foundJob.aiSummary}
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {isApplied && appliedJob!.status && (
               <Chip label={appliedJob!.status} variant={statusBadgeVariant(appliedJob!.status)} />

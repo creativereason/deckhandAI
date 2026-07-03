@@ -10,7 +10,8 @@
     "screenshots": "node scripts/screenshots.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "backfill:summaries": "node scripts/backfill-ai-summaries.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

@@ -2,6 +2,7 @@ import type { JobSection } from "@/lib/jobs";
 import { readJobs, writeJobs } from "@/lib/jobs-repository";
 import { readProfile } from "@/lib/profile-server";
 import { fetchJobDetails } from "@/lib/job-fetcher";
+import { generateAiSummary } from "@/lib/job-summary-server";
 
 // ─── Anthropic tool definitions ───────────────────────────────────────────────
 
@@ -37,6 +38,11 @@ export const ANTHROPIC_TOOLS = [
         url: { type: "string" },
         salary: { type: "string" },
         notes: { type: "string" },
+        aiSummary: {
+          type: "string",
+          description:
+            "1–2 sentence at-a-glance summary of what the role is and what the company does. Provide it when you have job description context; it is generated automatically otherwise.",
+        },
         fit: {
           type: "string",
           enum: ["strong", "good", "caution", "weak"],
@@ -66,7 +72,7 @@ export const ANTHROPIC_TOOLS = [
         role: { type: "string" },
         updates: {
           type: "object",
-          description: "Key-value pairs of fields to update. Updatable fields: status, notes, salary, fit, scoreRationale, date, url. When updating fit always include scoreRationale explaining why.",
+          description: "Key-value pairs of fields to update. Updatable fields: status, notes, salary, fit, scoreRationale, aiSummary, date, url. When updating fit always include scoreRationale explaining why. aiSummary is a 1–2 sentence at-a-glance summary of the role and company.",
         },
       },
       required: ["section", "company", "role", "updates"],
@@ -224,6 +230,14 @@ export async function executeTool(
         const sec = section as JobSection;
         if (!jobs[sec]) return JSON.stringify({ error: `Unknown section: ${sec}` });
         const job = normalizeForSection(rest, sec);
+        if (!job.aiSummary) {
+          job.aiSummary = await generateAiSummary({
+            company: String(job.company ?? ""),
+            role: String(job.role ?? ""),
+            salary: typeof job.salary === "string" ? job.salary : undefined,
+            notes: typeof job.notes === "string" ? job.notes : undefined,
+          });
+        }
         (jobs[sec] as unknown as AnyJob[]).unshift(job);
         await writeJobs(jobs);
         return JSON.stringify({ ok: true, added: job, detailUrl: jobDetailHref(sec, job.company, job.role) });

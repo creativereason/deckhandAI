@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   JobSection,
@@ -14,6 +14,7 @@ import {
 import { getAppliedIcon, getProspectIcon, getSignalLabel } from "@/lib/job-signal";
 import { SignalIcon } from "@/components/SignalIcon";
 import { Button } from "@/components/ui/button";
+import { fetchAiSummary, fetchSummarizerConfigured } from "@/lib/summarize-job-client";
 
 type JobRecord = AppliedJob | ProspectJob | PassedJob;
 type Board = "applied" | "prospects" | "passed";
@@ -57,6 +58,7 @@ function jobToForm(section: JobSection, job?: JobRecord) {
     salary: job?.salary ?? "",
     notes: job?.notes ?? "",
     url: job?.url ?? "",
+    aiSummary: job?.aiSummary ?? "",
     fit: "good" as JobFit,
     status: "applied" as JobStatus,
     date: new Date().toISOString().split("T")[0],
@@ -83,6 +85,7 @@ function buildJobPayload(section: JobSection, form: ReturnType<typeof jobToForm>
       salary: form.salary,
       notes: form.notes,
       url: form.url,
+      aiSummary: form.aiSummary,
       isGhost: (form as { isGhost?: boolean }).isGhost ?? false,
     };
   }
@@ -93,6 +96,7 @@ function buildJobPayload(section: JobSection, form: ReturnType<typeof jobToForm>
       salary: form.salary,
       notes: form.notes,
       url: form.url,
+      aiSummary: form.aiSummary,
     };
   }
   return {
@@ -102,6 +106,7 @@ function buildJobPayload(section: JobSection, form: ReturnType<typeof jobToForm>
     salary: form.salary,
     notes: form.notes,
     url: form.url,
+    aiSummary: form.aiSummary,
   };
 }
 
@@ -129,10 +134,42 @@ export default function JobFormModal({
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Form state already holds every field for every board (unused ones are just
+  // ignored by buildJobPayload), so a board change must NOT re-initialize the
+  // form — doing so silently discarded in-progress edits (see ROADMAP bug).
   function onBoardChange(next: Board) {
     setBoard(next);
-    const nextSection = sectionFromBoardAndType(next, jobType);
-    setForm(jobToForm(nextSection, job));
+  }
+
+  const [summarizerReady, setSummarizerReady] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryHint, setSummaryHint] = useState("");
+
+  useEffect(() => {
+    fetchSummarizerConfigured().then(setSummarizerReady);
+  }, []);
+
+  async function regenerateSummary() {
+    if (!form.company || !form.role) return;
+    setSummarizing(true);
+    setSummaryHint("");
+    try {
+      const summary = await fetchAiSummary({
+        company: form.company,
+        role: form.role,
+        salary: form.salary || undefined,
+        notes: form.notes || undefined,
+      });
+      if (!summary) {
+        setSummaryHint("Nothing to summarize yet — add some notes first.");
+        return;
+      }
+      set("aiSummary", summary);
+    } catch {
+      setSummaryHint("Could not generate a summary — check AI settings.");
+    } finally {
+      setSummarizing(false);
+    }
   }
 
   async function scoreFit() {
@@ -385,6 +422,35 @@ export default function JobFormModal({
               value={form.url}
               onChange={(e) => set("url", e.target.value)}
             />
+          </div>
+
+          <div className="col-span-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">At-a-glance summary</label>
+              {summarizerReady && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  onClick={regenerateSummary}
+                  disabled={!form.company || !form.role}
+                  loading={summarizing}
+                  className="text-xs"
+                >
+                  {summarizing ? "Generating…" : "↻ Regenerate"}
+                </Button>
+              )}
+            </div>
+            <textarea
+              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
+              rows={2}
+              placeholder="1–2 sentence summary of the role and company"
+              value={form.aiSummary}
+              onChange={(e) => set("aiSummary", e.target.value)}
+            />
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {summaryHint || "Shown on the board card and job detail header."}
+            </p>
           </div>
 
           <div className="col-span-2">

@@ -182,6 +182,9 @@ An always-visible panel on the board — stacked above the tracker on mobile, a 
 **Job fit evaluation**
 Each job in your tracker can be scored against your target titles, salary floor, and location preferences. The AI explains why a role is a strong fit or a caution, surfacing signal you'd otherwise have to read manually.
 
+**At-a-glance role summaries**
+Every job gets a 1–2 sentence AI summary of what the role is and what the company does — shown on the board card and in the job detail header, so you get the gist without re-reading notes or the full JD. Summaries are generated automatically when jobs are added; bring an existing board up to date once with `pnpm backfill:summaries`.
+
 **Cover letter generation**
 Drafts a tailored cover letter from your work history (`profile.json`) and the job description. Streamed in real time, editable inline, and exportable as a styled DOCX or print-to-PDF.
 

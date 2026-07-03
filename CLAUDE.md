@@ -63,13 +63,15 @@ data/
 
 ```json
 {
-  "applied": [{ "company": "", "role": "", "status": "applied|screening|interview|offer|declined", "date": "YYYY-MM-DD", "salary": "", "notes": "", "url": "" }],
-  "prospect": [{ "company": "", "role": "", "fit": "strong|good|caution|weak", "salary": "", "notes": "", "url": "" }],
+  "applied": [{ "company": "", "role": "", "status": "applied|screening|interview|offer|declined", "date": "YYYY-MM-DD", "salary": "", "notes": "", "url": "", "aiSummary": "" }],
+  "prospect": [{ "company": "", "role": "", "fit": "strong|good|caution|weak", "salary": "", "notes": "", "url": "", "aiSummary": "" }],
   "local": [],
   "staffing": [],
   "passed": []
 }
 ```
+
+`aiSummary` (optional, all sections) is an AI-generated 1–2 sentence "at a glance" summary of the role and company — distinct from `notes` (fluid, updated by scrapes and the user) and `scoreRationale` (fit assessment). It is generated automatically for new additions (evaluate-job flow, chat `add_job`, manual add) and shown on board cards and in the job detail header. Backfill existing boards once with `pnpm backfill:summaries` (see `scripts/backfill-ai-summaries.mjs`).
 
 ## Architecture Notes
 

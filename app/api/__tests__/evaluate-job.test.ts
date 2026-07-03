@@ -46,9 +46,9 @@ async function streamText(response: Response): Promise<string> {
   }
 }
 
-function resultEventData(stream: string): { notes?: string } {
+function resultEventData(stream: string): { notes?: string; aiSummary?: string } {
   const match = stream.match(/event: result\ndata: (.+)\n/);
-  return match ? JSON.parse(match[1]) as { notes?: string } : {};
+  return match ? JSON.parse(match[1]) as { notes?: string; aiSummary?: string } : {};
 }
 
 beforeEach(() => {
@@ -251,6 +251,79 @@ describe("/api/evaluate-job", () => {
 
     expect(result.notes).not.toContain("Skip to site index");
     expect(result.notes).toContain("No relevant job description found");
+  });
+
+  it("returns the model's aiSummary normalized to at most two clean sentences", async () => {
+    vi.stubEnv("AI_API_KEY", "test-key");
+    vi.mocked(fetchGenerate).mockResolvedValue(JSON.stringify({
+      company: "Acme",
+      role: "Designer",
+      salary: "",
+      notes: "",
+      fit: "good",
+      scoreRationale: "Solid fit.",
+      aiSummary: "**Acme builds logistics software.** The role owns end-to-end design. It also does other things.",
+    }));
+    vi.mocked(fetchJobDetails).mockResolvedValue({
+      ok: true,
+      url: "https://example.com/job",
+      text: "About the Role. Own end-to-end design for freight workflows across web and mobile platforms.",
+      retrieval_method: "fetch_only",
+      retrieval_limited: false,
+    });
+
+    const response = await POST(request("POST", {
+      url: "https://example.com/job",
+      company: "Acme",
+      role: "Designer",
+    }));
+    const result = resultEventData(await streamText(response));
+
+    expect(result.aiSummary).toBe("Acme builds logistics software. The role owns end-to-end design.");
+  });
+
+  it("derives a heuristic aiSummary from the page sections when AI is not configured", async () => {
+    vi.mocked(fetchJobDetails).mockResolvedValue({
+      ok: true,
+      url: "https://example.com/job",
+      text: "About Acme. Acme builds logistics software for freight teams worldwide, helping them route shipments more efficiently every day. About the Role. Own end-to-end design for a cross-functional team shipping enterprise workflows. Partner with product and engineering to deliver measurable outcomes.",
+      retrieval_method: "fetch_only",
+      retrieval_limited: false,
+    });
+
+    const response = await POST(request("POST", {
+      url: "https://example.com/job",
+      company: "Acme",
+      role: "Designer",
+    }));
+    const result = resultEventData(await streamText(response));
+
+    expect(result.aiSummary).toContain("Own end-to-end design for a cross-functional team");
+  });
+
+  it("persists aiSummary on the pending job when the evaluation is confirmed", async () => {
+    vi.mocked(readJobs).mockResolvedValue({
+      applied: [],
+      prospect: [],
+      local: [],
+      staffing: [],
+      passed: [],
+      pending: [],
+    });
+
+    const response = await PUT(request("PUT", {
+      company: "Acme",
+      role: "Designer",
+      url: "https://example.com/job",
+      aiSummary: "Acme builds logistics software. The role owns end-to-end design.",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(writeJobs).toHaveBeenCalledWith(expect.objectContaining({
+      pending: [expect.objectContaining({
+        aiSummary: "Acme builds logistics software. The role owns end-to-end design.",
+      })],
+    }));
   });
 
   it("adds an evaluated job to pending only on confirmation", async () => {

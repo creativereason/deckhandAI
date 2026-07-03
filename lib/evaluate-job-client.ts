@@ -8,6 +8,7 @@ export type EvaluationPayload = {
   notes: string;
   fit: string;
   scoreRationale: string;
+  aiSummary?: string;
   retrieval: {
     retrieval_method: string;
     retrieval_limited: boolean;

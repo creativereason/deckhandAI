@@ -96,6 +96,14 @@ function TypeBadge({ type }: { type?: JobType }) {
   );
 }
 
+// At-a-glance line on a board card (M14): the AI role summary when present,
+// falling back to notes for jobs that haven't been backfilled yet.
+function CardSummary({ aiSummary, notes }: { aiSummary?: string; notes?: string }) {
+  const text = aiSummary || notes;
+  if (!text) return null;
+  return <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{text}</p>;
+}
+
 function NewChip() {
   return (
     <Badge variant="tone-highlight" className="ml-1.5 rounded uppercase tracking-wide">
@@ -398,7 +406,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
               {j.date && <span>{j.date}</span>}
               {j.salary && <span>{j.salary}</span>}
             </div>
-            {j.notes && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
+            <CardSummary aiSummary={j.aiSummary} notes={j.notes} />
             <div className="mt-2 pt-2 border-t border-border">
               <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
                 onGenerate={onGenerate ? () => onGenerate(j) : undefined}
@@ -481,7 +489,7 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
             </div>
             <p className="text-base text-gray-700 dark:text-gray-200 mt-1 leading-snug">{j.role}</p>
             {j.salary && <p className="text-sm text-muted-foreground mt-1">{j.salary}</p>}
-            {j.notes && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
+            <CardSummary aiSummary={j.aiSummary} notes={j.notes} />
             {j.scoreRationale && <p className="text-xs text-muted-foreground italic mt-1.5 leading-relaxed">{j.scoreRationale}</p>}
             <div className="mt-2 pt-2 border-t border-border">
               <RowActions onEdit={() => onEdit(j)} onGenerate={() => onGenerate(j)} moveSections={otherSections}
@@ -558,7 +566,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExport
             </div>
             <p className="text-base text-gray-700 dark:text-gray-300 mt-1 leading-snug">{j.role}</p>
             {j.salary && <p className="text-sm text-muted-foreground mt-1">{j.salary}</p>}
-            {j.notes && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{j.notes}</p>}
+            <CardSummary aiSummary={j.aiSummary} notes={j.notes} />
             <div className="mt-2 pt-2 border-t border-border">
               <RowActions onEdit={() => onEdit(j)} moveSections={otherSections} onMove={(t) => handleMove(t, j)}
                 onGenerate={onGenerate ? () => onGenerate(j) : undefined}

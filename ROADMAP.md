@@ -411,23 +411,23 @@ The board redesign (M12) surfaced how much of the UI still leaned on the origina
 
 ---
 
-## M14 — AI Role Summary (planned)
+## M14 — AI Role Summary (shipped)
 
 A third, distinct piece of AI-generated context per job — separate from the user's own `notes` and from the fit-assessment `scoreRationale` — that concisely summarizes what the role actually is (scope, team, key responsibilities) in the candidate's terms. Surfaced in two places: on the job card (board view) and in the top bar of the job detail page, so the gist of a role is visible without opening notes or re-reading the full JD.
 
-- [ ] Schema: add a new field (e.g. `aiSummary: string`) to the relevant job types in `lib/jobs.ts` and to `data/jobs.sample.json`; update `CLAUDE.md`'s jobs.json schema docs
-- [ ] Decide the generation trigger — likely piggybacks on the existing evaluate-job flow (`app/api/evaluate-job/route.ts` already extracts company/role summaries for notes; a role summary could reuse that extraction rather than a second AI call) vs. a dedicated on-demand "Summarize this role" action for jobs added by other paths (chat `add_job`, scrape)
-- [ ] Card UI: short (1–2 line, truncated) summary shown on the Applied/Prospect/Passed card, below the role title
-- [ ] Job detail UI: summary shown in the top bar/header area of `app/job/page.tsx`, distinct from the Notes card
-- [ ] Backfill story for existing jobs with no `aiSummary` — likely just render nothing until the user regenerates, no bulk migration
+- [x] Schema: `aiSummary?: string` on all four job types in `lib/jobs.ts`, populated in `data/jobs.sample.json`, documented in `CLAUDE.md`'s jobs.json schema
+- [x] Generation triggers — every write path fills it automatically: the evaluate-job flow asks the extraction model for `aiSummary` in the same call (with a heuristic first-prose-sentence fallback when AI is unconfigured), chat `add_job` accepts it from the model and generates server-side when omitted, and manual adds via `POST /api/jobs` generate best-effort from notes. Shared domain lives in `lib/job-summary.ts` (prompt + `normalizeAiSummary`: two-sentence clamp, markdown/quote stripping, idempotent) with `lib/job-summary-server.ts` wrapping config + provider
+- [x] Card UI: `CardSummary` shows the summary (line-clamped) in place of notes on Applied/Prospect/Passed cards, falling back to notes for jobs not yet backfilled
+- [x] Job detail UI: summary rendered in the header card beside the company/role title (stacked below on small screens), and included in the job chat context
+- [x] Backfill: `pnpm backfill:summaries` (`scripts/backfill-ai-summaries.mjs`) — one-time, idempotent (skips jobs that already have a summary, skips jobs with no notes), `--dry-run` supported, writes a single commit to the data repo
 
-**Effort:** TBD — needs a design pass on the generation trigger before estimating
+**Effort:** ~1 day
 
 ---
 
 ## Known Bugs
 
-- [ ] **Edit modal section change discards notes** — if a user edits the notes field then changes the section dropdown in the job edit modal, the notes changes are lost (section change re-initializes form state). Verified still present in `components/JobFormModal.tsx`'s `onBoardChange` — not touched by the card-view/board redesign.
+- [x] **Edit modal section change discards notes** — fixed alongside M14's edit-form pass: `onBoardChange` no longer re-initializes form state on a board switch (the form already holds every field for every board; section-specific fields are simply ignored by the payload builder), so in-progress edits survive changing the section dropdown.
 - [ ] **Moved-to-Passed job retains stale `status` field** — when a job moves from Applied to Passed, `app/api/jobs/route.ts`'s `normalizeJobForSection` never strips the old `status` value from the underlying record. The card-view rewrite means the Passed card no longer *renders* a status badge, so the original visible symptom ("shows Declined") likely no longer reproduces — but the stale field is still written to `jobs.json`, which is worth cleaning up regardless of whether it's currently user-visible.
 
 ---

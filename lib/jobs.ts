@@ -17,6 +17,8 @@ export interface AppliedJob {
   url: string;
   type?: JobType;
   isGhost?: boolean;
+  /** AI-generated 1–2 sentence "at a glance" summary of the role and company (M14). */
+  aiSummary?: string;
 }
 
 export interface ProspectJob {
@@ -29,6 +31,7 @@ export interface ProspectJob {
   type?: JobType;
   isNew?: boolean;
   scoreRationale?: string;
+  aiSummary?: string;
 }
 
 export interface PassedJob {
@@ -38,6 +41,7 @@ export interface PassedJob {
   notes: string;
   url: string;
   type?: JobType;
+  aiSummary?: string;
 }
 
 export interface PendingJob {
@@ -50,6 +54,7 @@ export interface PendingJob {
   scrapeDate: string;
   fit?: JobFit;
   scoreRationale?: string;
+  aiSummary?: string;
 }
 
 export interface JobsData {
