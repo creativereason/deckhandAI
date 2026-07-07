@@ -146,6 +146,29 @@ describe("buildResumeHtml", () => {
     expect(html).toContain("Best in Show");
   });
 
+  it("appends a company-specific portfolio link when both portfolio_url and company are given", () => {
+    // Arrange
+    const profile: ProfileData = { portfolio_url: "https://example.com/p/" };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate, { company: "Acme Corp" });
+
+    // Assert
+    expect(html).toContain("Portfolio: https://example.com/p/acme-corp");
+  });
+
+  it("renders tailoredProfileBullets as a list instead of the summary paragraph when provided", () => {
+    // Arrange
+    const profile: ProfileData = { summary: "Should not appear." };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate, { tailoredProfileBullets: ["Tailored bullet one."] });
+
+    // Assert
+    expect(html).toContain("<li>Tailored bullet one.</li>");
+    expect(html).not.toContain("Should not appear.");
+  });
+
   it("embeds Inter as a real base64 font-face, not a bare font-family reference", () => {
     // Arrange
     const profile: ProfileData = {};
