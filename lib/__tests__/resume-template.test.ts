@@ -92,7 +92,7 @@ describe("buildResumeHtml", () => {
     expect(html).not.toContain("<checkout>");
   });
 
-  it("wraps each experience role in a break-inside: avoid block", () => {
+  it("wraps each experience role's title and employer row in a break-inside: avoid block", () => {
     // Arrange
     const profile: ProfileData = {
       experience: [
@@ -105,6 +105,27 @@ describe("buildResumeHtml", () => {
 
     // Assert
     expect(html).toMatch(/break-inside:\s*avoid/);
+    expect(html).toMatch(/<div class="role-head">\s*<h3>Staff Designer<\/h3>/);
+  });
+
+  it("keeps the bullet list outside the break-inside: avoid wrapper so a long role can split across pages", () => {
+    // Arrange
+    const profile: ProfileData = {
+      experience: [
+        { company: "Anthropic", role: "Staff Designer", start: "2023-01", end: null, bullets: ["Did a thing."] },
+      ],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+    const headOpen = html.indexOf('<div class="role-head">');
+    const listOpen = html.indexOf("<ul>");
+
+    // Assert
+    expect(headOpen).toBeGreaterThan(-1);
+    expect(listOpen).toBeGreaterThan(headOpen);
+    const headSection = html.slice(headOpen, listOpen);
+    expect(headSection).not.toContain("<li>");
   });
 
   it("omits education, awards, and skills sections when those fields are absent", () => {

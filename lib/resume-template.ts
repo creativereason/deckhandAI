@@ -71,7 +71,8 @@ function renderStyle(): string {
   .role-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-top: 2px; }
   .employer { font-size: 12.5px; font-weight: 500; color: var(--secondary); }
   .dates { font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
-  .role-block { break-inside: avoid; margin-bottom: 16px; }
+  .role-block { margin-bottom: 16px; }
+  .role-head { break-inside: avoid; }
   ul { padding-left: 18px; margin: 5px 0 0; }
   li { font-size: 13px; line-height: 1.55; margin-bottom: 4px; }
   p.body-text { font-size: 13px; line-height: 1.55; margin: 0; }
@@ -132,10 +133,12 @@ function renderExperienceSection(profile: ProfileData, tailoredBullets?: Record<
     const key = `${job.company}::${job.role}`;
     const bullets = tailoredBullets?.[key] ?? job.bullets;
     return `<div class="role-block">
-  <h3>${escapeHtml(job.role)}</h3>
-  <div class="role-row">
-    <span class="employer">${escapeHtml(job.company)}</span>
-    <span class="dates">${formatDateRange(job.start, job.end)}</span>
+  <div class="role-head">
+    <h3>${escapeHtml(job.role)}</h3>
+    <div class="role-row">
+      <span class="employer">${escapeHtml(job.company)}</span>
+      <span class="dates">${formatDateRange(job.start, job.end)}</span>
+    </div>
   </div>
   <ul>${bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
 </div>`;
