@@ -5,7 +5,7 @@ import { resolveExportStyle } from "@/lib/config";
 import { buildResumeHtml } from "@/lib/resume-template";
 import { renderResumePdf } from "@/lib/resume-pdf";
 import type { ProfileData } from "@/lib/docx-resume";
-import { companySlug } from "@/lib/resume-format";
+import { resumeFilenameSlug } from "@/lib/resume-format";
 
 export const runtime = "nodejs";
 
@@ -50,7 +50,8 @@ export async function POST(req: NextRequest) {
 
     const company = body.company ?? "company";
     const role = body.role ?? "role";
-    const filename = `resume-${companySlug(`${company}-${role}`)}.pdf`;
+    const name = profile.name ?? candidate.name;
+    const filename = `${resumeFilenameSlug(name, company, role)}.pdf`;
 
     return new NextResponse(pdfBuffer as unknown as BodyInit, {
       headers: {

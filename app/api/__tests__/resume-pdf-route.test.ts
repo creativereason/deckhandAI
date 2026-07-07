@@ -70,7 +70,7 @@ describe("POST /api/export/resume-pdf", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
-    expect(response.headers.get("Content-Disposition")).toContain("resume-acme-corp-design-engineer.pdf");
+    expect(response.headers.get("Content-Disposition")).toContain("jordan-rivera-acme-corp-design-engineer.pdf");
   });
 
   it("returns 500 with an error message when profile.json fails to parse", async () => {

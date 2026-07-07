@@ -12,3 +12,12 @@ export function formatDateRange(start: string, end: string | null): string {
 export function companySlug(company: string): string {
   return company.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
+
+export function resumeFilenameSlug(name: string | undefined, company: string, role: string): string {
+  return [name, company, role]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}

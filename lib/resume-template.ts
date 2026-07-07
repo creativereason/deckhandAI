@@ -59,7 +59,7 @@ function renderStyle(): string {
     --muted: ${TOKENS.muted}; --accent: ${TOKENS.accent}; --rule: ${TOKENS.rule};
   }
   * { box-sizing: border-box; }
-  body { font-family: 'Inter', -apple-system, sans-serif; color: var(--body); margin: 0; padding: 0.7in; }
+  body { font-family: 'Inter', -apple-system, sans-serif; color: var(--body); margin: 0; padding: 0; }
   h1 { font-size: 27px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; line-height: 1.2; margin: 0; }
   .headline { font-size: 13px; font-weight: 500; color: var(--accent); letter-spacing: 0.01em; margin: 6px 0 0; }
   .contact { font-size: 12px; font-weight: 400; color: var(--secondary); line-height: 1.6; margin: 8px 0 0; }
