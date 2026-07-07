@@ -42,6 +42,31 @@ function InlineParsed({ text }: { text: string }) {
   return <>{parseInline(text)}</>;
 }
 
+// Collects consecutive list-item lines matching itemPattern, tolerating a
+// single blank line between items — LLMs commonly emit "loose" lists with
+// blank-line spacing, and treating that as list-end would split one list
+// into several single-item lists (each <ol> restarting its own count at 1).
+function collectListItems(
+  lines: string[],
+  startIndex: number,
+  itemPattern: RegExp,
+  stripPattern: RegExp
+): { items: string[]; nextIndex: number } {
+  const items: string[] = [];
+  let i = startIndex;
+  while (i < lines.length) {
+    if (itemPattern.test(lines[i])) {
+      items.push(lines[i].replace(stripPattern, ""));
+      i++;
+    } else if (lines[i].trim() === "" && i + 1 < lines.length && itemPattern.test(lines[i + 1])) {
+      i++; // blank line between items — keep the list going
+    } else {
+      break;
+    }
+  }
+  return { items, nextIndex: i };
+}
+
 interface Props {
   text: string;
   className?: string;
@@ -96,13 +121,52 @@ export function MarkdownContent({ text, className }: Props) {
       continue;
     }
 
-    // Unordered list
-    if (/^[-*]\s/.test(line)) {
-      const items: string[] = [];
-      while (i < lines.length && /^[-*]\s/.test(lines[i])) {
-        items.push(lines[i].replace(/^[-*]\s+/, ""));
+    // Pipe table — a header row, a separator row of only -, :, |, and
+    // whitespace, then one or more body rows, all starting with "|".
+    if (/^\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\|?[\s:|-]+\|?$/.test(lines[i + 1].trim())) {
+      const splitRow = (row: string) =>
+        row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+
+      const headerCells = splitRow(line);
+      i += 2; // skip header + separator
+      const bodyRows: string[][] = [];
+      while (i < lines.length && /^\|.*\|\s*$/.test(lines[i])) {
+        bodyRows.push(splitRow(lines[i]));
         i++;
       }
+      nodes.push(
+        <div key={key++} className="my-2 overflow-x-auto">
+          <table className="text-sm border-collapse">
+            <thead>
+              <tr>
+                {headerCells.map((cell, idx) => (
+                  <th key={idx} className="text-left font-semibold px-2 py-1 border-b border-stone-300 dark:border-white/20 whitespace-nowrap">
+                    <InlineParsed text={cell} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {bodyRows.map((row, rIdx) => (
+                <tr key={rIdx}>
+                  {row.map((cell, cIdx) => (
+                    <td key={cIdx} className="px-2 py-1 border-b border-stone-100 dark:border-white/10 align-top">
+                      <InlineParsed text={cell} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
+    // Unordered list
+    if (/^[-*]\s/.test(line)) {
+      const { items, nextIndex } = collectListItems(lines, i, /^[-*]\s/, /^[-*]\s+/);
+      i = nextIndex;
       nodes.push(
         <ul key={key++} className="my-1.5 ml-4 space-y-0.5 list-disc list-outside">
           {items.map((it, idx) => (
@@ -117,11 +181,8 @@ export function MarkdownContent({ text, className }: Props) {
 
     // Ordered list
     if (/^\d+\.\s/.test(line)) {
-      const items: string[] = [];
-      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
-        items.push(lines[i].replace(/^\d+\.\s+/, ""));
-        i++;
-      }
+      const { items, nextIndex } = collectListItems(lines, i, /^\d+\.\s/, /^\d+\.\s+/);
+      i = nextIndex;
       nodes.push(
         <ol key={key++} className="my-1.5 ml-4 space-y-0.5 list-decimal list-outside">
           {items.map((it, idx) => (

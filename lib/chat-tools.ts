@@ -221,8 +221,16 @@ export async function executeTool(
 
       case "list_jobs": {
         const section = input.section as string | undefined;
-        if (!section || section === "all") return JSON.stringify(jobs, null, 2);
-        return JSON.stringify((jobs[section as JobSection] ?? []), null, 2);
+        const withDetailUrl = (sec: JobSection, list: AnyJob[]) =>
+          list.map((job) => ({ ...job, detailUrl: jobDetailHref(sec, job.company, job.role) }));
+
+        if (!section || section === "all") {
+          const withUrls = Object.fromEntries(
+            (Object.keys(jobs) as JobSection[]).map((sec) => [sec, withDetailUrl(sec, jobs[sec] as unknown as AnyJob[])])
+          );
+          return JSON.stringify(withUrls, null, 2);
+        }
+        return JSON.stringify(withDetailUrl(section as JobSection, (jobs[section as JobSection] ?? []) as unknown as AnyJob[]), null, 2);
       }
 
       case "add_job": {
