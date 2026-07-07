@@ -79,7 +79,7 @@ function formatEducation(profile: Profile): string {
   return profile.education
     .map((e) => {
       const honors = e.honors ? `, ${e.honors}` : "";
-      return `${e.degree} — ${e.institution} (${e.graduated}${honors})`;
+      return `${e.degree} — ${e.institution} (${e.graduated ?? ""}${honors})`;
     })
     .join("\n");
 }

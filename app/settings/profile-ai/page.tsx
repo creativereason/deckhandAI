@@ -261,15 +261,15 @@ export default function ProfileAiSettings() {
           <div key={i} className="grid grid-cols-2 gap-3 border border-border rounded-xl p-4">
             <div className="col-span-2">
               <label className={LABEL}>Institution</label>
-              <input className={INPUT} value={edu.institution} onChange={(e) => updateEdu(i, { institution: e.target.value })} />
+              <input className={INPUT} value={edu.institution ?? ""} onChange={(e) => updateEdu(i, { institution: e.target.value })} />
             </div>
             <div>
               <label className={LABEL}>Degree</label>
-              <input className={INPUT} value={edu.degree} onChange={(e) => updateEdu(i, { degree: e.target.value })} />
+              <input className={INPUT} value={edu.degree ?? ""} onChange={(e) => updateEdu(i, { degree: e.target.value })} />
             </div>
             <div>
               <label className={LABEL}>Graduated</label>
-              <input className={INPUT} placeholder="2020-05" value={edu.graduated} onChange={(e) => updateEdu(i, { graduated: e.target.value })} />
+              <input className={INPUT} placeholder="2020-05" value={edu.graduated ?? ""} onChange={(e) => updateEdu(i, { graduated: e.target.value })} />
             </div>
             <div className="col-span-2 flex items-end justify-between gap-3">
               <div className="flex-1">

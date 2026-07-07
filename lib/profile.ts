@@ -9,7 +9,7 @@ export interface ExperienceEntry {
 export interface EducationEntry {
   institution: string;
   degree: string;
-  graduated: string;
+  graduated: string | null;
   honors?: string;
 }
 
