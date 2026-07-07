@@ -1,6 +1,31 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ProfileData } from "@/lib/docx-resume";
 import type { CandidateConfig } from "@/lib/config";
 import { formatDateRange, companySlug } from "@/lib/resume-format";
+
+const FONT_DIR = join(process.cwd(), "assets", "fonts", "inter");
+
+// Computed once per process — base64-encoding on every request would be wasted work.
+let cachedFontFaces: string | null = null;
+
+function loadFontFaces(): string {
+  if (cachedFontFaces) return cachedFontFaces;
+  const regular = readFileSync(join(FONT_DIR, "Inter-Regular.woff2")).toString("base64");
+  const semibold = readFileSync(join(FONT_DIR, "Inter-SemiBold.woff2")).toString("base64");
+  cachedFontFaces = `
+  @font-face {
+    font-family: 'Inter';
+    font-weight: 400;
+    src: url(data:font/woff2;base64,${regular}) format('woff2');
+  }
+  @font-face {
+    font-family: 'Inter';
+    font-weight: 600;
+    src: url(data:font/woff2;base64,${semibold}) format('woff2');
+  }`;
+  return cachedFontFaces;
+}
 
 export interface ResumeHtmlOptions {
   tailoredBullets?: Record<string, string[]>;
@@ -28,6 +53,7 @@ function escapeHtml(text: string): string {
 
 function renderStyle(): string {
   return `<style>
+  ${loadFontFaces()}
   :root {
     --ink: ${TOKENS.ink}; --body: ${TOKENS.body}; --secondary: ${TOKENS.secondary};
     --muted: ${TOKENS.muted}; --accent: ${TOKENS.accent}; --rule: ${TOKENS.rule};

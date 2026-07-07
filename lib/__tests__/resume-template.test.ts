@@ -145,4 +145,16 @@ describe("buildResumeHtml", () => {
     expect(html).toContain("State University");
     expect(html).toContain("Best in Show");
   });
+
+  it("embeds Inter as a real base64 font-face, not a bare font-family reference", () => {
+    // Arrange
+    const profile: ProfileData = {};
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toMatch(/@font-face/);
+    expect(html).toMatch(/data:font\/woff2;base64,[A-Za-z0-9+/]{100,}/);
+  });
 });
