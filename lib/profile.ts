@@ -22,6 +22,7 @@ export interface Profile {
   name?: string;
   title?: string;
   summary?: string;
+  summaryBullets?: string[];
   strengths?: string[];
   strengthGroups?: StrengthGroup[];
   experience?: ExperienceEntry[];

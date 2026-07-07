@@ -91,10 +91,10 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
   useEffect(() => {
     fetch("/api/profile", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d: Record<string, unknown> & { name?: string; title?: string; summary?: string; experience?: TailoredResume["experience"] }) => {
+      .then((d: Record<string, unknown> & { name?: string; title?: string; summary?: string; summaryBullets?: string[]; experience?: TailoredResume["experience"] }) => {
         setOriginalProfile({
           title: d.title as string | undefined,
-          profileBullets: typeof d.summary === "string" ? [d.summary] : undefined,
+          profileBullets: d.summaryBullets?.length ? d.summaryBullets : (typeof d.summary === "string" && d.summary ? [d.summary] : undefined),
           experience: d.experience,
         });
         if (d.name) setResumeName(d.name);

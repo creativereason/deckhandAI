@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Profile, ExperienceEntry, EducationEntry, StrengthGroup } from "@/lib/profile";
+import { linesToBullets } from "@/lib/resume-format";
 
 const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
 const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
@@ -18,9 +19,13 @@ export default function ProfileAiSettings() {
     fetch("/api/profile")
       .then((r) => r.json())
       .then((data: Profile) => {
-        const migrated = !data.strengthGroups?.length && data.strengths?.length
-          ? { ...data, strengthGroups: [{ label: "Strengths", items: data.strengths }] }
-          : data;
+        let migrated = data;
+        if (!migrated.strengthGroups?.length && migrated.strengths?.length) {
+          migrated = { ...migrated, strengthGroups: [{ label: "Strengths", items: migrated.strengths }] };
+        }
+        if (!migrated.summaryBullets?.length && migrated.summary) {
+          migrated = { ...migrated, summaryBullets: linesToBullets(migrated.summary) };
+        }
         setProfile(migrated);
         setLoading(false);
       })
@@ -148,8 +153,14 @@ export default function ProfileAiSettings() {
             <input className={INPUT} placeholder="Senior UX Designer / Director" value={profile.title ?? ""} onChange={(e) => update({ title: e.target.value })} />
           </div>
           <div className="col-span-2">
-            <label className={LABEL}>Professional summary</label>
-            <textarea rows={3} className={INPUT} placeholder="2–3 sentences used in generated cover letters" value={profile.summary ?? ""} onChange={(e) => update({ summary: e.target.value })} />
+            <label className={LABEL}>Profile summary (bullet points, one per line)</label>
+            <textarea
+              rows={4}
+              className={INPUT}
+              placeholder={"20+ years leading enterprise UX, product strategy, and design systems\nProven track record building and scaling high-performing design orgs"}
+              value={(profile.summaryBullets ?? []).join("\n")}
+              onChange={(e) => update({ summaryBullets: linesToBullets(e.target.value) })}
+            />
           </div>
           <div>
             <label className={LABEL}>Portfolio URL</label>

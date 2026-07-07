@@ -157,6 +157,37 @@ describe("buildResumeHtml", () => {
     expect(html).toContain("Portfolio: https://example.com/p/acme-corp");
   });
 
+  it("renders profile.summaryBullets as a bullet list instead of a paragraph", () => {
+    // Arrange
+    const profile: ProfileData = {
+      summary: "Should not appear as a paragraph.",
+      summaryBullets: ["20+ years leading enterprise UX", "Proven track record building teams"],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toContain("<li>20+ years leading enterprise UX</li>");
+    expect(html).toContain("<li>Proven track record building teams</li>");
+    expect(html).not.toContain("Should not appear as a paragraph.");
+    expect(html).not.toContain('<p class="body-text">');
+  });
+
+  it("prefers tailoredProfileBullets over summaryBullets when both are given", () => {
+    // Arrange
+    const profile: ProfileData = {
+      summaryBullets: ["Untailored bullet."],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate, { tailoredProfileBullets: ["Tailored bullet."] });
+
+    // Assert
+    expect(html).toContain("<li>Tailored bullet.</li>");
+    expect(html).not.toContain("Untailored bullet.");
+  });
+
   it("renders tailoredProfileBullets as a list instead of the summary paragraph when provided", () => {
     // Arrange
     const profile: ProfileData = { summary: "Should not appear." };

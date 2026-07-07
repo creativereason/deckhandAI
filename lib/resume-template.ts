@@ -106,7 +106,7 @@ ${titleHtml}
 }
 
 function renderProfileSection(profile: ProfileData, tailoredProfileBullets?: string[]): string {
-  const bullets = tailoredProfileBullets ?? [];
+  const bullets = tailoredProfileBullets ?? profile.summaryBullets ?? [];
   if (!bullets.length && !profile.summary) return "";
   const body = bullets.length
     ? `<ul>${bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>`

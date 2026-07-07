@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDateRange, companySlug } from "@/lib/resume-format";
+import { formatDateRange, companySlug, linesToBullets } from "@/lib/resume-format";
 
 describe("companySlug", () => {
   it("returns an empty string for empty input", () => {
@@ -95,5 +95,73 @@ describe("formatDateRange", () => {
 
     // Assert
     expect(range).toBe("December 2011 – January 2012");
+  });
+});
+
+describe("linesToBullets", () => {
+  it("returns an empty array for an empty string", () => {
+    // Arrange
+    const text = "";
+
+    // Act
+    const bullets = linesToBullets(text);
+
+    // Assert
+    expect(bullets).toEqual([]);
+  });
+
+  it("returns a single bullet for one plain line", () => {
+    // Arrange
+    const text = "20+ years leading enterprise UX";
+
+    // Act
+    const bullets = linesToBullets(text);
+
+    // Assert
+    expect(bullets).toEqual(["20+ years leading enterprise UX"]);
+  });
+
+  it("strips a leading bullet marker and surrounding whitespace from each line", () => {
+    // Arrange
+    const text = "•    20+ years leading enterprise UX\n•    Proven track record building teams";
+
+    // Act
+    const bullets = linesToBullets(text);
+
+    // Assert
+    expect(bullets).toEqual(["20+ years leading enterprise UX", "Proven track record building teams"]);
+  });
+
+  it("drops blank lines between bullets", () => {
+    // Arrange
+    const text = "• First point\n\n• Second point\n   \n• Third point";
+
+    // Act
+    const bullets = linesToBullets(text);
+
+    // Assert
+    expect(bullets).toEqual(["First point", "Second point", "Third point"]);
+  });
+
+  it("strips hyphen and asterisk bullet markers as well as the dot leader character", () => {
+    // Arrange
+    const text = "- Dash bullet\n* Asterisk bullet\n· Dot bullet";
+
+    // Act
+    const bullets = linesToBullets(text);
+
+    // Assert
+    expect(bullets).toEqual(["Dash bullet", "Asterisk bullet", "Dot bullet"]);
+  });
+
+  it("does not strip a hyphen that is part of the sentence rather than a leading marker", () => {
+    // Arrange
+    const text = "Twenty-five years of cross-functional leadership";
+
+    // Act
+    const bullets = linesToBullets(text);
+
+    // Assert
+    expect(bullets).toEqual(["Twenty-five years of cross-functional leadership"]);
   });
 });

@@ -16,6 +16,7 @@ export interface ProfileData {
   name?: string;
   title?: string;
   summary?: string;
+  summaryBullets?: string[];
   strengths?: string[];
   strengthGroups?: { label: string; items: string[] }[];
   experience?: {
@@ -138,7 +139,7 @@ export async function generateResumeDOCX(
   // ── Summary ────────────────────────────────────────────────────────────────
 
   const summaryParagraphs: Paragraph[] = [];
-  const profileBullets = tailoredProfileBullets ?? [];
+  const profileBullets = tailoredProfileBullets ?? profile.summaryBullets ?? [];
   if (profileBullets.length || profile.summary) {
     summaryParagraphs.push(sectionHeader("Profile"));
     if (profileBullets.length) {

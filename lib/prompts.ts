@@ -97,7 +97,7 @@ export function buildSystemPrompt(profile: Profile): string {
 CANDIDATE PROFILE
 Name: ${profile.name ?? ""}
 Title: ${profile.title ?? ""}
-Summary: ${profile.summary ?? ""}
+Summary: ${profile.summaryBullets?.length ? profile.summaryBullets.map((b) => `- ${b}`).join("\n") : profile.summary ?? ""}
 Core strengths: ${strengths}
 ${profile.portfolio_url ? `Portfolio: ${profile.portfolio_url}${profile.portfolio_password ? ` (pw: ${profile.portfolio_password})` : ""}` : ""}
 
