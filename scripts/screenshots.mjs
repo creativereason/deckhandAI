@@ -209,7 +209,7 @@ function applyTheme(ctx, theme) {
 }
 
 async function newLoggedInPage(browser, theme = "light") {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ deviceScaleFactor: 2 });
   await applyTheme(ctx, theme);
   await ctx.request.post(`${BASE}/api/auth/login`, { data: { password: PASSWORD } });
   const page = await ctx.newPage();
@@ -222,7 +222,7 @@ async function newLoggedInPage(browser, theme = "light") {
 
 async function captureLogin(browser, dir, theme = "light") {
   console.log("  → login");
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ deviceScaleFactor: 2 });
   await applyTheme(ctx, theme);
   const page = await ctx.newPage();
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 90_000 });
@@ -260,10 +260,26 @@ async function captureChat(browser, dir, theme = "light") {
     await page.getByRole("button", { name: "Send" }).click();
     // Assistant replies render in a bubble with this corner-radius class —
     // wait for one to appear rather than a fixed sleep, since AI latency varies.
-    await page.locator(".rounded-tl-sm").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
+    // Generous timeout: this reply involves a list-jobs tool call before the model can answer.
+    await page.locator(".rounded-tl-sm").first().waitFor({ state: "visible", timeout: 45_000 }).catch(() => {});
     await sleep(400);
     await page.screenshot({ path: join(dir, "chat-with-reply--desktop.png") });
     console.log("    chat-with-reply--desktop.png");
+
+    // Second example question — shows off the assistant's stats/reporting angle,
+    // distinct from the job-lookup question above.
+    console.log("  → chat (second question: applied-in-June stat)");
+    await input.fill("How many did I apply to in June?");
+    await sleep(200);
+    await page.screenshot({ path: join(dir, "chat-with-stats-input--desktop.png") });
+    console.log("    chat-with-stats-input--desktop.png");
+
+    await page.getByRole("button", { name: "Send" }).click();
+    // Second assistant bubble — wait for it specifically, not just "any" bubble.
+    await page.locator(".rounded-tl-sm").nth(1).waitFor({ state: "visible", timeout: 45_000 }).catch(() => {});
+    await sleep(400);
+    await page.screenshot({ path: join(dir, "chat-with-stats-reply--desktop.png") });
+    console.log("    chat-with-stats-reply--desktop.png");
   }
 
   await ctx.close();
@@ -354,6 +370,38 @@ async function captureJobDetail(browser, dir, { company, role, section, label },
   await ctx.close();
 }
 
+// Uses one of the job page's real prompt-chip labels (see buildPrompts in
+// app/job/page.tsx) rather than typed free text, so the screenshot matches
+// an actual clickable affordance in the UI.
+async function captureJobDetailChat(browser, dir, { company, role, section, label }, theme = "light") {
+  console.log(`  → job detail chat: ${company} (${label})`);
+  const { page, ctx } = await newLoggedInPage(browser, theme);
+  const url = `${BASE}/job?company=${encodeURIComponent(company)}&role=${encodeURIComponent(role)}&section=${section}`;
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90_000 });
+  await sleep(500);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addStyleTag({ content: HIDE_DEV_UI }).catch(() => {});
+
+  const prompt = page.getByRole("button", { name: "Should I apply to this role?" });
+  if (await prompt.isVisible().catch(() => false)) {
+    await prompt.click();
+    // Catch the pending state (bouncing "thinking" dots) before the reply lands.
+    await sleep(300);
+    mkdirSync(dir, { recursive: true });
+    await page.screenshot({ path: join(dir, `job-chat-${label}-waiting--desktop.png`) });
+    console.log(`    job-chat-${label}-waiting--desktop.png`);
+
+    console.log("  → job chat (waiting for AI reply)");
+    // Generous timeout — this reply is scored against the full profile + job context.
+    await page.locator(".rounded-tl-sm").first().waitFor({ state: "visible", timeout: 45_000 }).catch(() => {});
+    await sleep(400);
+    await page.screenshot({ path: join(dir, `job-chat-${label}-reply--desktop.png`) });
+    console.log(`    job-chat-${label}-reply--desktop.png`);
+  }
+
+  await ctx.close();
+}
+
 async function captureSettings(browser, dir, theme = "light") {
   console.log("  → settings");
   const { page, ctx } = await newLoggedInPage(browser, theme);
@@ -392,7 +440,7 @@ async function captureSettingsExport(browser, dir, theme = "light") {
 
 async function captureLoginWithForgot(browser, dir, theme = "light") {
   console.log("  → login (forgot password open)");
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ deviceScaleFactor: 2 });
   await applyTheme(ctx, theme);
   const page = await ctx.newPage();
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 90_000 });
@@ -404,7 +452,7 @@ async function captureLoginWithForgot(browser, dir, theme = "light") {
 }
 
 async function captureOnboardingSteps(browser, dir, theme = "light") {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ deviceScaleFactor: 2 });
   await applyTheme(ctx, theme);
   await ctx.request.post(`${BASE}/api/auth/login`, { data: { password: PASSWORD } });
   const page = await ctx.newPage();
@@ -481,6 +529,7 @@ async function runPersona(browser, persona) {
   }
   if (persona.prospectJob) {
     await captureJobDetail(browser, dir, { ...persona.prospectJob, label: "prospect" }, theme);
+    await captureJobDetailChat(browser, dir, { ...persona.prospectJob, label: "prospect" }, theme);
   }
 
   // Settings pages — only needed once, use design persona
