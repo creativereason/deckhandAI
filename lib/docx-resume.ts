@@ -17,6 +17,7 @@ export interface ProfileData {
   title?: string;
   summary?: string;
   strengths?: string[];
+  strengthGroups?: { label: string; items: string[] }[];
   experience?: {
     company: string;
     role: string;
@@ -155,7 +156,20 @@ export async function generateResumeDOCX(
   // ── Strengths / Skills ─────────────────────────────────────────────────────
 
   const strengthsParagraphs: Paragraph[] = [];
-  if (profile.strengths?.length) {
+  if (profile.strengthGroups?.length) {
+    strengthsParagraphs.push(sectionHeader("Skills"));
+    for (const group of profile.strengthGroups) {
+      strengthsParagraphs.push(
+        new Paragraph({
+          children: [
+            run(`${group.label}: `, { bold: true, color: body }),
+            run(group.items.join(", "), { color: body }),
+          ],
+          spacing: { before: 40, after: 40 },
+        })
+      );
+    }
+  } else if (profile.strengths?.length) {
     strengthsParagraphs.push(sectionHeader("Core Strengths"));
     strengthsParagraphs.push(
       new Paragraph({

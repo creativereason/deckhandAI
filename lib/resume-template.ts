@@ -115,6 +115,12 @@ function renderProfileSection(profile: ProfileData, tailoredProfileBullets?: str
 }
 
 function renderSkillsSection(profile: ProfileData): string {
+  if (profile.strengthGroups?.length) {
+    const lines = profile.strengthGroups.map(
+      (group) => `<p class="skills-line"><b>${escapeHtml(group.label)}:</b> ${group.items.map(escapeHtml).join(", ")}</p>`
+    );
+    return `<h2>Skills</h2>\n${lines.join("\n")}`;
+  }
   if (!profile.strengths?.length) return "";
   const line = profile.strengths.map(escapeHtml).join(", ");
   return `<h2>Skills</h2>\n<p class="skills-line"><b>Strengths:</b> ${line}</p>`;

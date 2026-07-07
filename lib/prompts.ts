@@ -86,7 +86,9 @@ function formatEducation(profile: Profile): string {
 
 export function buildSystemPrompt(profile: Profile): string {
   const rules = (profile.writing_rules ?? []).map((r) => `- ${r}`).join("\n");
-  const strengths = (profile.strengths ?? []).join(", ");
+  const strengths = profile.strengthGroups?.length
+    ? profile.strengthGroups.map((g) => `${g.label}: ${g.items.join(", ")}`).join("; ")
+    : (profile.strengths ?? []).join(", ");
   const experience = formatExperience(profile);
   const education = formatEducation(profile);
 

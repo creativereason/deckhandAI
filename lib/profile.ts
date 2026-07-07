@@ -13,11 +13,17 @@ export interface EducationEntry {
   honors?: string;
 }
 
+export interface StrengthGroup {
+  label: string;
+  items: string[];
+}
+
 export interface Profile {
   name?: string;
   title?: string;
   summary?: string;
   strengths?: string[];
+  strengthGroups?: StrengthGroup[];
   experience?: ExperienceEntry[];
   education?: EducationEntry[];
   writing_rules?: string[];

@@ -169,6 +169,94 @@ describe("buildResumeHtml", () => {
     expect(html).not.toContain("Should not appear.");
   });
 
+  it("omits the Skills section when strengthGroups is an empty array and strengths is absent", () => {
+    // Arrange
+    const profile: ProfileData = { strengthGroups: [] };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).not.toContain("<h2>Skills</h2>");
+  });
+
+  it("renders a single strength group as a labeled skills line", () => {
+    // Arrange
+    const profile: ProfileData = {
+      strengthGroups: [{ label: "UX & Design", items: ["Product Design", "UX Research"] }],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toContain("<h2>Skills</h2>");
+    expect(html).toContain("<b>UX &amp; Design:</b> Product Design, UX Research");
+  });
+
+  it("renders multiple strength groups as separate lines in the given order", () => {
+    // Arrange
+    const profile: ProfileData = {
+      strengthGroups: [
+        { label: "UX & Design", items: ["Product Design"] },
+        { label: "Tools", items: ["Figma", "Claude Code"] },
+        { label: "Technical", items: ["NextJS", "Ruby"] },
+      ],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    const uxIndex = html.indexOf("<b>UX &amp; Design:</b>");
+    const toolsIndex = html.indexOf("<b>Tools:</b>");
+    const techIndex = html.indexOf("<b>Technical:</b>");
+    expect([uxIndex, toolsIndex, techIndex].every((i) => i > -1)).toBe(true);
+    expect(toolsIndex).toBeGreaterThan(uxIndex);
+    expect(techIndex).toBeGreaterThan(toolsIndex);
+    expect(html).toContain("Figma, Claude Code");
+  });
+
+  it("prefers strengthGroups over the flat strengths list when both are present", () => {
+    // Arrange
+    const profile: ProfileData = {
+      strengths: ["Old flat strength"],
+      strengthGroups: [{ label: "Tools", items: ["Figma"] }],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toContain("<b>Tools:</b> Figma");
+    expect(html).not.toContain("Old flat strength");
+  });
+
+  it("falls back to the flat strengths list under a Strengths label when strengthGroups is absent", () => {
+    // Arrange
+    const profile: ProfileData = { strengths: ["Design Systems", "DesignOps"] };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toContain("<b>Strengths:</b> Design Systems, DesignOps");
+  });
+
+  it("escapes HTML-significant characters in strength group labels and items", () => {
+    // Arrange
+    const profile: ProfileData = {
+      strengthGroups: [{ label: "R&D", items: ["<script>alert(1)</script>"] }],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toContain("R&amp;D");
+    expect(html).not.toContain("<script>");
+  });
+
   it("embeds Inter as a real base64 font-face, not a bare font-family reference", () => {
     // Arrange
     const profile: ProfileData = {};

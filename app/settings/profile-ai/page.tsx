@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { Profile, ExperienceEntry, EducationEntry } from "@/lib/profile";
+import type { Profile, ExperienceEntry, EducationEntry, StrengthGroup } from "@/lib/profile";
 
 const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
 const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
@@ -17,12 +17,32 @@ export default function ProfileAiSettings() {
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
-      .then((data) => { setProfile(data); setLoading(false); })
+      .then((data: Profile) => {
+        const migrated = !data.strengthGroups?.length && data.strengths?.length
+          ? { ...data, strengthGroups: [{ label: "Strengths", items: data.strengths }] }
+          : data;
+        setProfile(migrated);
+        setLoading(false);
+      })
       .catch(() => { toast.error("Failed to load profile"); setLoading(false); });
   }, []);
 
   function update(patch: Partial<Profile>) {
     setProfile((p) => ({ ...p, ...patch }));
+  }
+
+  function updateStrengthGroup(idx: number, patch: Partial<StrengthGroup>) {
+    const next = [...(profile.strengthGroups ?? [])];
+    next[idx] = { ...next[idx], ...patch };
+    update({ strengthGroups: next });
+  }
+
+  function addStrengthGroup() {
+    update({ strengthGroups: [...(profile.strengthGroups ?? []), { label: "", items: [] }] });
+  }
+
+  function removeStrengthGroup(idx: number) {
+    update({ strengthGroups: (profile.strengthGroups ?? []).filter((_, i) => i !== idx) });
   }
 
   function updateExp(idx: number, patch: Partial<ExperienceEntry>) {
@@ -140,14 +160,37 @@ export default function ProfileAiSettings() {
             <input className={INPUT} value={profile.portfolio_password ?? ""} onChange={(e) => update({ portfolio_password: e.target.value })} />
           </div>
         </div>
-        <div>
-          <label className={LABEL}>Core strengths (one per line)</label>
-          <textarea
-            rows={3}
-            className={INPUT}
-            value={(profile.strengths ?? []).join("\n")}
-            onChange={(e) => update({ strengths: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
-          />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className={LABEL}>Core strengths</label>
+            <Button onClick={addStrengthGroup} variant="link" size="sm" className="text-xs">+ Add skill group</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Optionally split strengths into labeled groups (e.g. UX &amp; Design, Tools, Technical). One group is fine too.
+          </p>
+          {(profile.strengthGroups ?? []).map((group, gi) => (
+            <div key={gi} className="border border-border rounded-xl p-3 space-y-2">
+              <div className="flex gap-2 items-center">
+                <input
+                  className={INPUT}
+                  placeholder="Group label, e.g. UX & Design"
+                  value={group.label}
+                  onChange={(e) => updateStrengthGroup(gi, { label: e.target.value })}
+                />
+                <button onClick={() => removeStrengthGroup(gi)} className={`${BTN_SM} shrink-0 hover:text-destructive`}>×</button>
+              </div>
+              <textarea
+                rows={2}
+                className={INPUT}
+                placeholder="Comma-separated items, e.g. Product Design, UX Research, Design Systems"
+                value={group.items.join(", ")}
+                onChange={(e) => updateStrengthGroup(gi, { items: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
+              />
+            </div>
+          ))}
+          {(profile.strengthGroups ?? []).length === 0 && (
+            <p className="text-sm text-muted-foreground">No skill groups yet.</p>
+          )}
         </div>
       </div>
 
