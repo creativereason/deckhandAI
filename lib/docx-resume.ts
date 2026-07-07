@@ -10,6 +10,7 @@ import {
 } from "docx";
 import type { CandidateConfig, ExportStyle } from "@/lib/config";
 import { resolveExportStyle } from "@/lib/config";
+import { formatDateRange, companySlug } from "@/lib/resume-format";
 
 export interface ProfileData {
   name?: string;
@@ -36,21 +37,6 @@ export interface ProfileData {
 
 function hexToDocxColor(hex: string): string {
   return hex.replace("#", "");
-}
-
-function formatDateRange(start: string, end: string | null): string {
-  const fmt = (d: string) => {
-    const [y, m] = d.split("-");
-    return new Date(Number(y), Number(m) - 1).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-  };
-  return `${fmt(start)} – ${end ? fmt(end) : "Present"}`;
-}
-
-function companySlug(company: string): string {
-  return company.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 export async function generateResumeDOCX(
