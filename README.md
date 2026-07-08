@@ -19,13 +19,26 @@ A self-hosted job search command center. Track prospects, scrape target company 
 
 ## Screenshots
 
-| Board | Job detail |
-|---|---|
-| ![Job tracker board](docs/screenshots/board--desktop.png) | ![Job detail page](docs/screenshots/job-detail-applied--desktop.png) |
+<img src="docs/screenshots/board-prospects-filtered--desktop.png" alt="Job tracker board, filtered to strong-fit prospects" width="820">
 
-| AI chat assistant | Onboarding wizard |
-|---|---|
-| ![AI chat open](docs/screenshots/chat-open--desktop.png) | ![Onboarding step 1](docs/screenshots/onboarding-step1-filled--desktop.png) |
+*Prospects filtered to strong-fit roles — one board for everything from first look to final decision.*
+
+<table>
+<tr>
+<td align="center" width="33%">
+<img src="docs/screenshots/job-detail-applied--desktop.png" alt="Job detail page" width="260"><br>
+Job detail
+</td>
+<td align="center" width="33%">
+<img src="docs/screenshots/chat-open--desktop.png" alt="AI chat assistant" width="260"><br>
+AI chat assistant
+</td>
+<td align="center" width="33%">
+<img src="docs/screenshots/onboarding-step1-filled--desktop.png" alt="Onboarding wizard" width="260"><br>
+Onboarding wizard
+</td>
+</tr>
+</table>
 
 ---
 
