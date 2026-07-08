@@ -61,8 +61,8 @@ function renderStyle(): string {
   * { box-sizing: border-box; }
   body { font-family: 'Inter', -apple-system, sans-serif; color: var(--body); margin: 0; padding: 0; }
   h1 { font-size: 27px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; line-height: 1.2; margin: 0; }
-  .headline { font-size: 13px; font-weight: 500; color: var(--accent); letter-spacing: 0.01em; margin: 4px 0 0; }
-  .contact { font-size: 12px; font-weight: 400; color: var(--secondary); line-height: 1.3; margin: 6px 0 0; }
+  .headline { font-size: 14px; font-weight: 500; color: var(--accent); letter-spacing: 0.01em; margin: 4px 8px 0 0; text-align: justify;}
+  .contact { font-size: 12px; font-weight: 400; color: var(--secondary); line-height: 1.3; margin: 6px 6px 0 0; }
   h2 {
     font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase;
     letter-spacing: 0.12em; padding-bottom: 5px; border-bottom: 1px solid var(--rule); margin: 17px 0 8px;
@@ -129,9 +129,10 @@ function renderSkillsSection(profile: ProfileData): string {
 
 function renderExperienceSection(profile: ProfileData, tailoredBullets?: Record<string, string[]>): string {
   if (!profile.experience?.length) return "";
-  const roles = profile.experience.map((job) => {
+  const roles = profile.experience.map((job, idx) => {
     const key = `${job.company}::${job.role}`;
-    const bullets = tailoredBullets?.[key] ?? job.bullets;
+    const bulletLimit = idx < 2 ? 4 : 2;
+    const bullets = tailoredBullets?.[key] ?? job.bullets.slice(0, bulletLimit);
     return `<div class="role-block">
   <div class="role-head">
     <h3>${escapeHtml(job.role)}</h3>

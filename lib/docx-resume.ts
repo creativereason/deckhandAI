@@ -188,9 +188,10 @@ export async function generateResumeDOCX(
   if (profile.experience?.length) {
     experienceParagraphs.push(sectionHeader("Experience"));
 
-    for (const job of profile.experience) {
+    for (const [idx, job] of profile.experience.entries()) {
       const jobKey = `${job.company}::${job.role}`;
-      const bullets = tailoredBullets?.[jobKey] ?? job.bullets;
+      const bulletLimit = idx < 2 ? 4 : 2;
+      const bullets = tailoredBullets?.[jobKey] ?? job.bullets.slice(0, bulletLimit);
 
       // Job title
       experienceParagraphs.push(

@@ -32,15 +32,19 @@ export async function POST(req: NextRequest) {
     const systemPrompt = buildSystemPrompt(profile);
 
     const experienceList = (profile.experience ?? [])
-      .map((e) => `- ${e.role} at ${e.company}`)
-      .join("\n");
+      .map((e, idx) => {
+        const budget = idx < 2 ? 4 : 2;
+        const pool = e.bullets.map((b, i) => `    ${i + 1}. ${b}`).join("\n");
+        return `- ${e.role} at ${e.company} (select ${budget} bullets)\n  Available pool:\n${pool}`;
+      })
+      .join("\n\n");
 
     const userPrompt = `Tailor this candidate's resume for the following role. Return only valid JSON — no prose, no markdown fences.
 
 ROLE: ${role} at ${company}
 ${jdText ? `\nJOB DESCRIPTION:\n${jdText.slice(0, 6000)}` : ""}
 
-CANDIDATE'S CURRENT EXPERIENCE POSITIONS (use exact company and role names):
+CANDIDATE'S EXPERIENCE — bullet pools per role (use exact company and role names):
 ${experienceList}
 
 Return a JSON object with this exact shape:
@@ -55,7 +59,7 @@ Return a JSON object with this exact shape:
 Rules:
 - title: mirror the target role's language, max 3 segments
 - profileBullets: reorder or lightly reword the existing 4 profile bullets to front-load what this JD emphasizes most — do not invent new ones
-- experience: reorder and lightly reword bullets to match JD keywords — do not fabricate experience; include all positions from the candidate's history
+- experience: for each role, choose the BEST bullets from its available pool and lightly reword them to match JD keywords — do not fabricate bullets not in the pool; include all positions; the two most recent roles get exactly 4 bullets, all older roles get exactly 2 bullets
 - Apply all writing style rules from the system prompt
 - Return only the JSON object, nothing else`;
 
