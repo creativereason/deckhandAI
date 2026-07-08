@@ -10,12 +10,15 @@ import {
 } from "docx";
 import type { CandidateConfig, ExportStyle } from "@/lib/config";
 import { resolveExportStyle } from "@/lib/config";
+import { formatDateRange, companySlug } from "@/lib/resume-format";
 
 export interface ProfileData {
   name?: string;
   title?: string;
   summary?: string;
+  summaryBullets?: string[];
   strengths?: string[];
+  strengthGroups?: { label: string; items: string[] }[];
   experience?: {
     company: string;
     role: string;
@@ -36,21 +39,6 @@ export interface ProfileData {
 
 function hexToDocxColor(hex: string): string {
   return hex.replace("#", "");
-}
-
-function formatDateRange(start: string, end: string | null): string {
-  const fmt = (d: string) => {
-    const [y, m] = d.split("-");
-    return new Date(Number(y), Number(m) - 1).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-  };
-  return `${fmt(start)} – ${end ? fmt(end) : "Present"}`;
-}
-
-function companySlug(company: string): string {
-  return company.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 export async function generateResumeDOCX(
@@ -151,7 +139,7 @@ export async function generateResumeDOCX(
   // ── Summary ────────────────────────────────────────────────────────────────
 
   const summaryParagraphs: Paragraph[] = [];
-  const profileBullets = tailoredProfileBullets ?? [];
+  const profileBullets = tailoredProfileBullets ?? profile.summaryBullets ?? [];
   if (profileBullets.length || profile.summary) {
     summaryParagraphs.push(sectionHeader("Profile"));
     if (profileBullets.length) {
@@ -169,7 +157,20 @@ export async function generateResumeDOCX(
   // ── Strengths / Skills ─────────────────────────────────────────────────────
 
   const strengthsParagraphs: Paragraph[] = [];
-  if (profile.strengths?.length) {
+  if (profile.strengthGroups?.length) {
+    strengthsParagraphs.push(sectionHeader("Skills"));
+    for (const group of profile.strengthGroups) {
+      strengthsParagraphs.push(
+        new Paragraph({
+          children: [
+            run(`${group.label}: `, { bold: true, color: body }),
+            run(group.items.join(", "), { color: body }),
+          ],
+          spacing: { before: 40, after: 40 },
+        })
+      );
+    }
+  } else if (profile.strengths?.length) {
     strengthsParagraphs.push(sectionHeader("Core Strengths"));
     strengthsParagraphs.push(
       new Paragraph({
@@ -187,9 +188,10 @@ export async function generateResumeDOCX(
   if (profile.experience?.length) {
     experienceParagraphs.push(sectionHeader("Experience"));
 
-    for (const job of profile.experience) {
+    for (const [idx, job] of profile.experience.entries()) {
       const jobKey = `${job.company}::${job.role}`;
-      const bullets = tailoredBullets?.[jobKey] ?? job.bullets;
+      const bulletLimit = idx < 2 ? 4 : 2;
+      const bullets = tailoredBullets?.[jobKey] ?? job.bullets.slice(0, bulletLimit);
 
       // Job title
       experienceParagraphs.push(

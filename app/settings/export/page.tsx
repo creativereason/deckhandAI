@@ -176,6 +176,26 @@ export default function ExportSettings() {
         </p>
       </div>
 
+      <div className={SECTION}>
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Styled PDF resume (beta)</h2>
+        <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
+          <input
+            type="checkbox"
+            className="w-4 h-4 accent-primary"
+            checked={(get("stylePdfEnabled") as boolean) ?? false}
+            onChange={(e) => updateExport("stylePdfEnabled", e.target.checked)}
+          />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            Enable styled PDF export
+          </span>
+        </label>
+        <p className="text-xs text-muted-foreground ml-6 -mt-2">
+          Renders a design-forward PDF resume (Inter, custom colors) alongside the DOCX export. Requires a
+          self-hosted deployment with <code className="bg-muted px-1 rounded">ENABLE_PLAYWRIGHT_FALLBACK=true</code> —
+          it will not work on Vercel or other serverless hosts.
+        </p>
+      </div>
+
       <div className="flex justify-end">
         <Button onClick={save} loading={saving} size="lg" className="px-5">
           Save export settings

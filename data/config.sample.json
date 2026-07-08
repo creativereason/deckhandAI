@@ -73,6 +73,7 @@
     "marginTopDxa": 864,
     "marginBottomDxa": 864,
     "marginLeftDxa": 1080,
-    "marginRightDxa": 1080
+    "marginRightDxa": 1080,
+    "stylePdfEnabled": false
   }
 }

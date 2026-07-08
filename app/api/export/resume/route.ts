@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { githubRead } from "@/lib/github";
 import { readConfig } from "@/lib/config-repository";
 import { generateResumeDOCX, type ProfileData } from "@/lib/docx-resume";
+import { resumeFilenameSlug } from "@/lib/resume-format";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,8 +26,8 @@ export async function POST(req: NextRequest) {
 
     const company = body.company ?? "company";
     const role = body.role ?? "role";
-    const slug = `${company}-${role}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    const filename = `resume-${slug}.docx`;
+    const name = profile.name ?? candidate.name;
+    const filename = `${resumeFilenameSlug(name, company, role)}.docx`;
 
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {

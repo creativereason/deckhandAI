@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { GenerationType } from "@/lib/prompts";
 import type { TailoredResume } from "@/app/api/tailor-resume/route";
+import { resumeFilenameSlug } from "@/lib/resume-format";
 
 async function triggerDownload(url: string, body: Record<string, unknown>, filename: string) {
   const res = await fetch(url, {
@@ -77,6 +78,8 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
   const [exporting, setExporting] = useState<string | null>(null);
   const [tailoring, setTailoring] = useState(false);
   const [tailored, setTailored] = useState<TailoredResume | null>(null);
+  const [stylePdfEnabled, setStylePdfEnabled] = useState(false);
+  const [resumeName, setResumeName] = useState<string | undefined>(undefined);
   const [originalProfile, setOriginalProfile] = useState<{
     title?: string;
     profileBullets?: string[];
@@ -88,12 +91,23 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
   useEffect(() => {
     fetch("/api/profile", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d: Record<string, unknown> & { title?: string; summary?: string; experience?: TailoredResume["experience"] }) => {
+      .then((d: Record<string, unknown> & { name?: string; title?: string; summary?: string; summaryBullets?: string[]; experience?: TailoredResume["experience"] }) => {
         setOriginalProfile({
           title: d.title as string | undefined,
-          profileBullets: typeof d.summary === "string" ? [d.summary] : undefined,
+          profileBullets: d.summaryBullets?.length ? d.summaryBullets : (typeof d.summary === "string" && d.summary ? [d.summary] : undefined),
           experience: d.experience,
         });
+        if (d.name) setResumeName(d.name);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/config", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { export?: { stylePdfEnabled?: boolean }; candidate?: { name?: string } }) => {
+        setStylePdfEnabled(!!d.export?.stylePdfEnabled);
+        setResumeName((prev) => prev ?? d.candidate?.name);
       })
       .catch(() => {});
   }, []);
@@ -184,6 +198,7 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
   }
 
   const slug = `${company}-${role}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const resumeSlug = resumeFilenameSlug(resumeName, company, role);
 
   async function exportCoverLetterDocx() {
     setExporting("cover-letter-docx");
@@ -200,8 +215,20 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
   async function exportResumeDocx() {
     setExporting("resume-docx");
     try {
-      await triggerDownload("/api/export/resume", { company, role }, `resume-${slug}.docx`);
+      await triggerDownload("/api/export/resume", { company, role }, `${resumeSlug}.docx`);
       toast.success("Resume downloaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function exportResumePdf() {
+    setExporting("resume-pdf");
+    try {
+      await triggerDownload("/api/export/resume-pdf", { company, role }, `${resumeSlug}.pdf`);
+      toast.success("Resume PDF downloaded");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed");
     } finally {
@@ -240,9 +267,30 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
       await triggerDownload(
         "/api/export/resume",
         { company, role, tailoredBullets, tailoredProfileBullets: tailored.profileBullets },
-        `resume-${slug}.docx`
+        `${resumeSlug}.docx`
       );
       toast.success("Tailored resume downloaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function exportTailoredResumePdf() {
+    if (!tailored) return;
+    setExporting("tailored-resume-pdf");
+    try {
+      const tailoredBullets: Record<string, string[]> = {};
+      for (const exp of tailored.experience) {
+        tailoredBullets[`${exp.company}::${exp.role}`] = exp.bullets;
+      }
+      await triggerDownload(
+        "/api/export/resume-pdf",
+        { company, role, tailoredBullets, tailoredProfileBullets: tailored.profileBullets },
+        `${resumeSlug}.pdf`
+      );
+      toast.success("Tailored resume PDF downloaded");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed");
     } finally {
@@ -301,8 +349,9 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
 
       {/* Job URL note */}
       {url && (
-        <p className="px-6 pb-3 text-xs text-muted-foreground">
-          JD: <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-foreground truncate">{url}</a>
+        <p className="px-6 pb-3 flex gap-1 min-w-0 text-xs text-muted-foreground">
+          <span className="shrink-0">JD:</span>
+          <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-foreground truncate min-w-0">{url}</a>
         </p>
       )}
 
@@ -375,16 +424,30 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
         <div className="flex gap-2 flex-wrap">
           {type === "tailor-resume" ? (
             tailored && (
-              <Button
-                onClick={exportTailoredResume}
-                disabled={!!exporting}
-                loading={exporting === "tailored-resume"}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                Download tailored resume .docx
-              </Button>
+              <>
+                <Button
+                  onClick={exportTailoredResume}
+                  disabled={!!exporting}
+                  loading={exporting === "tailored-resume"}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Download tailored resume .docx
+                </Button>
+                {stylePdfEnabled && (
+                  <Button
+                    onClick={exportTailoredResumePdf}
+                    disabled={!!exporting}
+                    loading={exporting === "tailored-resume-pdf"}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    Download tailored resume .pdf
+                  </Button>
+                )}
+              </>
             )
           ) : (
             <>
@@ -423,6 +486,18 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
               >
                 Resume .docx
               </Button>
+              {stylePdfEnabled && (
+                <Button
+                  onClick={exportResumePdf}
+                  disabled={!!exporting}
+                  loading={exporting === "resume-pdf"}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Resume .pdf
+                </Button>
+              )}
             </>
           )}
         </div>

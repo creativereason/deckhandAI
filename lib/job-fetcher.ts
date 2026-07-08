@@ -1,3 +1,5 @@
+import { isPlaywrightFallbackEnabled } from "@/lib/env";
+
 export type JobRetrievalMethod = "fetch_only" | "brave_search" | "playwright";
 
 export interface JobFetchResult {
@@ -78,10 +80,6 @@ const RETRIEVAL_LIMITED_WARNING =
   "Content could not be retrieved automatically. Copy the job description text and paste it directly.";
 const BROWSER_FALLBACK_NOT_READY_WARNING =
   "Browser-based retrieval is enabled but not available in this fetch-only slice. Copy the job description text and paste it directly.";
-
-function isPlaywrightFallbackEnabled(): boolean {
-  return process.env.ENABLE_PLAYWRIGHT_FALLBACK === "true";
-}
 
 async function loadPlaywright(): Promise<PlaywrightModule | null> {
   try {
