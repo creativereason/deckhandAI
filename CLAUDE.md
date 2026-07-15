@@ -226,11 +226,11 @@ Block any proposed change that violates these. Open an issue if the fix is out o
 All must pass before any PR is created. Run in order.
 
 ```bash
-pnpm tsc --noEmit          # type check — no errors
-pnpm lint                  # ESLint — no warnings
-pnpm test                  # Vitest — all tests pass
-pnpm test:coverage         # ≥80% lines on changed files
-pnpm e2e                   # Playwright — happy path green
+yarn tsc --noEmit          # type check — no errors
+yarn lint                  # ESLint — no warnings
+yarn test                  # Vitest — all tests pass
+yarn test:coverage         # ≥80% lines on changed files
+yarn e2e                   # Playwright — happy path green
 ```
 
 Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a confirmed false positive, documented inline with the specific reason.

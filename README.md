@@ -35,7 +35,7 @@ A self-hosted job search command center. Track prospects, scrape target company 
 # 1. Clone and install
 git clone https://github.com/creativereason/deckhandAI.git
 cd deckhandAI
-pnpm install
+yarn install
 
 # 2. Run the setup wizard
 node scripts/setup.mjs
@@ -43,7 +43,7 @@ node scripts/setup.mjs
 # and AI provider — then writes .env.local, data/config.json, and data/profile.json
 
 # 3. Run locally
-pnpm dev   # http://localhost:3000
+yarn dev   # http://localhost:3000
 ```
 
 **Want sample data to start from?** Run the data repo init script:
