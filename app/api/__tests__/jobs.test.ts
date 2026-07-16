@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "@/app/api/jobs/route";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DELETE, POST } from "@/app/api/jobs/route";
 import { readJobs, writeJobs } from "@/lib/jobs-repository";
 import { generateAiSummary } from "@/lib/job-summary-server";
 import type { JobsData } from "@/lib/jobs";
@@ -17,6 +17,14 @@ vi.mock("@/lib/job-summary-server", () => ({
 function request(body: unknown) {
   return new NextRequest("http://localhost/api/jobs", {
     method: "POST",
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function deleteRequest(body: unknown) {
+  return new NextRequest("http://localhost/api/jobs", {
+    method: "DELETE",
     body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },
   });
@@ -58,6 +66,36 @@ describe("POST /api/jobs", () => {
     expect(generateAiSummary).not.toHaveBeenCalled();
     expect(writeJobs).toHaveBeenCalledWith(expect.objectContaining({
       prospect: [expect.objectContaining({ aiSummary: "Provided summary." })],
+    }));
+  });
+});
+
+describe("DELETE /api/jobs (move to applied)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-16T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("stamps today's date when a job with no date moves into applied", async () => {
+    vi.mocked(readJobs).mockResolvedValue({
+      ...emptyJobs(),
+      prospect: [{ company: "Acme", role: "Designer", fit: "good", salary: "", notes: "", url: "" }],
+    });
+
+    const response = await DELETE(deleteRequest({
+      section: "prospect",
+      company: "Acme",
+      role: "Designer",
+      targetSection: "applied",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(writeJobs).toHaveBeenCalledWith(expect.objectContaining({
+      applied: [expect.objectContaining({ date: "2026-07-16" })],
     }));
   });
 });

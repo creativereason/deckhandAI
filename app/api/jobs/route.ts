@@ -11,7 +11,7 @@ function normalizeJobForSection(job: AnyJob, targetSection: JobSection): AnyJob 
   const normalized = { ...job };
   if (targetSection === "applied") {
     if (!normalized.status) normalized.status = "applied";
-    if (normalized.date === undefined) normalized.date = "";
+    if (!normalized.date) normalized.date = new Date().toISOString().slice(0, 10);
   } else if (targetSection === "prospect" || targetSection === "local" || targetSection === "staffing") {
     if (!normalized.fit) normalized.fit = "good";
   }
