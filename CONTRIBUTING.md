@@ -18,9 +18,9 @@ Thanks for your interest. deckhandAI is a personal tool built for public use —
 ```bash
 git clone https://github.com/creativereason/deckhandAI.git
 cd deckhandAI
-pnpm install
+yarn install
 node scripts/setup.mjs   # configure local env
-pnpm dev
+yarn dev
 ```
 
 ---
@@ -41,8 +41,15 @@ Check the [open issues](https://github.com/creativereason/deckhandAI/issues) fir
 
 - Open an issue before starting significant work so we can align on direction
 - Keep PRs focused — one thing per PR
-- Test your changes locally before opening a PR
 - `data/jobs.json`, `data/config.json`, and `data/profile.json` are gitignored — never commit personal data files
+
+Run all three before opening a PR. They must be clean:
+
+```bash
+yarn tsc --noEmit   # type check
+yarn lint           # ESLint
+yarn test           # Vitest
+```
 
 ---
 
@@ -50,7 +57,8 @@ Check the [open issues](https://github.com/creativereason/deckhandAI/issues) fir
 
 - TypeScript everywhere in `app/`, `components/`, and `lib/`
 - Scripts in `scripts/` use ES modules (`.mjs` or `"type": "module"`)
-- Run `pnpm lint` before submitting
+- Pure logic goes in a testable module with a test; I/O stays in a thin shell around it. `scripts/setup-lib.mjs` and `scripts/setup.mjs` are the reference example.
+- `CLAUDE.md` documents the fuller quality bar (TDD protocol, SOLID, domain boundaries) if you want the reasoning behind the shape of the code.
 
 ---
 

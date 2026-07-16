@@ -26,7 +26,8 @@ This file is always loaded. Use it to route tasks without re-reading the whole c
 | New API route | `lib/auth.ts`, `lib/jobs.ts`, `app/api/jobs/route.ts` | UI components |
 | UI component | That component's direct imports only | `lib/`, `app/api/` |
 | Scraping issue | `lib/scrape-filters.ts`, `lib/scrape-run.ts`, `lib/scrape-targets.ts` | Everything else |
-| Security review | `lib/auth.ts`, all `app/api/*/route.ts`, `middleware.ts` | UI components |
+| Security review | `lib/auth.ts`, all `app/api/*/route.ts`, `proxy.ts` | UI components |
+| Setup wizard change | `scripts/setup-lib.mjs` + its test | `scripts/setup.mjs` unless the change is I/O |
 
 If a task spans more than three files, stop and ask whether this is one slice or two.
 
@@ -34,13 +35,14 @@ If a task spans more than three files, stop and ask whether this is one slice or
 
 ## Domain Map
 
-Five bounded contexts. Do not let concerns cross these boundaries.
+Six bounded contexts. Do not let concerns cross these boundaries.
 
 ### Job Tracking
 **Files:** `lib/jobs.ts`, `app/api/jobs/route.ts`  
 **Types:** `AppliedJob`, `ProspectJob`, `PassedJob`, `PendingJob`, `JobsData`, `JobSection`, `JobStatus`, `JobFit`, `JobType`  
-**Invariant:** Every job is identified by `jobKey(company, role)` — the canonical composite key with `::` separator. Never concatenate company and role without using `jobKey()`.  
-**Open:** Repository interface (`IJobRepository`), Zod schemas, auth middleware guard.
+**Intended invariant:** Every job is identified by `jobKey(company, role)` — the canonical composite key with `::` separator.  
+**Reality (2026-07-15):** `jobKey()` does not exist yet. The `::` key is hand-rolled in two places — `lib/docx-resume.ts:194` and `components/ScrapeReviewQueue.tsx:37`. This is Slice 2. Until it lands, do not add a third call site; extract the function instead.  
+**Open:** `jobKey()` extraction, repository interface (`IJobRepository`), Zod schemas.
 
 ### Scraping
 **Files:** `lib/scrape-filters.ts`, `lib/scrape-run.ts`, `lib/scrape-targets.ts`, `app/api/scrape/`  
@@ -58,9 +60,17 @@ Five bounded contexts. Do not let concerns cross these boundaries.
 **Open:** `CandidateProfile` type, Zod validation schema.
 
 ### Auth
-**Files:** `lib/auth.ts`, `app/api/auth/login/route.ts`, `app/api/auth/logout/route.ts`, `app/middleware.ts`  
-**Invariant:** No API route is accessible without `session.authenticated === true`. This is enforced by `middleware.ts`, not by individual route handlers. `COOKIE_SECRET` must be a non-empty string — validated at startup, not at request time.  
-**Open:** `middleware.ts` (not yet created), startup validation.
+**Files:** `lib/auth.ts`, `app/api/auth/login/route.ts`, `app/api/auth/logout/route.ts`, `proxy.ts`  
+**Invariant:** No API route is accessible without `session.authenticated === true`. This is enforced centrally in `proxy.ts` at the repo root — not by individual route handlers. Next 16 renamed the middleware entrypoint to `proxy.ts`; there is no `middleware.ts` and there should not be one.  
+**Exemptions, deliberate:** `PUBLIC_PATHS` (`/login`, `/api/auth/login`, `/api/auth/logout`), static assets, and `DEMO_MODE === "true"` which bypasses auth entirely for the read-only public demo.  
+**Reality (2026-07-15):** `COOKIE_SECRET` is still read as `process.env.COOKIE_SECRET as string` in `lib/auth.ts:9`. A missing secret silently becomes `undefined` rather than throwing. This violates Security Invariant 3 and is the one open auth gap.  
+**Open:** startup validation of `COOKIE_SECRET`.
+
+### Setup / Onboarding
+**Files:** `scripts/setup-lib.mjs` (pure decisions), `scripts/setup.mjs` (I/O shell), `scripts/init-sample-repo.mjs`  
+**Invariant:** `setup-lib.mjs` stays free of I/O — no filesystem, no network, no prompts. It is the only part of setup that is unit-testable, and it is the reference example of the strangler pattern in this repo: logic was pulled out of `setup.mjs` behind tests, leaving `setup.mjs` as a thin shell over prompts and writes.  
+**Tests:** `scripts/__tests__/setup-lib.test.mjs` — 24 tests, the only test file currently in the repo.  
+**When adding to setup:** if the new behavior is a decision (validation, defaulting, mapping), it belongs in `setup-lib.mjs` with a failing test first. If it touches the disk or the network, it belongs in `setup.mjs` and stays untested.
 
 ---
 
@@ -77,6 +87,8 @@ Refactor → Apply SOLID and Clean Code. Run tests. Must still pass.
 Commit  → git commit -m "test+impl: [ZOMBIES case] — [one sentence on what this proved]"
 Switch roles. Repeat.
 ```
+
+**The full delivery cycle — branch, red/green, refactor, builders, adversarial review to convergence, PR — is encoded in the `deliver` skill (`.claude/skills/deliver/SKILL.md`). Invoke it with `/deliver` for any change to product code.** This section is the reasoning; that skill is the order of operations. When they disagree, the skill is wrong — fix it.
 
 **Minimum means minimum.** Do not add code for cases no test yet covers. Do not generalize. Do not add error handling that no test requires. Let future tests force generalization.
 
@@ -154,14 +166,32 @@ describe('getAppliedIcon', () => {
 
 ### Test file locations
 
+`vitest.config.mts` collects exactly three globs. A test outside them will not run:
+
 ```
-lib/__tests__/scrape-filters.test.ts    ← pure function unit tests
+lib/__tests__/**/*.test.{ts,tsx,mjs}
+scripts/__tests__/**/*.test.mjs
+app/api/__tests__/**/*.test.ts
+```
+
+Existing (2026-07-15):
+
+```
+scripts/__tests__/setup-lib.test.mjs    ← 24 tests. The only test file in the repo.
+```
+
+Planned, per the slice backlog — the directories do not exist yet:
+
+```
+lib/__tests__/scrape-filters.test.ts    ← pure function unit tests (Slice 6)
 lib/__tests__/table-sort.test.ts
 lib/__tests__/job-signal.test.ts
-lib/__tests__/jobs.test.ts              ← resolveJobType, jobKey; I/O tested separately
-app/api/__tests__/jobs.test.ts          ← service contract tests
-e2e/happy-path.spec.ts                  ← Playwright happy path
+lib/__tests__/jobs.test.ts              ← resolveJobType, jobKey; I/O tested separately (Slices 2, 7)
+app/api/__tests__/jobs.test.ts          ← service contract tests (Slice 5)
+e2e/happy-path.spec.ts                  ← Playwright happy path — needs a playwright.config and an `e2e` glob first
 ```
+
+Note: `playwright` is a devDependency because `scripts/scrape-careers.mjs` drives Chromium for scraping — not because E2E tests exist. There is no `playwright.config` and no `e2e/` directory.
 
 ### Test layers
 
@@ -223,15 +253,26 @@ Block any proposed change that violates these. Open an issue if the fix is out o
 
 ## Quality Gates
 
+### Gates that exist and must pass
+
 All must pass before any PR is created. Run in order.
 
 ```bash
-yarn tsc --noEmit          # type check — no errors
+yarn tsc --noEmit          # type check — no errors. Green as of 2026-07-15.
 yarn lint                  # ESLint — no warnings
-yarn test                  # Vitest — all tests pass
-yarn test:coverage         # ≥80% lines on changed files
-yarn e2e                   # Playwright — happy path green
+yarn test                  # Vitest — all tests pass. 24 passing, 1 file.
 ```
+
+### Gates that do not exist yet
+
+These were aspirational in an earlier draft of this file. Do not run them — the scripts are absent from `package.json` and the command will fail:
+
+| Gate | What it needs before it can be a gate |
+|------|---------------------------------------|
+| `yarn test:coverage` — ≥80% lines on changed files | a `test:coverage` script and the `@vitest/coverage-v8` devDependency |
+| `yarn e2e` — Playwright happy path | a `playwright.config`, an `e2e/` directory, and an `e2e` script |
+
+Coverage is not meaningfully enforceable yet regardless: the only tested module is `scripts/setup-lib.mjs`. Adding a coverage gate before Slices 2 and 6 land would fail on files no one has been asked to test. Land the tests first, then the gate.
 
 Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a confirmed false positive, documented inline with the specific reason.
 
@@ -239,18 +280,25 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 
 ## Slice Backlog
 
+Status as of 2026-07-15, verified against the tree — not against intent.
+
 | # | Slice | Status |
 |---|-------|--------|
-| 1 | Test infrastructure (Vitest + Playwright) | **Ready** |
-| 2 | `jobKey()` — fix composite key, no separator bug | **Ready** |
-| 3 | Auth middleware — enforce session on all routes | **Ready** — blocked on #1 |
-| 4 | Zod validation on `/api/jobs` | **Ready** — blocked on #1 |
-| 5 | `IJobRepository` interface + service contract tests | **Ready** — blocked on #1, #4 |
-| 6 | Scrape filter unit tests | **Ready** — blocked on #1 |
-| 7 | `resolveJobType` unit tests | **Ready** — blocked on #1 |
-| 8 | Table deduplication — merge three tables into `JobTable` | **Ready** — blocked on #1 |
-| 9 | `toSlug()` and `downloadBlob()` utilities | **Ready** — blocked on #1 |
-| 10 | Rate limiting on `/api/generate` | **Ready** — blocked on #1, #3 |
+| 1 | Test infrastructure (Vitest + Playwright) | **Partial** — Vitest configured and running (`vitest.config.mts`, 3 globs). Playwright side not started: no config, no `e2e/`. |
+| 2 | `jobKey()` — fix composite key, no separator bug | **Ready** — unblocked by #1's Vitest half. Two hand-rolled `::` call sites to collapse. |
+| 3 | Auth proxy — enforce session on all routes | **Done** — `proxy.ts` guards every non-public path; `DEMO_MODE` bypass is deliberate. Follow-up: `COOKIE_SECRET` startup validation (Security Invariant 3) is still open — split it out as #11. |
+| 4 | Zod validation on `/api/jobs` | **Ready** |
+| 5 | `IJobRepository` interface + service contract tests | **Ready** — blocked on #4 |
+| 6 | Scrape filter unit tests | **Ready** |
+| 7 | `resolveJobType` unit tests | **Ready** |
+| 8 | Table deduplication — merge three tables into `JobTable` | **Ready** |
+| 9 | `toSlug()` and `downloadBlob()` utilities | **Ready** |
+| 10 | Rate limiting on `/api/generate` | **Ready** |
+| 11 | `COOKIE_SECRET` startup validation — drop the `as string` cast | **Ready** — split from #3 |
+| 12 | Playwright E2E infra + `yarn e2e` gate | **Ready** — the unfinished half of #1 |
+| 13 | Coverage gate — `@vitest/coverage-v8` + `yarn test:coverage` | **Blocked on #2, #6, #7** — a coverage floor with one tested file fails on untested code no slice owns yet |
+
+`zod` is not currently a dependency. Slice 4 installs it.
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 
