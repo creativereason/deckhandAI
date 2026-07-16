@@ -15,6 +15,7 @@
     {
       "company": "Clarion Systems",
       "role": "Staff Software Engineer",
+      "location": "Remote",
       "start": "2022-07",
       "end": null,
       "bullets": [
@@ -28,6 +29,7 @@
     {
       "company": "Beacon Labs",
       "role": "Senior Software Engineer",
+      "location": "Austin, TX",
       "start": "2019-04",
       "end": "2022-06",
       "bullets": [
@@ -40,6 +42,7 @@
     {
       "company": "Trove Digital",
       "role": "Software Engineer",
+      "location": "Austin, TX",
       "start": "2016-08",
       "end": "2019-03",
       "bullets": [

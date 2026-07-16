@@ -1,4 +1,4 @@
-export function formatDateRange(start: string, end: string | null): string {
+export function formatDateRange(start: string, end: string | null, location?: string): string {
   const fmt = (d: string) => {
     const [y, m] = d.split("-");
     return new Date(Number(y), Number(m) - 1).toLocaleDateString("en-US", {
@@ -6,7 +6,8 @@ export function formatDateRange(start: string, end: string | null): string {
       year: "numeric",
     });
   };
-  return `${fmt(start)} – ${end ? fmt(end) : "Present"}`;
+  const range = `${fmt(start)} – ${end ? fmt(end) : "Present"}`;
+  return location ? `${range} | ${location}` : range;
 }
 
 export function companySlug(company: string): string {

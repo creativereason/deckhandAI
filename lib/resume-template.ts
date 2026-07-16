@@ -61,26 +61,26 @@ function renderStyle(): string {
   * { box-sizing: border-box; }
   body { font-family: 'Inter', -apple-system, sans-serif; color: var(--body); margin: 0; padding: 0; }
   h1 { font-size: 27px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; line-height: 1.2; margin: 0; }
-  .headline { font-size: 14px; font-weight: 500; color: var(--accent); letter-spacing: 0.01em; margin: 4px 8px 0 0; text-align: justify;}
-  .contact { font-size: 12px; font-weight: 400; color: var(--secondary); line-height: 1.3; margin: 6px 6px 0 0; }
+  .headline { font-size: 13px; font-weight: 500; color: var(--accent); letter-spacing: 0.01em; margin: 6px 0 0; }
+  .contact { font-size: 12px; font-weight: 400; color: var(--secondary); line-height: 1.6; margin: 8px 0 0; }
   h2 {
     font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase;
-    letter-spacing: 0.12em; padding-bottom: 5px; border-bottom: 1px solid var(--rule); margin: 17px 0 8px;
+    letter-spacing: 0.12em; padding-bottom: 5px; border-bottom: 1px solid var(--rule); margin: 16px 0 7px;
   }
+  h2:first-of-type { margin-top: 18px; }
   h3 { font-size: 13.5px; font-weight: 700; color: var(--ink); line-height: 1.4; margin: 0; }
   .role-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-top: 2px; }
   .employer { font-size: 12.5px; font-weight: 500; color: var(--secondary); }
   .dates { font-size: 12px; font-weight: 400; color: var(--muted); white-space: nowrap; }
-  .role-block { margin-bottom: 16px; }
+  .role-block { margin-bottom: 12px; }
   .role-head { break-inside: avoid; }
-  ul { padding-left: 18px; margin: 5px 0 0; }
-  li { font-size: 13px; line-height: 1.45; margin-bottom: 4px; }
-  p.body-text { font-size: 13px; line-height: 1.45; margin: 0; }
-  .skills-line { font-size: 13px; line-height: 1.3; margin: 4px 0; }
+  ul { padding-left: 18px; margin: 4px 0 0; }
+  li { font-size: 12.25px; line-height: 1.5; margin-bottom: 4px; }
+  p.body-text { font-size: 12.25px; line-height: 1.5; margin: 0; }
+  .skills-line { font-size: 12.25px; line-height: 1.5; margin: 4px 0; }
   .skills-line b { font-weight: 600; color: var(--ink); }
-  .edu-entry { break-inside: avoid; margin-bottom: 10px; }
-  .edu-entry b { font-weight: 700; color: var(--ink); font-size: 13px; }
-  .edu-entry .details { font-size: 12px; color: var(--secondary); }
+  .edu-entry { break-inside: avoid; margin-bottom: 10px; font-size: 12.25px; }
+  .edu-entry b { font-weight: 700; color: var(--ink); }
 </style>`;
 }
 
@@ -138,7 +138,7 @@ function renderExperienceSection(profile: ProfileData, tailoredBullets?: Record<
     <h3>${escapeHtml(job.role)}</h3>
     <div class="role-row">
       <span class="employer">${escapeHtml(job.company)}</span>
-      <span class="dates">${formatDateRange(job.start, job.end)}</span>
+      <span class="dates">${escapeHtml(formatDateRange(job.start, job.end, job.location))}</span>
     </div>
   </div>
   <ul>${bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
@@ -155,11 +155,8 @@ function renderAwardsSection(profile: ProfileData): string {
 function renderEducationSection(profile: ProfileData): string {
   if (!profile.education?.length) return "";
   const entries = profile.education.map((edu) => {
-    const details = [edu.degree, edu.honors, edu.graduated].filter(Boolean).map(String).map(escapeHtml).join(" | ");
-    return `<div class="edu-entry">
-  <div><b>${escapeHtml(edu.institution)}</b></div>
-  <div class="details">${details}</div>
-</div>`;
+    const rest = [edu.degree, edu.honors, edu.graduated].filter(Boolean).map(String).map(escapeHtml).join(" | ");
+    return `<div class="edu-entry"><b>${escapeHtml(edu.institution)}</b>${rest ? ` | ${rest}` : ""}</div>`;
   });
   return `<h2>Education</h2>\n${entries.join("\n")}`;
 }
