@@ -1,4 +1,4 @@
-name: Lint and type-check
+name: Quality gates
 
 on:
   pull_request:
@@ -13,22 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: yarn
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: Type-check
-        run: pnpm tsc --noEmit
+        run: yarn tsc --noEmit
 
       - name: Lint
-        run: pnpm lint
+        run: yarn lint
+
+      - name: Test
+        run: yarn test

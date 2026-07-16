@@ -15,22 +15,17 @@ jobs:
       - name: Checkout app repo
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: yarn
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: Install Playwright Chromium
-        run: pnpm exec playwright install chromium --with-deps
+        run: yarn playwright install chromium --with-deps
 
       - name: Checkout data repo
         uses: actions/checkout@v4

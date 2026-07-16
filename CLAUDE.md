@@ -297,6 +297,7 @@ Status as of 2026-07-15, verified against the tree — not against intent.
 | 11 | `COOKIE_SECRET` startup validation — drop the `as string` cast | **Ready** — split from #3 |
 | 12 | Playwright E2E infra + `yarn e2e` gate | **Ready** — the unfinished half of #1 |
 | 13 | Coverage gate — `@vitest/coverage-v8` + `yarn test:coverage` | **Blocked on #2, #6, #7** — a coverage floor with one tested file fails on untested code no slice owns yet |
+| 14 | Clear 8 pre-existing lint warnings — dead imports in `docx-resume.ts`, `docx-cover-letter.ts`, unused vars in `settings/model/page.tsx`, `MarkdownContent.tsx`, `ScrapeReviewQueue.tsx`, `scrape-careers.mjs` | **Ready** — `yarn lint` exits 0 so CI passes, but the documented gate is "no warnings" and today it is a lie. Either clear them or make the gate `--max-warnings=0` and mean it. |
 
 `zod` is not currently a dependency. Slice 4 installs it.
 
