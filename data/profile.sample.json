@@ -15,6 +15,7 @@
     {
       "company": "Meridian Software",
       "role": "Director of Product Design",
+      "location": "Remote",
       "start": "2023-03",
       "end": null,
       "bullets": [
@@ -28,6 +29,7 @@
     {
       "company": "Lumen Analytics",
       "role": "Senior Product Designer",
+      "location": "Chicago, IL",
       "start": "2020-06",
       "end": "2023-02",
       "bullets": [
@@ -41,6 +43,7 @@
     {
       "company": "Clearpath Digital",
       "role": "UX Designer",
+      "location": "Chicago, IL",
       "start": "2017-08",
       "end": "2020-05",
       "bullets": [

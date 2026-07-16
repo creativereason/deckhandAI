@@ -50,6 +50,43 @@ describe("buildResumeHtml", () => {
     expect(html).toContain("<li>Shipped the thing.</li>");
   });
 
+  it("appends the role's location after the date range when location is present", () => {
+    // Arrange
+    const profile: ProfileData = {
+      experience: [
+        {
+          company: "Anthropic",
+          role: "Staff Designer",
+          location: "Chicago, IL",
+          start: "2023-01",
+          end: null,
+          bullets: [],
+        },
+      ],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toContain("January 2023 – Present | Chicago, IL");
+  });
+
+  it("omits the location segment when the role has no location", () => {
+    // Arrange
+    const profile: ProfileData = {
+      experience: [
+        { company: "Anthropic", role: "Staff Designer", start: "2023-01", end: null, bullets: [] },
+      ],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toContain("January 2023 – Present</span>");
+  });
+
   it("renders multiple experience roles in the given order", () => {
     // Arrange
     const profile: ProfileData = {
@@ -307,6 +344,35 @@ describe("buildResumeHtml", () => {
     // Assert
     expect(html).toContain("R&amp;D");
     expect(html).not.toContain("<script>");
+  });
+
+  it("renders each education entry as a single line joining institution, degree, honors, and date with ' | '", () => {
+    // Arrange
+    const profile: ProfileData = {
+      education: [
+        { institution: "State University", degree: "B.A. Design", graduated: "2010-05", honors: "Cum Laude" },
+      ],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toMatch(/<b>State University<\/b>\s*\|\s*B\.A\. Design\s*\|\s*Cum Laude\s*\|\s*2010-05/);
+  });
+
+  it("gives the first section header a larger top margin than subsequent section headers", () => {
+    // Arrange
+    const profile: ProfileData = {
+      summary: "Fifteen years of design leadership.",
+      strengths: ["Design Systems"],
+    };
+
+    // Act
+    const html = buildResumeHtml(profile, candidate);
+
+    // Assert
+    expect(html).toMatch(/h2:first-of-type\s*\{[^}]*margin-top:\s*18px/);
   });
 
   it("embeds Inter as a real base64 font-face, not a bare font-family reference", () => {

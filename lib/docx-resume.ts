@@ -22,6 +22,7 @@ export interface ProfileData {
   experience?: {
     company: string;
     role: string;
+    location?: string;
     start: string;
     end: string | null;
     bullets: string[];
@@ -207,7 +208,7 @@ export async function generateResumeDOCX(
           children: [
             run(job.company, { bold: true, color: body }),
             new TextRun({ children: ["\t"], font: { ascii: font, hAnsi: font } }),
-            run(formatDateRange(job.start, job.end), { color: meta, size: 18 }),
+            run(formatDateRange(job.start, job.end, job.location), { color: meta, size: 18 }),
           ],
           tabStops: [{ type: TabStopType.RIGHT, position: contentWidth }],
           spacing: { after: 60 },

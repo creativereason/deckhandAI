@@ -96,6 +96,42 @@ describe("formatDateRange", () => {
     // Assert
     expect(range).toBe("December 2011 – January 2012");
   });
+
+  it("omits the location segment entirely when location is undefined", () => {
+    // Arrange
+    const start = "2024-10";
+    const end = null;
+
+    // Act
+    const range = formatDateRange(start, end, undefined);
+
+    // Assert
+    expect(range).toBe("October 2024 – Present");
+  });
+
+  it("omits the location segment entirely when location is an empty string", () => {
+    // Arrange
+    const start = "2024-10";
+    const end = null;
+
+    // Act
+    const range = formatDateRange(start, end, "");
+
+    // Assert
+    expect(range).toBe("October 2024 – Present");
+  });
+
+  it("appends a single location after the date range separated by ' | '", () => {
+    // Arrange
+    const start = "2023-01";
+    const end = "2024-01";
+
+    // Act
+    const range = formatDateRange(start, end, "Chicago, IL");
+
+    // Assert
+    expect(range).toBe("January 2023 – January 2024 | Chicago, IL");
+  });
 });
 
 describe("linesToBullets", () => {

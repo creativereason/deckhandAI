@@ -1,6 +1,7 @@
 export interface ExperienceEntry {
   company: string;
   role: string;
+  location?: string;
   start: string;
   end: string | null;
   bullets: string[];
