@@ -184,6 +184,48 @@ You can combine both into a single trigger — Claude will run WebSearch first, 
 
 ---
 
+## Email digest ingestion
+
+If you already subscribe to job-alert emails (Indeed, TheLadders, Lensa, LinkedIn, or similar),
+`scripts/email-job-search.mjs` can parse those digests directly instead of running fresh
+searches. It reuses the same preferences, dedup, and write flow as `scripts/job-search.mjs`, but
+takes emails as input rather than running its own web/Indeed search.
+
+This script is deliberately mail-provider-agnostic — it has no Gmail/IMAP/OAuth code of its own.
+You feed it a JSON array of already-exported emails, and it does the extraction, filtering,
+dedup, and write:
+
+```
+[
+  { "id": "...", "subject": "...", "from": "...", "receivedAt": "...", "body": "..." }
+]
+```
+
+```bash
+node scripts/email-job-search.mjs --input emails.json
+# or
+cat emails.json | node scripts/email-job-search.mjs
+```
+
+It requires the same env vars as `scripts/job-search.mjs` (`AI_API_KEY`, `AI_MODEL`,
+`GITHUB_TOKEN`, `GITHUB_DATA_REPO`, `GITHUB_DATA_BRANCH`, optional `AI_BASE_URL`) and prints a
+single JSON summary to stdout on success: `{ "processed", "added", "skippedDuplicate", "skippedNoMatch" }`.
+
+**How you get emails into that shape is up to you** — any of the following work:
+
+- **OpenClaw `gog` (Gmail) skill** — a scheduled OpenClaw cron job searches Gmail for
+  job-platform senders, exports matching threads as JSON, and pipes them into this script. This
+  is how the deckhandAI maintainer runs it day to day; the OpenClaw job itself is personal
+  automation (tied to one Gmail account and one data repo), not part of this repo.
+- **A plain IMAP fetch script** — any language, any provider, as long as it emits the shape above.
+- **A one-off export** — e.g. Gmail's "Download message" or Takeout, converted to the input shape
+  with a small script, for a manual/occasional pass instead of a recurring schedule.
+
+Because the extraction call runs once per email and each job-alert digest often lists several
+roles, a single run can add multiple jobs from one email.
+
+---
+
 ## Reviewing results
 
 After any scheduled run, new jobs appear in the **Pending** section of the deckhandAI UI. From there you can:

@@ -7,18 +7,21 @@
  * against existing jobs, and writes new entries to the pending queue in your
  * GitHub data repo.
  *
- * Works with any OpenAI-compatible AI provider.
+ * Works with Anthropic natively, or any OpenAI-compatible AI provider.
  *
  * Required env vars:
  *   AI_API_KEY          — your AI provider API key
- *   AI_MODEL            — model to use (e.g. gemini-2.0-flash, gpt-4o-mini)
  *   GITHUB_TOKEN        — PAT with write access to your data repo
  *   GITHUB_DATA_REPO    — e.g. your-org/your-private-repo
  *   GITHUB_DATA_BRANCH  — e.g. main
  *
  * Optional:
- *   AI_BASE_URL          — base URL for OpenAI-compatible endpoint
- *                          (defaults to https://api.openai.com/v1)
+ *   AI_PROVIDER          — anthropic (default) | openai | gemini | grok | ollama | custom
+ *   AI_MODEL             — model to use (default: claude-sonnet-4-6)
+ *   AI_BASE_URL          — base URL for OpenAI-compatible endpoints; ignored
+ *                          for AI_PROVIDER=anthropic (native Messages API
+ *                          instead). Defaults per provider, falling back to
+ *                          https://api.openai.com/v1
  *   BRAVE_SEARCH_API_KEY — Brave Search API key (recommended for reliable results)
  *                          Falls back to DuckDuckGo if not set.
  */
@@ -26,9 +29,13 @@
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { githubGet, githubPut } from "./lib/github-contents.mjs";
+import { callAI } from "./lib/ai-provider.mjs";
+import { jobKey } from "./lib/job-key.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = resolve(__dirname, "../data/config.json");
+const USER_AGENT = "deckhandAI/job-search";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -41,39 +48,6 @@ function loadConfig() {
     console.error("Could not read data/config.json — copy data/config.sample.json to get started.");
     process.exit(1);
   }
-}
-
-// ---------------------------------------------------------------------------
-// GitHub API
-// ---------------------------------------------------------------------------
-
-async function githubGet(repo, branch, path) {
-  const res = await fetch(
-    `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-        "User-Agent": "deckhandAI/job-search",
-      },
-    }
-  );
-  if (!res.ok) throw new Error(`GitHub GET ${path}: ${res.status} ${await res.text()}`);
-  const { content, sha } = await res.json();
-  return { data: JSON.parse(Buffer.from(content, "base64").toString("utf8")), sha };
-}
-
-async function githubPut(repo, branch, path, sha, data, message) {
-  const content = Buffer.from(JSON.stringify(data, null, 2)).toString("base64");
-  const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      "Content-Type": "application/json",
-      "User-Agent": "deckhandAI/job-search",
-    },
-    body: JSON.stringify({ message, content, sha, branch }),
-  });
-  if (!res.ok) throw new Error(`GitHub PUT ${path}: ${res.status} ${await res.text()}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -136,9 +110,10 @@ async function searchDuckDuckGo(query) {
 // ---------------------------------------------------------------------------
 
 async function filterWithAI(results, preferences, query) {
-  const baseUrl = (process.env.AI_BASE_URL ?? "https://api.openai.com/v1").replace(/\/$/, "");
-
-  const prompt = `You are helping filter job search results for a candidate.
+  const prompt = `You are helping filter job search results for a candidate. Be strict — reject a
+result whenever it's unclear or ambiguous, rather than including it on the hope it might fit.
+False positives cost the candidate real time reviewing bad matches; a missed result costs
+nothing since the source search can be rerun.
 
 Candidate preferences:
 - Target titles: ${preferences.titles.join(", ")}
@@ -147,34 +122,35 @@ Candidate preferences:
 - Open to contract: ${preferences.open_to_contract}
 - Remote OK: ${preferences.locations.remote}
 - Hybrid OK: ${preferences.locations.hybrid}
-- Hub city: ${preferences.locations.hub_city}, ${preferences.locations.hub_state}
+- Local OK: within ${preferences.locations.hub_radius_miles} miles of ${preferences.locations.hub_city}, ${preferences.locations.hub_state}
 
 Search query used: "${query}"
 
 Search results:
 ${results.map((r, i) => `${i + 1}. ${r.title}\n   URL: ${r.url}\n   ${r.description}`).join("\n\n")}
 
-From these results, extract any that appear to be active job listings matching the candidate's seniority level and preferences. Ignore results that are clearly not job listings (blog posts, news articles, company homepages).
+Apply every rule below to each result — it only qualifies if it passes all of them:
+
+1. Title: the role must closely match one of the target titles above, at the same seniority
+   tier and same discipline. Reject IC-level or junior/mid titles when the target list is
+   director/head/VP/principal-tier, and reject listings in an unrelated discipline even if
+   "design"/"designer" appears in the title. A near-miss title in the wrong discipline is not a
+   match.
+2. Salary: if a salary or rate is stated, it must meet the FTE or contract floor above (whichever
+   applies). Search snippets often omit salary — that's fine, but don't assume an unstated
+   salary meets the floor; only include salary-unstated results when title/location are a clear
+   strong match.
+3. Location: must be explicitly remote, explicitly hybrid, or within the local radius above.
+   Vague or missing location does not count as remote — reject unless remote/hybrid/local
+   eligibility is clearly stated.
+4. Not a listing at all: ignore results that are clearly not active job listings (blog posts,
+   news articles, company homepages, expired/closed postings).
 
 Return a JSON array only, no other text. Each item: { "company": "", "role": "", "url": "", "salary": "", "notes": "" }
-Return [] if nothing qualifies.`;
+The "notes" field must briefly state why it passed all four rules. Return [] if nothing clearly
+qualifies.`;
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.AI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: process.env.AI_MODEL,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0,
-    }),
-  });
-
-  if (!res.ok) throw new Error(`AI API: ${res.status} ${await res.text()}`);
-  const data = await res.json();
-  const text = data.choices[0].message.content.trim();
+  const text = (await callAI({ userPrompt: prompt, temperature: 0 })).trim();
 
   try {
     return JSON.parse(text.replace(/^```json\n?/, "").replace(/\n?```$/, ""));
@@ -189,7 +165,7 @@ Return [] if nothing qualifies.`;
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const required = ["GITHUB_TOKEN", "GITHUB_DATA_REPO", "GITHUB_DATA_BRANCH", "AI_API_KEY", "AI_MODEL"];
+  const required = ["GITHUB_TOKEN", "GITHUB_DATA_REPO", "GITHUB_DATA_BRANCH", "AI_API_KEY"];
   const missing = required.filter((k) => !process.env[k]);
   if (missing.length) {
     console.error(`Missing required env vars: ${missing.join(", ")}`);
@@ -207,15 +183,11 @@ async function main() {
   }
 
   console.log(`Loading jobs from ${GITHUB_DATA_REPO}...`);
-  const { data: jobs, sha } = await githubGet(GITHUB_DATA_REPO, GITHUB_DATA_BRANCH, "data/jobs.json");
+  const { data: jobs, sha } = await githubGet(GITHUB_DATA_REPO, GITHUB_DATA_BRANCH, "data/jobs.json", USER_AGENT);
 
-  const existingUrls = new Set(
-    Object.values(jobs)
-      .filter(Array.isArray)
-      .flat()
-      .map((j) => j.url)
-      .filter(Boolean)
-  );
+  const existingJobs = Object.values(jobs).filter(Array.isArray).flat();
+  const existingUrls = new Set(existingJobs.map((j) => j.url).filter(Boolean));
+  const existingKeys = new Set(existingJobs.map((j) => jobKey(j.company ?? "", j.role ?? "")));
 
   console.log(`${existingUrls.size} existing job URLs loaded for deduplication.`);
 
@@ -248,8 +220,11 @@ async function main() {
       }
 
       for (const job of extracted) {
-        if (!job.url || existingUrls.has(job.url)) continue;
+        if (!job.url) continue;
+        const key = jobKey(job.company ?? "", job.role ?? "");
+        if (existingUrls.has(job.url) || existingKeys.has(key)) continue;
         existingUrls.add(job.url);
+        existingKeys.add(key);
         newJobs.push({
           company: job.company ?? "",
           role: job.role ?? "",
@@ -279,7 +254,8 @@ async function main() {
     "data/jobs.json",
     sha,
     jobs,
-    `Add ${newJobs.length} job${newJobs.length === 1 ? "" : "s"} to pending queue via WebSearch pass`
+    `Add ${newJobs.length} job${newJobs.length === 1 ? "" : "s"} to pending queue via WebSearch pass`,
+    USER_AGENT
   );
 
   console.log(`Done. ${newJobs.length} new job(s) added to pending queue.`);

@@ -179,7 +179,7 @@ npx playwright install chromium
 
 ## Scheduled job searching
 
-Beyond scraping your target companies, deckhandAI can search job boards automatically and populate the pending queue without any manual effort. Three approaches are supported — GitHub Actions, system cron, and Claude Code's built-in scheduler — depending on how you run the app.
+Beyond scraping your target companies, deckhandAI can search job boards automatically and populate the pending queue without any manual effort. Three approaches are supported — GitHub Actions, system cron, and Claude Code's built-in scheduler — depending on how you run the app. It can also parse job-alert emails you already receive (Indeed, TheLadders, Lensa, etc.) via `scripts/email-job-search.mjs`, fed by any mail source you wire up yourself.
 
 → [docs/scheduled-job-search.md](docs/scheduled-job-search.md)
 
