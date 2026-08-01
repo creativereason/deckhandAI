@@ -30,9 +30,12 @@
 import { existsSync, readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { githubGet, githubPut } from "./lib/github-contents.mjs";
+import { callAI } from "./lib/ai-provider.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DRY_RUN = process.argv.includes("--dry-run");
+const USER_AGENT = "deckhandAI/backfill-ai-summaries";
 
 // ---------------------------------------------------------------------------
 // Env (.env.local convenience — existing env always wins)
@@ -48,39 +51,6 @@ function loadEnvLocal() {
     if (process.env[key] !== undefined) continue;
     process.env[key] = rawValue.replace(/^["']|["']$/g, "");
   }
-}
-
-// ---------------------------------------------------------------------------
-// GitHub API (same shape as scripts/job-search.mjs)
-// ---------------------------------------------------------------------------
-
-async function githubGet(repo, branch, path) {
-  const res = await fetch(
-    `https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-        "User-Agent": "deckhandAI/backfill-ai-summaries",
-      },
-    }
-  );
-  if (!res.ok) throw new Error(`GitHub GET ${path}: ${res.status} ${await res.text()}`);
-  const { content, sha } = await res.json();
-  return { data: JSON.parse(Buffer.from(content, "base64").toString("utf8")), sha };
-}
-
-async function githubPut(repo, branch, path, sha, data, message) {
-  const content = Buffer.from(JSON.stringify(data, null, 2)).toString("base64");
-  const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-      "Content-Type": "application/json",
-      "User-Agent": "deckhandAI/backfill-ai-summaries",
-    },
-    body: JSON.stringify({ message, content, sha, branch }),
-  });
-  if (!res.ok) throw new Error(`GitHub PUT ${path}: ${res.status} ${await res.text()}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -102,54 +72,7 @@ ${job.notes}`;
 }
 
 async function generateSummary(job) {
-  const provider = process.env.AI_PROVIDER || "anthropic";
-  const model = process.env.AI_MODEL || "claude-sonnet-4-6";
-  const apiKey = process.env.AI_API_KEY || "";
-
-  if (provider === "anthropic") {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 300,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: buildUserPrompt(job) }],
-      }),
-    });
-    if (!res.ok) throw new Error(`AI provider error ${res.status}: ${await res.text()}`);
-    const json = await res.json();
-    return (json.content ?? []).filter((c) => c.type === "text").map((c) => c.text).join("");
-  }
-
-  const builtinBase = {
-    openai: "https://api.openai.com/v1",
-    gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
-    grok: "https://api.x.ai/v1",
-  };
-  const baseUrl = process.env.AI_BASE_URL || builtinBase[provider] || "https://api.openai.com/v1";
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 300,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: buildUserPrompt(job) },
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error(`AI provider error ${res.status}: ${await res.text()}`);
-  const json = await res.json();
-  return json.choices?.[0]?.message?.content ?? "";
+  return callAI({ systemPrompt: SYSTEM_PROMPT, userPrompt: buildUserPrompt(job), maxTokens: 300 });
 }
 
 // Same cleanup rules as normalizeAiSummary in lib/job-summary.ts — keep in sync.
@@ -188,7 +111,7 @@ async function main() {
   }
 
   console.log(`Reading data/jobs.json from ${repo}@${branch}…`);
-  const { data: jobs, sha } = await githubGet(repo, branch, "data/jobs.json");
+  const { data: jobs, sha } = await githubGet(repo, branch, "data/jobs.json", USER_AGENT);
 
   let generated = 0;
   let skippedExisting = 0;
@@ -234,7 +157,7 @@ async function main() {
     return;
   }
 
-  await githubPut(repo, branch, "data/jobs.json", sha, jobs, `Backfill aiSummary for ${generated} jobs`);
+  await githubPut(repo, branch, "data/jobs.json", sha, jobs, `Backfill aiSummary for ${generated} jobs`, USER_AGENT);
   console.log(`Wrote data/jobs.json to ${repo}@${branch}.`);
 }
 
