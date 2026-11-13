@@ -6,17 +6,19 @@ import { readJobsFrom, writeJobsTo, type JobRowStore } from "@/lib/supabase-jobs
 const EMPTY: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
 const prospect = (role: string) => ({ company: "Acme", role, fit: "good" as const, salary: "", notes: "", url: "" });
 
-/** In-memory stand-in for the jobs table; records which operations ran. */
-function fakeStore(initial: JobRow[] = []): JobRowStore & { rows: Map<string, JobRow>; calls: string[] } {
+/** In-memory stand-in for the jobs table; records which operations ran. `rows` keeps soft-deleted rows, like the real table. */
+function fakeStore(initial: JobRow[] = []): JobRowStore & { rows: Map<string, JobRow>; deleted: Set<string>; calls: string[] } {
   const rows = new Map(initial.map((r) => [r.id, r]));
+  const deleted = new Set<string>();
   const calls: string[] = [];
   return {
     rows,
+    deleted,
     calls,
-    selectAll: async () => [...rows.values()],
+    selectAll: async () => [...rows.values()].filter((r) => !deleted.has(r.id)),
     insert: async (batch) => { calls.push("insert"); batch.forEach((r) => rows.set(r.id, r)); },
     update: async (batch) => { calls.push("update"); batch.forEach((r) => rows.set(r.id, r)); },
-    remove: async (ids) => { calls.push("remove"); ids.forEach((id) => rows.delete(id)); },
+    softDelete: async (ids) => { calls.push("softDelete"); ids.forEach((id) => deleted.add(id)); },
   };
 }
 
@@ -63,7 +65,19 @@ describe("writeJobsTo", () => {
     const after = await readJobsFrom(store);
     expect(after.prospect.map((j) => [j.role, j.notes])).toEqual([["Edit", "edited"]]);
     expect(after.applied.map((j) => j.role)).toEqual(["Move"]);
-    expect(store.rows.size).toBe(2);
+  });
+
+  // B — Boundary: nothing is ever physically deleted; a removed job leaves the board but stays stored
+  it("keeps a removed job in the table, marked deleted, and off the board", async () => {
+    const store = fakeStore(jobsDataToRows({ ...EMPTY, prospect: [prospect("Keep"), prospect("Drop")] }));
+    const board = await readJobsFrom(store);
+    const [keep, drop] = board.prospect;
+
+    await writeJobsTo(store, { ...board, prospect: [keep] });
+
+    expect((await readJobsFrom(store)).prospect.map((j) => j.role)).toEqual(["Keep"]);
+    expect(store.rows.has(drop.id!)).toBe(true);
+    expect(store.deleted).toEqual(new Set([drop.id]));
   });
 
   // B — Boundary: a moved job keeps its identity (no delete+insert)

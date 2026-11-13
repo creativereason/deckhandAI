@@ -91,12 +91,17 @@ export function createSupabaseData({ env = process.env, fetchImpl = fetch } = {}
   }
 
   return {
-    /** Every job as `{ id, company, role, url, salary, notes, aiSummary }`, grouped by section. */
-    async readBoard() {
+    /**
+     * Every job as `{ id, company, role, url, salary, notes, aiSummary }`, grouped by section.
+     * Deleted jobs are excluded unless `includeDeleted` is set; pass it when deduplicating,
+     * so a job you removed is not added again.
+     */
+    async readBoard({ includeDeleted = false } = {}) {
       const board = Object.fromEntries(SECTIONS.map((s) => [s, []]));
+      const live = includeDeleted ? "" : "&deleted_at=is.null";
       for (let offset = 0; ; offset += PAGE_SIZE) {
         const select = "id,section,company,role,url,salary,notes,ai_summary";
-        const rows = await request(`jobs?select=${select}&order=id&limit=${PAGE_SIZE}&offset=${offset}`);
+        const rows = await request(`jobs?select=${select}${live}&order=id&limit=${PAGE_SIZE}&offset=${offset}`);
         if (!rows.length) return board;
         for (const r of rows) {
           board[r.section]?.push({ id: r.id, company: r.company, role: r.role, url: r.url, salary: r.salary, notes: r.notes, aiSummary: r.ai_summary ?? undefined });

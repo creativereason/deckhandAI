@@ -10,8 +10,14 @@ const manyRows = (n: number) =>
 function clientWith(result: { data?: unknown; error: { message: string } | null }) {
   const insert = vi.fn().mockResolvedValue(result);
   const range = vi.fn().mockResolvedValue(result);
-  const client = { from: () => ({ insert, select: () => ({ order: () => ({ range }) }) }) } as unknown as SupabaseClient;
-  return { client, insert, range };
+  const isFilter = vi.fn(() => ({ order: () => ({ range }) }));
+  const inFilter = vi.fn().mockResolvedValue(result);
+  const update = vi.fn(() => ({ in: inFilter }));
+  const hardDelete = vi.fn();
+  const client = {
+    from: () => ({ insert, update, delete: hardDelete, select: () => ({ is: isFilter }) }),
+  } as unknown as SupabaseClient;
+  return { client, insert, range, isFilter, update, inFilter, hardDelete };
 }
 
 describe("createJobRowStore", () => {
@@ -36,6 +42,33 @@ describe("createJobRowStore", () => {
     const { client } = clientWith({ error: { message: "timeout" } });
 
     await expect(createJobRowStore(client).selectAll()).rejects.toThrow(/select failed: timeout/);
+  });
+
+  // B — Boundary: deleted rows must not reach the board, or the next write would resurrect them
+  it("reads only rows that are not marked deleted", async () => {
+    const { client, isFilter } = clientWith({ data: [], error: null });
+
+    await createJobRowStore(client).selectAll();
+
+    expect(isFilter).toHaveBeenCalledWith("deleted_at", null);
+  });
+
+  // B — Boundary: "never delete" means the row stays; only a timestamp is set
+  it("marks rows deleted with a timestamp and never issues a delete", async () => {
+    const { client, update, inFilter, hardDelete } = clientWith({ error: null });
+
+    await createJobRowStore(client).softDelete(["a", "b"]);
+
+    expect(update).toHaveBeenCalledWith({ deleted_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) });
+    expect(inFilter).toHaveBeenCalledWith("id", ["a", "b"]);
+    expect(hardDelete).not.toHaveBeenCalled();
+  });
+
+  // E — Exception
+  it("throws with the database message when marking rows deleted fails", async () => {
+    const { client } = clientWith({ error: { message: "boom" } });
+
+    await expect(createJobRowStore(client).softDelete(["a"])).rejects.toThrow(/delete failed: boom/);
   });
 
   // Z — Zero

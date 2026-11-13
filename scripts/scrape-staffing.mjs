@@ -206,7 +206,7 @@ async function scrapeInsightGlobal(browser) {
 // DATA_BACKEND=supabase reads and inserts via Supabase instead of data/jobs.json.
 const store = usesSupabase() ? createSupabaseData() : undefined;
 const browser = await chromium.launch({ headless: true });
-const data = store ? await store.readBoard() : loadJobs();
+const data = store ? await store.readBoard({ includeDeleted: true }) : loadJobs();
 if (!data.staffing) data.staffing = [];
 
 const allJobs = [

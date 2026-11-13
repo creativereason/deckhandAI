@@ -65,6 +65,20 @@ describe("readBoard", () => {
     expect(board.local).toEqual([{ id: "i1", company: "A", role: "R", url: "u", salary: "s", notes: "n", aiSummary: "sum" }]);
   });
 
+  // B — Boundary: deleted jobs stay out of the board unless a caller asks for them
+  it("excludes deleted rows by default", async () => {
+    const { data, calls } = make();
+    await data.readBoard();
+    expect(calls[0].url).toContain("deleted_at=is.null");
+  });
+
+  // B — Boundary: scrapers dedupe against deleted jobs too, so a job you removed is not re-added
+  it("includes deleted rows when includeDeleted is set", async () => {
+    const { data, calls } = make();
+    await data.readBoard({ includeDeleted: true });
+    expect(calls[0].url).not.toContain("deleted_at");
+  });
+
   // B — Boundary: PostgREST caps a response, so keep paging until empty
   it("requests following pages until one is empty", async () => {
     const { data, calls } = make([[{ id: "1", section: "applied" }], [{ id: "2", section: "applied" }], []]);

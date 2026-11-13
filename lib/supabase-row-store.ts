@@ -26,7 +26,8 @@ export function createJobRowStore(client: SupabaseClient): JobRowStore {
     async selectAll() {
       const rows: JobRow[] = [];
       for (let from = 0; ; from += PAGE_SIZE) {
-        const { data, error } = await client.from("jobs").select(COLUMNS).order("id").range(from, from + PAGE_SIZE - 1);
+        const { data, error } = await client
+          .from("jobs").select(COLUMNS).is("deleted_at", null).order("id").range(from, from + PAGE_SIZE - 1);
         check(error, "select");
         if (!data?.length) return rows;
         rows.push(...(data as unknown as JobRow[]));
@@ -41,8 +42,12 @@ export function createJobRowStore(client: SupabaseClient): JobRowStore {
         check((await client.from("jobs").upsert(batch, { onConflict: "id" })).error, "update");
       }
     },
-    async remove(ids) {
-      for (const batch of batches(ids)) check((await client.from("jobs").delete().in("id", batch)).error, "delete");
+    // The service role has no DELETE privilege on jobs (see the soft-delete migration).
+    async softDelete(ids) {
+      const deletedAt = new Date().toISOString();
+      for (const batch of batches(ids)) {
+        check((await client.from("jobs").update({ deleted_at: deletedAt }).in("id", batch)).error, "delete");
+      }
     },
   };
 }

@@ -220,7 +220,7 @@ async function main() {
 
   console.log(`Loading jobs from ${store ? "Supabase" : GITHUB_DATA_REPO}...`);
   const { data: jobs, sha } = store
-    ? { data: await store.readBoard(), sha: undefined }
+    ? { data: await store.readBoard({ includeDeleted: true }), sha: undefined }
     : await githubGet(GITHUB_DATA_REPO, GITHUB_DATA_BRANCH, "data/jobs.json");
 
   const existingUrls = new Set(

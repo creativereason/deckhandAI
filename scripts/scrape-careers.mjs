@@ -349,7 +349,7 @@ async function main() {
   }
 
   LOCATION_LOCAL = buildLocalRegex(store ? await store.readDocument("config") : readDiskConfig());
-  const jobs = store ? await store.readBoard() : JSON.parse(readFileSync(JOBS_PATH, "utf-8"));
+  const jobs = store ? await store.readBoard({ includeDeleted: true }) : JSON.parse(readFileSync(JOBS_PATH, "utf-8"));
   const added = { local: [], prospect: [] };
 
   const existingKeys = new Set([
