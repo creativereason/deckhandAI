@@ -412,6 +412,8 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 11 | Stable job identity (UUID) — fix silent data loss on delete/move for duplicate company+role | **Ready** — blocked on #5 |
 | 16 | "Evaluate Job URL" flow — fetch → Playwright fallback, streaming status, AI fit scoring, user-confirm before write to pending | **Ready** — blocked on #5, #10 |
 | 17 | Styled PDF resume export (Playwright + HTML/CSS template) — `stylePdfEnabled` config flag, `resume-template.ts`, `resume-pdf.ts`, `/api/export/resume-pdf` route | **Done** |
+| 18 | Inbox as a separate view — hide/show the pending queue instead of forcing it above the board | **Ready** |
+| 19 | Restore and browse deleted jobs — UI for the soft-delete markers (`deleted_at`) | **Ready** |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 
@@ -537,3 +539,50 @@ app/api/__tests__/evaluate-job.test.ts
 - No job is written to pending without an explicit user confirmation action after seeing the evaluation card.
 - Job detail view offers a "Fetch more details" action that uses the same retrieval path to enrich notes before generating or scoring.
 - Auth guard: unauthenticated request returns 401 before any fetch is attempted.
+
+---
+
+## Slice 18 — Inbox as a separate view
+
+### Problem
+
+`ScrapeReviewQueue` renders inline above the board whenever `jobs.pending` is non-empty (`app/page.tsx`). With a large queue (67 items on the author's board) the user must scroll past the whole inbox to reach their applied jobs and prospects, and there is no way to put it away.
+
+### Goal
+
+The inbox is its own view. The user chooses to open it; the board is the default and is never pushed down by it.
+
+### Behavior
+
+- The board view shows the existing "N pending review" count in the header as the entry point (with the NEW badge), and a clear "Inbox" control that opens the inbox view.
+- The inbox view shows only the `ScrapeReviewQueue`; a control returns to the board. Triage actions (accept to prospect, pass, etc.) behave exactly as today.
+- The choice persists for the session (and across reloads) — a per-user preference, not stored in the jobs data. Default is the board.
+- An empty inbox hides the control's badge; it does not disappear entirely.
+
+### Acceptance Criteria
+
+- With pending jobs present, the board's first content is the board sections, not the queue.
+- Opening the inbox shows every pending job; triaging one updates the header count without leaving the view.
+- Reloading keeps the last-selected view.
+- Interface tests (React Testing Library) cover: default view, switching to the inbox, switching back, empty inbox. No change to `/api/jobs` is required.
+
+### Open
+
+Whether the view is a route (`/inbox`, shareable and back-button friendly) or a toggle on `/`. Prefer a route unless the single-page state makes that costly.
+
+## Slice 19 — Restore and browse deleted jobs
+
+### Problem
+
+Jobs are soft-deleted (`deleted_at`) and never removed, but nothing in the UI can see them. A job removed by mistake, or by an agent, can only be recovered with SQL.
+
+### Goal
+
+A "Deleted" view lists soft-deleted jobs (newest first, with when they were deleted and, once Slice 21 lands, by whom) and offers Restore, which clears `deleted_at` and returns the job to its section.
+
+### Acceptance Criteria
+
+- A restored job reappears in its original section and position-independent order, with its original fields intact and the same id.
+- Deleted jobs never appear on the board, in counts, or in exports.
+- Restoring requires a repository method (`restore(id)`), not a whole-board write; depends on Slice 5/11.
+- Hard purge is intentionally not offered anywhere in the UI.
