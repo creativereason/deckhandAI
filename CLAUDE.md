@@ -419,6 +419,8 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 22 | Agent API — `/api/agent/v1` job CRUD (soft-delete only), add-to-pending, triage, evaluate, Zod-validated | **Ready** — blocked on #4, #5, #11, #21 |
 | 23 | MCP server — `/api/mcp` exposing the Agent API as tools for Grokbot, Muse, Duet | **Ready** — blocked on #22 |
 | 24 | Route scrapers through `pending` via the Agent API — fix the invariant gap | **Ready** — blocked on #22 |
+| 25 | Job link check — verify a job's URL is valid and still open, on any board section or the inbox, with a visible status | **Ready** — reuses `lib/job-fetcher.ts` |
+| 26 | Agent-assisted link repair — find the right posting for a bad URL and propose a fix for the user to confirm | **Ready** — blocked on #25, #22 |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 
@@ -629,6 +631,7 @@ The browser never holds an agent key, and agents never hold the Supabase key.
 | `jobs:edit` | change notes, `aiSummary`, score rationale, fit |
 | `jobs:triage` | move a job between sections, including out of `pending` |
 | `jobs:evaluate` | run URL evaluation / fit scoring (spends AI budget) |
+| `jobs:check_url` | run link checks and read their results (no AI spend) |
 | `jobs:archive` | soft-delete a job; restore stays user-only |
 
 - Managing agents is a signed-in-user action (a Settings page); an agent can never create or change agents.
@@ -661,3 +664,73 @@ The browser never holds an agent key, and agents never hold the Supabase key.
 - Every write appears in `job_events` with the agent's name; replaying a duplicate add creates no second job.
 - The Supabase service-role key exists only in the app's server environment.
 - E2E: an agent adds a job over MCP, it shows in the Inbox (Slice 18), the user triages it, and the history shows both actors.
+
+---
+
+## Slices 25–26 — Job link validity
+
+### Problem
+
+Some jobs on the board have wrong URLs: added incorrectly, a different role's page, a generic careers page, a posting that has since closed, or a malformed string. Nothing tells the user which links are bad, so they find out by clicking. This matters most in the inbox (triage decisions) and for prospects.
+
+### Slice 25 — Job link check
+
+**Goal:** a job's URL has a visible health status, checkable on demand for one job, a whole section, or the inbox, and re-checkable automatically.
+
+**What "bad" means** — distinct results, because "I couldn't tell" must never be shown as "broken":
+
+| Status | Meaning |
+|--------|---------|
+| `ok` | fetched, role-specific page, posting open |
+| `redirected` | resolves to a different final URL; store it, flag if it lands on a generic careers/listing page |
+| `dead` | 404/410, DNS failure, or connection refused |
+| `closed` | page loads but says the role is filled/expired ("no longer available", "position filled", "posting expired") |
+| `generic` | a company careers page or search listing with no job-specific path |
+| `mismatch` | page loads but the title/company doesn't match the stored role |
+| `invalid` | not a parseable http(s) URL |
+| `unverified` | blocked by bot protection or JavaScript-only (`retrieval_limited`); status unknown |
+
+These are the same open/closed rules CLAUDE.md already applies before an agent adds a job; the check turns them into code in `lib/` instead of prose.
+
+**Design:**
+- A pure classifier (`lib/link-check.ts`): given the fetch result and the stored job, returns a status and a one-line reason. Fully unit-testable with fixture pages; no network in the tests.
+- Reuses `lib/job-fetcher.ts` for retrieval (fetch → Brave → optional Playwright). Playwright stays self-hosted-only (`ENABLE_PLAYWRIGHT_FALLBACK`).
+- Stored on the job: `url_status`, `url_checked_at`, `url_final`, `url_check_note` (migration; columns, not `extra`, so the board can filter on them).
+- UI: a status badge on cards and in the detail view, a "Check link" action per job, a "Check all" action on the inbox and each section, and a "broken links" filter. `unverified` is styled as neutral, not as an error.
+- Add-time: a job whose URL is `invalid` is rejected by validation (Zod) at create/edit; every other status is allowed and checked afterwards, since a slow check must not block adding.
+- Re-check: on demand, plus a scheduled sweep of `pending` and `prospect` (not `applied`/`passed`, where a closed posting is normal and not a problem). Re-check interval configurable; nothing is checked more than once per interval.
+- Link checks may be requested by agents (scope `jobs:check_url`, Slice 23 tool `check_job_url`).
+
+**Security and manners** (the server fetches user- and agent-supplied URLs):
+- SSRF guard: only `http`/`https`; resolve the host and refuse loopback, private, link-local and cloud-metadata addresses, and re-check after every redirect; cap redirects, response size and time.
+- Per-host concurrency and delay so a "Check all" on 67 jobs doesn't hammer one ATS; identify with a clear User-Agent; honor 429/`Retry-After`.
+- Page text is untrusted: it is classified, never executed or followed as instructions.
+
+**Acceptance Criteria:**
+- Each status above has a fixture-based test; `unverified` is returned (not `dead`) for a blocked or JS-only page.
+- A URL pointing at `localhost`, a private IP, or redirecting to one is refused and never fetched.
+- "Check all" in the inbox updates statuses without leaving the view and respects per-host limits.
+- A job whose link was checked shows its status and time; a stale or never-checked job shows that too.
+- Checking never changes a job's section, URL or notes — only the `url_*` fields.
+
+### Slice 26 — Agent-assisted link repair
+
+**Goal:** when a link is `dead`, `generic`, `closed` or `mismatch`, an agent tries to find the correct posting and **proposes** it; the user confirms.
+
+**Flow:** search by company + role (Brave, the same source Slice 16 uses, and the company's ATS domains from `scrape-targets`) → fetch each candidate → run the Slice 25 classifier → accept only candidates that are `ok` with a matching title/company → present the best match as a proposed URL with the evidence.
+
+**Rules:**
+- Never overwrite a URL silently. The proposal is stored (`url_proposal` with its evidence) and shown in the UI; the user accepts or dismisses. An agent with `jobs:edit` may accept only if the user has explicitly enabled that for the agent.
+- If no verified candidate is found, say so; do not guess. A `closed` posting is reported as closed, not "repaired" to a different job.
+- Every accepted or dismissed proposal is recorded in `job_events` (Slice 20).
+- Exposed over the Agent API and MCP (`propose_url_fix`), under `jobs:evaluate` because it spends search and AI budget, with the per-agent budget from Slice 22.
+
+**Acceptance Criteria:**
+- Given a job with a generic careers URL and a findable specific posting, a proposal appears with the new URL and why it matched.
+- Given a closed posting, no replacement is proposed and the job is marked `closed`.
+- Accepting a proposal updates the URL, re-checks it, and logs the change; dismissing keeps the old URL and does not propose the same candidate again.
+
+### Open
+
+- Whether closed `prospect` jobs should offer one-click "pass" (move to `passed`) after the check, or leave triage to the user.
+- Re-check cadence and which sections the scheduled sweep covers (proposed: `pending` and `prospect`, weekly).
