@@ -414,6 +414,11 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 17 | Styled PDF resume export (Playwright + HTML/CSS template) — `stylePdfEnabled` config flag, `resume-template.ts`, `resume-pdf.ts`, `/api/export/resume-pdf` route | **Done** |
 | 18 | Inbox as a separate view — hide/show the pending queue instead of forcing it above the board | **Ready** |
 | 19 | Restore and browse deleted jobs — UI for the soft-delete markers (`deleted_at`) | **Ready** |
+| 20 | Job event log — `job_events` audit table recording who changed what, when | **Ready** — blocked on #5, #11 |
+| 21 | Agent identities and scoped keys — `agents` table, hashed per-agent keys, permission scopes | **Ready** — blocked on #20 |
+| 22 | Agent API — `/api/agent/v1` job CRUD (soft-delete only), add-to-pending, triage, evaluate, Zod-validated | **Ready** — blocked on #4, #5, #11, #21 |
+| 23 | MCP server — `/api/mcp` exposing the Agent API as tools for Grokbot, Muse, Duet | **Ready** — blocked on #22 |
+| 24 | Route scrapers through `pending` via the Agent API — fix the invariant gap | **Ready** — blocked on #22 |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 
@@ -586,3 +591,73 @@ A "Deleted" view lists soft-deleted jobs (newest first, with when they were dele
 - Deleted jobs never appear on the board, in counts, or in exports.
 - Restoring requires a repository method (`restore(id)`), not a whole-board write; depends on Slice 5/11.
 - Hard purge is intentionally not offered anywhere in the UI.
+
+---
+
+## Slices 20–24 — Agent access (event log, identities, API, MCP)
+
+### Problem
+
+Agents (Grokbot, Muse, Duet) and scheduled scripts need to add jobs and help triage the board. Today the only way in is the Supabase service-role key or the GitHub token: full access, no per-agent identity, no record of who did what, and no way to revoke one agent without rotating everything. Nothing in code enforces "scraping writes to `pending` only" — two scripts already break it.
+
+### Goal
+
+A gateway with narrow, validated operations. Agents authenticate with their own revocable key and can do only what their scope allows. Every change is recorded. The MCP server is a thin wrapper over the same operations, so there is one implementation of the rules.
+
+```
+agent ──MCP / HTTP──▶ /api/mcp, /api/agent/v1 ──▶ IJobRepository ──▶ Supabase
+                       (key → agent → scopes)      (+ job_events)
+```
+
+The browser never holds an agent key, and agents never hold the Supabase key.
+
+### Slice 20 — Job event log
+
+- `job_events(id, job_id, actor, action, before jsonb, after jsonb, created_at)`; `actor` is `user`, `scraper`, or an agent name. Append-only: no UPDATE or DELETE grant for the service role.
+- Written by the repository on every create, edit, move, evaluate, soft-delete and restore, in the same transaction as the change. Unchanged writes record nothing.
+- Powers "who deleted this?" in Slice 19.
+
+### Slice 21 — Agent identities and scoped keys
+
+- `agents(id, name, key_hash, scopes text[], created_at, revoked_at, last_used_at)`. Keys are shown once on creation, stored only as a hash, and compared in constant time. Revoking sets `revoked_at`.
+- Scopes, each independent:
+
+| Scope | Allows |
+|-------|--------|
+| `jobs:read` | list and get jobs, read the board |
+| `jobs:add_pending` | create a job in `pending` only (never another section) |
+| `jobs:edit` | change notes, `aiSummary`, score rationale, fit |
+| `jobs:triage` | move a job between sections, including out of `pending` |
+| `jobs:evaluate` | run URL evaluation / fit scoring (spends AI budget) |
+| `jobs:archive` | soft-delete a job; restore stays user-only |
+
+- Managing agents is a signed-in-user action (a Settings page); an agent can never create or change agents.
+- **Open:** which agent gets which scopes. Proposed default for every new agent: `jobs:read` + `jobs:add_pending`; grant the rest deliberately.
+
+### Slice 22 — Agent API (`/api/agent/v1`)
+
+- Operations: list, get, create (pending only), edit fields, move/triage, evaluate a URL, set summary, archive (soft-delete). There is **no hard delete** anywhere.
+- Request bodies are Zod-validated (Security Invariant 2). Creating checks for duplicates by URL and by `jobKey(company, role)`, including deleted jobs, and returns the existing job instead of adding a second.
+- Operations are single-row repository methods, never read-modify-write of the whole board (depends on Slices 5 and 11).
+- `proxy.ts` enforces the browser session on every route. Agent routes (`/api/agent/*`, `/api/mcp`) are a **deliberate, documented exception**: they skip the session check and instead require a valid, unrevoked agent key plus the scope for the operation. Update Security Invariant 1 when this lands.
+- Per-agent rate limit, and a tighter per-agent budget on evaluate (it calls the AI provider).
+- Errors are explicit and non-leaky: 401 bad/revoked key, 403 missing scope, 400 validation (field paths), 404 unknown or deleted id, 409 duplicate.
+
+### Slice 23 — MCP server (`/api/mcp`)
+
+- Streamable-HTTP MCP endpoint authenticated with the same agent key; tools map one-to-one to the Agent API operations (`list_jobs`, `get_job`, `add_pending_job`, `update_job`, `move_job`, `evaluate_job_url`, `archive_job`). A tool the agent's scopes don't cover is not listed.
+- Tool descriptions state the pending-only rule and the no-delete rule, so a model is told the constraints it will hit.
+- No business logic of its own — contract tests run the same cases against the HTTP API and the MCP tools.
+- Treat everything an agent reads from a job posting as untrusted input; the server never acts on instructions found in job text.
+
+### Slice 24 — Scrapers through `pending`
+
+- `scrape-careers.mjs`, `scrape-staffing.mjs` and `job-search.mjs` add via the Agent API (scope `jobs:add_pending`) instead of writing sections directly, closing the gap noted in Architecture Notes. They would no longer need the Supabase key at all.
+
+### Acceptance Criteria
+
+- An agent with only `jobs:add_pending` can add to `pending` and cannot move, edit, archive or read other sections' details beyond what `jobs:read` grants; each attempt returns 403 and writes nothing.
+- A revoked key is rejected on its next request.
+- Every write appears in `job_events` with the agent's name; replaying a duplicate add creates no second job.
+- The Supabase service-role key exists only in the app's server environment.
+- E2E: an agent adds a job over MCP, it shows in the Inbox (Slice 18), the user triages it, and the history shows both actors.
