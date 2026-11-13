@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import type { AiConfig } from "@/lib/config";
 import { readConfig } from "@/lib/config-repository";
 import { ANTHROPIC_TOOLS, OPENAI_TOOLS, executeTool } from "@/lib/chat-tools";
+import { finalReply } from "@/lib/chat-reply";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -19,6 +20,7 @@ const SYSTEM_PROMPT = `You are a concise job search assistant inside DeckhandAI,
 Board sections: prospect (remote), local (local/hybrid), staffing (contract), applied, passed, pending (awaiting review).
 
 Use the available tools to read and mutate the board. After completing an action, confirm briefly what you did. Keep replies short.
+When the same change applies to several jobs (for example marking many applied jobs declined), call update_jobs once with the whole list instead of update_job once per job. You have a limited number of steps per message, so batch work and always end with a short summary of what you did and anything you could not do.
 When add_job returns a detailUrl for a pending or applied job, include a final markdown link exactly like: [View Job](detailUrl).
 
 Whenever you list multiple jobs from list_jobs in a table, keep it to exactly two columns — the chat panel is narrow, and a long role name wraps badly once there's a third column competing for width. Column 1 is "Job": "Company — [Role](detailUrl)", with only the role text linked, never the company. Column 2 is one status-like field relevant to the section — "Status" for applied jobs, "Fit" for prospect/local/staffing jobs. Omit salary and date from the table by default; mention them in prose after the table, or add a column, only if the user specifically asked about comp or timing. Header row stays plain text ("| Job | Status |"); only body-row cells carry the link, e.g. "| Anthropic — [Head of Product Design](/job?section=prospect&company=Anthropic&role=Head+of+Product+Design) | Strong fit |". Never add a separate "Link" column or a trailing "[View](url)" — the role name is already the link. Only use the exact detailUrl string returned by list_jobs for that job — never invent, guess, or fall back to "/" or any other placeholder URL. If a job wasn't returned by list_jobs in this conversation, don't link it. For a single job, or a short list, plain prose or a bulleted list ("Company — [Role](detailUrl)") is fine — don't force a table.
@@ -105,6 +107,8 @@ async function runAnthropic(
     content: m.content,
   } as AnthropicMsg));
   let finalText = "";
+  let toolCalls = 0;
+  let finished = false;
 
   for (let round = 0; round < 10; round++) {
     const res = await fetch(url, {
@@ -129,11 +133,15 @@ async function runAnthropic(
       .map((c) => c.text)
       .join("");
     if (text) finalText = text;
-    if (json.stop_reason !== "tool_use") break;
+    if (json.stop_reason !== "tool_use") {
+      finished = true;
+      break;
+    }
 
     const toolUses = content.filter((c): c is AnthropicToolUseBlock => c.type === "tool_use");
     const results: AnthropicToolResult[] = [];
     for (const tu of toolUses) {
+      toolCalls++;
       onToolCall(tu.name);
       results.push({
         type: "tool_result",
@@ -144,7 +152,7 @@ async function runAnthropic(
     thread.push({ role: "user", content: results });
   }
 
-  return finalText;
+  return finalReply({ text: finalText, hitRoundLimit: !finished, toolCalls });
 }
 
 // ─── OpenAI tool loop ─────────────────────────────────────────────────────────
@@ -173,6 +181,8 @@ async function runOpenAI(
     ...messages.map((m) => ({ role: m.role, content: m.content })),
   ];
   let finalText = "";
+  let toolCalls = 0;
+  let finished = false;
 
   for (let round = 0; round < 10; round++) {
     const res = await fetch(url, {
@@ -190,13 +200,20 @@ async function runOpenAI(
     };
     const choice = json.choices?.[0];
     const msg = choice?.message;
-    if (!msg) break;
+    if (!msg) {
+      finished = true;
+      break;
+    }
 
     thread.push(msg);
     if (msg.content) finalText = msg.content;
-    if (choice.finish_reason !== "tool_calls" || !msg.tool_calls?.length) break;
+    if (choice.finish_reason !== "tool_calls" || !msg.tool_calls?.length) {
+      finished = true;
+      break;
+    }
 
     for (const tc of msg.tool_calls) {
+      toolCalls++;
       onToolCall(tc.function.name);
       let input: Record<string, unknown> = {};
       try { input = JSON.parse(tc.function.arguments); } catch { /* ignore */ }
@@ -204,7 +221,7 @@ async function runOpenAI(
     }
   }
 
-  return finalText;
+  return finalReply({ text: finalText, hitRoundLimit: !finished, toolCalls });
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
