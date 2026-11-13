@@ -28,6 +28,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { formatModelLabel } from "@/lib/ai-settings";
 import AppHeader from "@/components/AppHeader";
 import AppFooter from "@/components/AppFooter";
 import ChatDrawer from "@/components/ChatDrawer";
@@ -649,10 +650,7 @@ export default function Home() {
       setShowOnboarding(true);
     }
     setShowPassed(config.preferences?.hide_passed !== true);
-    if (config.ai?.model) {
-      const provider = config.ai.provider ?? "anthropic";
-      setModelLabel(`${provider} / ${config.ai.model}`);
-    }
+    setModelLabel(formatModelLabel(config.ai_effective ?? config.ai ?? {}));
   }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect

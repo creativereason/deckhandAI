@@ -30,6 +30,7 @@
 import { existsSync, readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createSupabaseData, usesSupabase } from "./lib/supabase-data.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -175,9 +176,11 @@ const SECTIONS = ["applied", "prospect", "local", "staffing", "passed", "pending
 async function main() {
   loadEnvLocal();
 
+  // DATA_BACKEND=supabase reads and updates rows via Supabase; GITHUB_* are then unused.
+  const store = usesSupabase() ? createSupabaseData() : undefined;
   const repo = process.env.GITHUB_DATA_REPO;
   const branch = process.env.GITHUB_DATA_BRANCH || "main";
-  if (!repo || !process.env.GITHUB_TOKEN) {
+  if (!store && (!repo || !process.env.GITHUB_TOKEN)) {
     console.error("GITHUB_DATA_REPO and GITHUB_TOKEN are required (set them in .env.local).");
     process.exit(1);
   }
@@ -187,8 +190,11 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Reading data/jobs.json from ${repo}@${branch}…`);
-  const { data: jobs, sha } = await githubGet(repo, branch, "data/jobs.json");
+  console.log(store ? "Reading jobs from Supabase…" : `Reading data/jobs.json from ${repo}@${branch}…`);
+  const { data: jobs, sha } = store
+    ? { data: await store.readBoard(), sha: undefined }
+    : await githubGet(repo, branch, "data/jobs.json");
+  const generatedSummaries = [];
 
   let generated = 0;
   let skippedExisting = 0;
@@ -212,6 +218,7 @@ async function main() {
           continue;
         }
         job.aiSummary = summary;
+        generatedSummaries.push({ id: job.id, summary });
         generated++;
         console.log(`  ✓ ${section}: ${job.company} — ${job.role}`);
         console.log(`      ${summary}`);
@@ -234,6 +241,11 @@ async function main() {
     return;
   }
 
+  if (store) {
+    for (const { id, summary } of generatedSummaries) await store.setAiSummary(id, summary);
+    console.log(`Updated ${generated} rows in Supabase.`);
+    return;
+  }
   await githubPut(repo, branch, "data/jobs.json", sha, jobs, `Backfill aiSummary for ${generated} jobs`);
   console.log(`Wrote data/jobs.json to ${repo}@${branch}.`);
 }

@@ -21,11 +21,16 @@
  *                          (defaults to https://api.openai.com/v1)
  *   BRAVE_SEARCH_API_KEY — Brave Search API key (recommended for reliable results)
  *                          Falls back to DuckDuckGo if not set.
+ *   DATA_BACKEND         — "github" (default) or "supabase". With "supabase" the
+ *                          GITHUB_* vars are not needed; set SUPABASE_URL and
+ *                          SUPABASE_SERVICE_ROLE_KEY instead. Config is read from
+ *                          Supabase and new jobs are inserted into pending.
  */
 
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createSupabaseData, usesSupabase } from "./lib/supabase-data.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = resolve(__dirname, "../data/config.json");
@@ -34,7 +39,13 @@ const CONFIG_PATH = resolve(__dirname, "../data/config.json");
 // Config
 // ---------------------------------------------------------------------------
 
-function loadConfig() {
+async function loadConfig(store) {
+  if (store) {
+    const config = await store.readDocument("config");
+    if (config) return config;
+    console.error('No "config" document in Supabase — run `pnpm migrate:supabase` first.');
+    process.exit(1);
+  }
   try {
     return JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
   } catch {
@@ -189,7 +200,8 @@ Return [] if nothing qualifies.`;
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const required = ["GITHUB_TOKEN", "GITHUB_DATA_REPO", "GITHUB_DATA_BRANCH", "AI_API_KEY", "AI_MODEL"];
+  const store = usesSupabase() ? createSupabaseData() : undefined;
+  const required = [...(store ? [] : ["GITHUB_TOKEN", "GITHUB_DATA_REPO", "GITHUB_DATA_BRANCH"]), "AI_API_KEY", "AI_MODEL"];
   const missing = required.filter((k) => !process.env[k]);
   if (missing.length) {
     console.error(`Missing required env vars: ${missing.join(", ")}`);
@@ -198,7 +210,7 @@ async function main() {
 
   const { GITHUB_DATA_REPO, GITHUB_DATA_BRANCH } = process.env;
 
-  const config = loadConfig();
+  const config = await loadConfig(store);
   const { preferences, websearch_passes } = config;
 
   if (!websearch_passes || Object.keys(websearch_passes).length === 0) {
@@ -206,8 +218,10 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Loading jobs from ${GITHUB_DATA_REPO}...`);
-  const { data: jobs, sha } = await githubGet(GITHUB_DATA_REPO, GITHUB_DATA_BRANCH, "data/jobs.json");
+  console.log(`Loading jobs from ${store ? "Supabase" : GITHUB_DATA_REPO}...`);
+  const { data: jobs, sha } = store
+    ? { data: await store.readBoard({ includeDeleted: true }), sha: undefined }
+    : await githubGet(GITHUB_DATA_REPO, GITHUB_DATA_BRANCH, "data/jobs.json");
 
   const existingUrls = new Set(
     Object.values(jobs)
@@ -269,10 +283,15 @@ async function main() {
     return;
   }
 
+  console.log(`\nWriting ${newJobs.length} new job(s) to ${store ? "Supabase" : GITHUB_DATA_REPO}...`);
+  if (store) {
+    await store.addJobs("pending", newJobs, "push");
+    console.log(`Done. ${newJobs.length} new job(s) added to pending queue.`);
+    return;
+  }
+
   if (!Array.isArray(jobs.pending)) jobs.pending = [];
   jobs.pending.push(...newJobs);
-
-  console.log(`\nWriting ${newJobs.length} new job(s) to ${GITHUB_DATA_REPO}...`);
   await githubPut(
     GITHUB_DATA_REPO,
     GITHUB_DATA_BRANCH,

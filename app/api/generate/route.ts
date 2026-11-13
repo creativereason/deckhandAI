@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readConfig } from "@/lib/config-repository";
-import { githubRead } from "@/lib/github";
+import { readDataFile } from "@/lib/data-store";
 import { streamGenerate } from "@/lib/model";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
 import { fetchJdText } from "@/lib/fetch-jd";
@@ -9,7 +9,7 @@ import type { Profile } from "@/lib/profile";
 
 async function readProfile(): Promise<Profile> {
   try {
-    const raw = await githubRead("data/profile.json");
+    const raw = await readDataFile("data/profile.json");
     return JSON.parse(raw) as Profile;
   } catch {
     return {};

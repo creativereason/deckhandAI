@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { githubRead } from "@/lib/github";
+import { readDataFile } from "@/lib/data-store";
 import { readConfig } from "@/lib/config-repository";
 import { resolveExportStyle } from "@/lib/config";
 import { buildResumeHtml } from "@/lib/resume-template";
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     const [config, profileRaw] = await Promise.all([
       readConfig(),
-      githubRead("data/profile.json"),
+      readDataFile("data/profile.json"),
     ]);
 
     const style = resolveExportStyle(config.export);

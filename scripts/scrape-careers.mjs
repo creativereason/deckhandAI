@@ -13,12 +13,17 @@
  *                        when the app code and data repo are checked out
  *                        into different directories (e.g. in CI).
  *   GITHUB_DATA_BRANCH   Branch to pull/commit/push. Defaults to "main".
+ *   DATA_BACKEND         "github" (default) or "supabase". With "supabase" there is
+ *                        no git checkout, pull or push: jobs are read from and
+ *                        inserted into Supabase (needs SUPABASE_URL and
+ *                        SUPABASE_SERVICE_ROLE_KEY).
  */
 
 import { execSync } from "child_process";
 import { readFileSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createSupabaseData, usesSupabase } from "./lib/supabase-data.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Root of the data repo's git checkout. Defaults to this app's own checkout
@@ -38,20 +43,24 @@ const TITLE_INCLUDE =
   /\bux\b|\bui\b.{0,10}design|user experience|experience design|product design|product designer|design lead|design director|service design|design manager|design ops|designops|creative director|creative lead|head of design|design system|interaction design|\bdesigner\b|product director|director.{0,10}product|head of product/i;
 const LOCATION_REMOTE = /remote/i;
 
-function buildLocalRegex() {
+function readDiskConfig() {
   try {
-    const config = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
-    const city = config.preferences?.locations?.hub_city;
-    const state = config.preferences?.locations?.hub_state;
-    if (!city && !state) return /(?!)/;
-    const terms = [city, state].filter(Boolean).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    return new RegExp(terms.join("|"), "i");
+    return JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
   } catch {
-    return /(?!)/; // no config — match nothing
+    return undefined;
   }
 }
 
-const LOCATION_LOCAL = buildLocalRegex();
+function buildLocalRegex(config) {
+  const city = config?.preferences?.locations?.hub_city;
+  const state = config?.preferences?.locations?.hub_state;
+  if (!city && !state) return /(?!)/; // no config — match nothing
+  const terms = [city, state].filter(Boolean).map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(terms.join("|"), "i");
+}
+
+// Assigned in main() once the config is loaded (from disk or Supabase).
+let LOCATION_LOCAL = /(?!)/;
 
 const DEFAULT_SELECTORS = [
   ".job-title a",
@@ -332,11 +341,16 @@ async function main() {
 
   // Ensure the data repo checkout is on its tracked branch and up to date
   // (CI checks out a detached HEAD; this also covers a fresh local clone).
+  const store = usesSupabase() ? createSupabaseData() : undefined;
   const gitOpts = { stdio: "inherit", cwd: DATA_ROOT };
-  execSync(`git checkout ${DATA_BRANCH} 2>/dev/null || git checkout -b ${DATA_BRANCH} --track origin/${DATA_BRANCH}`, gitOpts);
-  execSync(`git pull --rebase origin ${DATA_BRANCH}`, gitOpts);
+  if (!store) {
+    execSync(`git checkout ${DATA_BRANCH} 2>/dev/null || git checkout -b ${DATA_BRANCH} --track origin/${DATA_BRANCH}`, gitOpts);
+    execSync(`git pull --rebase origin ${DATA_BRANCH}`, gitOpts);
+  }
 
-  const jobs = JSON.parse(readFileSync(JOBS_PATH, "utf-8"));
+  LOCATION_LOCAL = buildLocalRegex(store ? await store.readDocument("config") : readDiskConfig());
+  const jobs = store ? await store.readBoard({ includeDeleted: true }) : JSON.parse(readFileSync(JOBS_PATH, "utf-8"));
+  const added = { local: [], prospect: [] };
 
   const existingKeys = new Set([
     ...jobs.prospect.map((j) => `${j.company}|${j.role}`),
@@ -403,6 +417,7 @@ async function main() {
         } else {
           jobs.prospect.unshift(job);
         }
+        added[isLocal ? "local" : "prospect"].push(job);
         existingKeys.add(key);
         log.added++;
         totalAdded++;
@@ -417,7 +432,11 @@ async function main() {
     await browser.close();
   }
 
-  if (totalAdded > 0) {
+  if (totalAdded > 0 && store) {
+    await store.addJobs("local", added.local, "unshift");
+    await store.addJobs("prospect", added.prospect, "unshift");
+    console.log(`\nDone. ${totalAdded} new role(s) added to Supabase.`);
+  } else if (totalAdded > 0) {
     writeFileSync(JOBS_PATH, JSON.stringify(jobs, null, 2));
     execSync("git config user.email 'routine@claude.ai'", gitOpts);
     execSync("git config user.name 'Claude Routine'", gitOpts);

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { githubRead, githubWrite } from "@/lib/github";
 import { readJobs, writeJobs } from "@/lib/jobs-repository";
 import type { JobsData } from "@/lib/jobs";
@@ -66,5 +66,55 @@ describe("writeJobs", () => {
       JSON.stringify(jobs, null, 2),
       "Update jobs.json"
     );
+  });
+});
+
+describe("with the supabase backend", () => {
+  const selectAll = vi.fn();
+  const insert = vi.fn();
+
+  beforeEach(async () => {
+    vi.stubEnv("DATA_BACKEND", "supabase");
+    selectAll.mockReset();
+    insert.mockReset();
+    vi.doMock("@/lib/supabase", () => ({ getSupabase: () => ({}) }));
+    vi.doMock("@/lib/supabase-row-store", () => ({
+      createJobRowStore: () => ({ selectAll, insert, update: vi.fn(), remove: vi.fn() }),
+    }));
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock("@/lib/supabase");
+    vi.doUnmock("@/lib/supabase-row-store");
+  });
+
+  // O — One: reads come from rows, not from GitHub
+  it("reads the board from the jobs table", async () => {
+    selectAll.mockResolvedValue([]);
+    const repo = await import("@/lib/jobs-repository");
+
+    expect(await repo.readJobs()).toEqual(EMPTY_JOBS);
+    expect(githubRead).not.toHaveBeenCalled();
+  });
+
+  // E — Exception: an empty fallback here would let the next write delete every row
+  it("throws instead of returning an empty board when the read fails", async () => {
+    selectAll.mockRejectedValue(new Error("connection reset"));
+    const repo = await import("@/lib/jobs-repository");
+
+    await expect(repo.readJobs()).rejects.toThrow("connection reset");
+  });
+
+  // O — One: writes go to rows, not to GitHub
+  it("writes new jobs as rows", async () => {
+    selectAll.mockResolvedValue([]);
+    const repo = await import("@/lib/jobs-repository");
+
+    await repo.writeJobs({ ...EMPTY_JOBS, passed: [{ company: "A", role: "R", salary: "", notes: "", url: "" }] });
+
+    expect(insert).toHaveBeenCalledWith([expect.objectContaining({ section: "passed", company: "A" })]);
+    expect(githubWrite).not.toHaveBeenCalled();
   });
 });

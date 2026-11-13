@@ -11,10 +11,12 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "backfill:summaries": "node scripts/backfill-ai-summaries.mjs"
+    "backfill:summaries": "node scripts/backfill-ai-summaries.mjs",
+    "migrate:supabase": "tsx --env-file-if-exists=.env.local scripts/migrate-to-supabase.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@supabase/supabase-js": "^2.119.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docx": "^9.7.1",
@@ -43,6 +45,7 @@
     "jsdom": "^29.1.1",
     "playwright": "^1.60.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }

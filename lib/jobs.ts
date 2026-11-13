@@ -8,6 +8,8 @@ export type JobType = "remote" | "hybrid" | "local" | "contract";
 export type JobSection = "applied" | "prospect" | "local" | "staffing" | "passed" | "pending";
 
 export interface AppliedJob {
+  /** Row id when the Supabase backend is active; absent for JSON-backed data and unsaved jobs. */
+  id?: string;
   company: string;
   role: string;
   status: JobStatus;
@@ -22,6 +24,8 @@ export interface AppliedJob {
 }
 
 export interface ProspectJob {
+  /** Row id when the Supabase backend is active; absent for JSON-backed data and unsaved jobs. */
+  id?: string;
   company: string;
   role: string;
   fit: JobFit;
@@ -35,6 +39,8 @@ export interface ProspectJob {
 }
 
 export interface PassedJob {
+  /** Row id when the Supabase backend is active; absent for JSON-backed data and unsaved jobs. */
+  id?: string;
   company: string;
   role: string;
   salary: string;
@@ -45,6 +51,8 @@ export interface PassedJob {
 }
 
 export interface PendingJob {
+  /** Row id when the Supabase backend is active; absent for JSON-backed data and unsaved jobs. */
+  id?: string;
   company: string;
   role: string;
   url: string;

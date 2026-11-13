@@ -80,6 +80,9 @@ data/
 - AI generation proxies through `/api/generate` — API key stays server-side, never exposed to browser
 - Any OpenAI-compatible endpoint works for AI generation (Anthropic, OpenAI, Ollama, custom)
 - Jobs data lives in a private GitHub repo defined by `GITHUB_DATA_REPO` in `.env.local` — never in this repo
+- Storage is selected by `DATA_BACKEND` (`github` default, or `supabase`; see `lib/data-backend.ts`). Jobs go through `lib/jobs-repository.ts` (`readJobs`/`writeJobs`); config, profile and scrape-targets go through `lib/data-store.ts`. Nothing outside those two modules and `lib/github.ts` may call `githubRead`/`githubWrite`.
+- Supabase: `jobs` table (one row per job, `section` column, UUID `id`) and `documents` table, schema in `supabase/migrations/`. RLS is on with no policies; the server uses the service-role key (`lib/supabase.ts`) and it never reaches the browser. Jobs are never physically deleted on Supabase: `writeJobs` soft-deletes by setting `deleted_at`, reads filter those rows out, and the service role has no DELETE privilege on `jobs` (migration `20261113120000_soft_delete_jobs.sql`). Scripts that dedupe pass `readBoard({ includeDeleted: true })` so a removed job is not re-added. On Supabase `readJobs` must throw on failure (no empty-board fallback) because `writeJobs` diffs against stored rows and would delete them. Import existing data with `pnpm migrate:supabase` (`lib/jobs-import.ts` plans it, `lib/jobs-mapping.ts` maps rows).
+- The standalone `scripts/*.mjs` honor `DATA_BACKEND` through `scripts/lib/supabase-data.mjs`, which is dependency-free (plain `fetch` to PostgREST) so a bare checkout can run them. Its row mapping mirrors `lib/jobs-mapping.ts`; `lib/__tests__/scripts-supabase-data.test.ts` fails if they drift, so change both together. Known gap: `scrape-careers.mjs` and `scrape-staffing.mjs` still insert into `prospect`/`local`/`staffing` rather than `pending`, which predates the "scraping writes to pending only" invariant.
 
 ---
 
@@ -409,6 +412,16 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 11 | Stable job identity (UUID) — fix silent data loss on delete/move for duplicate company+role | **Ready** — blocked on #5 |
 | 16 | "Evaluate Job URL" flow — fetch → Playwright fallback, streaming status, AI fit scoring, user-confirm before write to pending | **Ready** — blocked on #5, #10 |
 | 17 | Styled PDF resume export (Playwright + HTML/CSS template) — `stylePdfEnabled` config flag, `resume-template.ts`, `resume-pdf.ts`, `/api/export/resume-pdf` route | **Done** |
+| 18 | Inbox as a separate view — hide/show the pending queue instead of forcing it above the board | **Ready** |
+| 19 | Restore and browse deleted jobs — UI for the soft-delete markers (`deleted_at`) | **Ready** |
+| 20 | Job event log — `job_events` audit table recording who changed what, when | **Ready** — blocked on #5, #11 |
+| 21 | Agent identities and scoped keys — `agents` table, hashed per-agent keys, permission scopes | **Ready** — blocked on #20 |
+| 22 | Agent API — `/api/agent/v1` job CRUD (soft-delete only), add-to-pending, triage, evaluate, Zod-validated | **Ready** — blocked on #4, #5, #11, #21 |
+| 23 | MCP server — `/api/mcp` exposing the Agent API as tools for Grokbot, Muse, Duet | **Ready** — blocked on #22 |
+| 24 | Route scrapers through `pending` via the Agent API — fix the invariant gap | **Ready** — blocked on #22 |
+| 25 | Job link check — verify a job's URL is valid and still open, on any board section or the inbox, with a visible status | **Ready** — reuses `lib/job-fetcher.ts` |
+| 26 | Agent-assisted link repair — find the right posting for a bad URL and propose a fix for the user to confirm | **Ready** — blocked on #25, #22 |
+| 27 | UI overhaul — visual and layout redesign of the board, inbox and detail views | **Deferred** — scope after Slices 18 and 22; no spec yet |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 
@@ -534,3 +547,195 @@ app/api/__tests__/evaluate-job.test.ts
 - No job is written to pending without an explicit user confirmation action after seeing the evaluation card.
 - Job detail view offers a "Fetch more details" action that uses the same retrieval path to enrich notes before generating or scoring.
 - Auth guard: unauthenticated request returns 401 before any fetch is attempted.
+
+---
+
+## Slice 18 — Inbox as a separate view
+
+### Problem
+
+`ScrapeReviewQueue` renders inline above the board whenever `jobs.pending` is non-empty (`app/page.tsx`). With a large queue (67 items on the author's board) the user must scroll past the whole inbox to reach their applied jobs and prospects, and there is no way to put it away.
+
+### Goal
+
+The inbox is its own view. The user chooses to open it; the board is the default and is never pushed down by it.
+
+### Behavior
+
+- The board view shows the existing "N pending review" count in the header as the entry point (with the NEW badge), and a clear "Inbox" control that opens the inbox view.
+- The inbox view shows only the `ScrapeReviewQueue`; a control returns to the board. Triage actions (accept to prospect, pass, etc.) behave exactly as today.
+- The choice persists for the session (and across reloads) — a per-user preference, not stored in the jobs data. Default is the board.
+- An empty inbox hides the control's badge; it does not disappear entirely.
+
+### Acceptance Criteria
+
+- With pending jobs present, the board's first content is the board sections, not the queue.
+- Opening the inbox shows every pending job; triaging one updates the header count without leaving the view.
+- Reloading keeps the last-selected view.
+- Interface tests (React Testing Library) cover: default view, switching to the inbox, switching back, empty inbox. No change to `/api/jobs` is required.
+
+### Open
+
+Whether the view is a route (`/inbox`, shareable and back-button friendly) or a toggle on `/`. Prefer a route unless the single-page state makes that costly.
+
+## Slice 19 — Restore and browse deleted jobs
+
+### Problem
+
+Jobs are soft-deleted (`deleted_at`) and never removed, but nothing in the UI can see them. A job removed by mistake, or by an agent, can only be recovered with SQL.
+
+### Goal
+
+A "Deleted" view lists soft-deleted jobs (newest first, with when they were deleted and, once Slice 21 lands, by whom) and offers Restore, which clears `deleted_at` and returns the job to its section.
+
+### Acceptance Criteria
+
+- A restored job reappears in its original section and position-independent order, with its original fields intact and the same id.
+- Deleted jobs never appear on the board, in counts, or in exports.
+- Restoring requires a repository method (`restore(id)`), not a whole-board write; depends on Slice 5/11.
+- Hard purge is intentionally not offered anywhere in the UI.
+
+---
+
+## Slices 20–24 — Agent access (event log, identities, API, MCP)
+
+### Problem
+
+Agents (Grokbot, Muse, Duet) and scheduled scripts need to add jobs and help triage the board. Today the only way in is the Supabase service-role key or the GitHub token: full access, no per-agent identity, no record of who did what, and no way to revoke one agent without rotating everything. Nothing in code enforces "scraping writes to `pending` only" — two scripts already break it.
+
+### Goal
+
+A gateway with narrow, validated operations. Agents authenticate with their own revocable key and can do only what their scope allows. Every change is recorded. The MCP server is a thin wrapper over the same operations, so there is one implementation of the rules.
+
+```
+agent ──MCP / HTTP──▶ /api/mcp, /api/agent/v1 ──▶ IJobRepository ──▶ Supabase
+                       (key → agent → scopes)      (+ job_events)
+```
+
+The browser never holds an agent key, and agents never hold the Supabase key.
+
+### Slice 20 — Job event log
+
+- `job_events(id, job_id, actor, action, before jsonb, after jsonb, created_at)`; `actor` is `user`, `scraper`, or an agent name. Append-only: no UPDATE or DELETE grant for the service role.
+- Written by the repository on every create, edit, move, evaluate, soft-delete and restore, in the same transaction as the change. Unchanged writes record nothing.
+- Powers "who deleted this?" in Slice 19.
+
+### Slice 21 — Agent identities and scoped keys
+
+- `agents(id, name, key_hash, scopes text[], created_at, revoked_at, last_used_at)`. Keys are shown once on creation, stored only as a hash, and compared in constant time. Revoking sets `revoked_at`.
+- Scopes, each independent:
+
+| Scope | Allows |
+|-------|--------|
+| `jobs:read` | list and get jobs, read the board |
+| `jobs:add_pending` | create a job in `pending` only (never another section) |
+| `jobs:edit` | change notes, `aiSummary`, score rationale, fit |
+| `jobs:triage` | move a job between sections, including out of `pending` |
+| `jobs:evaluate` | run URL evaluation / fit scoring (spends AI budget) |
+| `jobs:check_url` | run link checks and read their results (no AI spend) |
+| `jobs:archive` | soft-delete a job; restore stays user-only |
+
+- Managing agents is a signed-in-user action (a Settings page); an agent can never create or change agents.
+- **Open:** which agent gets which scopes. Proposed default for every new agent: `jobs:read` + `jobs:add_pending`; grant the rest deliberately.
+
+### Slice 22 — Agent API (`/api/agent/v1`)
+
+- Operations: list, get, create (pending only), edit fields, move/triage, evaluate a URL, set summary, archive (soft-delete). There is **no hard delete** anywhere.
+- Request bodies are Zod-validated (Security Invariant 2). Creating checks for duplicates by URL and by `jobKey(company, role)`, including deleted jobs, and returns the existing job instead of adding a second.
+- Operations are single-row repository methods, never read-modify-write of the whole board (depends on Slices 5 and 11).
+- `proxy.ts` enforces the browser session on every route. Agent routes (`/api/agent/*`, `/api/mcp`) are a **deliberate, documented exception**: they skip the session check and instead require a valid, unrevoked agent key plus the scope for the operation. Update Security Invariant 1 when this lands.
+- Per-agent rate limit, and a tighter per-agent budget on evaluate (it calls the AI provider).
+- Errors are explicit and non-leaky: 401 bad/revoked key, 403 missing scope, 400 validation (field paths), 404 unknown or deleted id, 409 duplicate.
+
+### Slice 23 — MCP server (`/api/mcp`)
+
+- Streamable-HTTP MCP endpoint authenticated with the same agent key; tools map one-to-one to the Agent API operations (`list_jobs`, `get_job`, `add_pending_job`, `update_job`, `move_job`, `evaluate_job_url`, `archive_job`). A tool the agent's scopes don't cover is not listed.
+- Tool descriptions state the pending-only rule and the no-delete rule, so a model is told the constraints it will hit.
+- No business logic of its own — contract tests run the same cases against the HTTP API and the MCP tools.
+- Treat everything an agent reads from a job posting as untrusted input; the server never acts on instructions found in job text.
+
+### Slice 24 — Scrapers through `pending`
+
+- `scrape-careers.mjs`, `scrape-staffing.mjs` and `job-search.mjs` add via the Agent API (scope `jobs:add_pending`) instead of writing sections directly, closing the gap noted in Architecture Notes. They would no longer need the Supabase key at all.
+
+### Acceptance Criteria
+
+- An agent with only `jobs:add_pending` can add to `pending` and cannot move, edit, archive or read other sections' details beyond what `jobs:read` grants; each attempt returns 403 and writes nothing.
+- A revoked key is rejected on its next request.
+- Every write appears in `job_events` with the agent's name; replaying a duplicate add creates no second job.
+- The Supabase service-role key exists only in the app's server environment.
+- E2E: an agent adds a job over MCP, it shows in the Inbox (Slice 18), the user triages it, and the history shows both actors.
+
+---
+
+## Slices 25–26 — Job link validity
+
+### Problem
+
+Some jobs on the board have wrong URLs: added incorrectly, a different role's page, a generic careers page, a posting that has since closed, or a malformed string. Nothing tells the user which links are bad, so they find out by clicking. This matters most in the inbox (triage decisions) and for prospects.
+
+### Slice 25 — Job link check
+
+**Goal:** a job's URL has a visible health status, checkable on demand for one job, a whole section, or the inbox, and re-checkable automatically.
+
+**What "bad" means** — distinct results, because "I couldn't tell" must never be shown as "broken":
+
+| Status | Meaning |
+|--------|---------|
+| `ok` | fetched, role-specific page, posting open |
+| `redirected` | resolves to a different final URL; store it, flag if it lands on a generic careers/listing page |
+| `dead` | 404/410, DNS failure, or connection refused |
+| `closed` | page loads but says the role is filled/expired ("no longer available", "position filled", "posting expired") |
+| `generic` | a company careers page or search listing with no job-specific path |
+| `mismatch` | page loads but the title/company doesn't match the stored role |
+| `invalid` | not a parseable http(s) URL |
+| `unverified` | blocked by bot protection or JavaScript-only (`retrieval_limited`); status unknown |
+
+These are the same open/closed rules CLAUDE.md already applies before an agent adds a job; the check turns them into code in `lib/` instead of prose.
+
+**Design:**
+- A pure classifier (`lib/link-check.ts`): given the fetch result and the stored job, returns a status and a one-line reason. Fully unit-testable with fixture pages; no network in the tests.
+- Reuses `lib/job-fetcher.ts` for retrieval (fetch → Brave → optional Playwright). Playwright stays self-hosted-only (`ENABLE_PLAYWRIGHT_FALLBACK`).
+- Stored on the job: `url_status`, `url_checked_at`, `url_final`, `url_check_note` (migration; columns, not `extra`, so the board can filter on them).
+- Only the latest result is kept: each check overwrites the previous one. No history table and no dependency on the event log (Slice 20).
+- Written only by a dedicated single-purpose repository method (`recordLinkCheck(id, result)`) that touches just the `url_*` columns. They are not part of the whole-board read/diff/write mapping, so a stale board read can never overwrite a fresher check result.
+- Editing a job's URL clears the `url_*` fields in the same write, so a status never describes a URL that is no longer there.
+- UI: a status badge on cards and in the detail view, a "Check link" action per job, a "Check all" action on the inbox and each section, and a "broken links" filter. `unverified` is styled as neutral, not as an error.
+- Add-time: a job whose URL is `invalid` is rejected by validation (Zod) at create/edit; every other status is allowed and checked afterwards, since a slow check must not block adding.
+- Re-check: on demand, plus a scheduled sweep of `pending` and `prospect` (not `applied`/`passed`, where a closed posting is normal and not a problem). Re-check interval configurable; nothing is checked more than once per interval.
+- Link checks may be requested by agents (scope `jobs:check_url`, Slice 23 tool `check_job_url`).
+
+**Security and manners** (the server fetches user- and agent-supplied URLs):
+- SSRF guard: only `http`/`https`; resolve the host and refuse loopback, private, link-local and cloud-metadata addresses, and re-check after every redirect; cap redirects, response size and time.
+- Per-host concurrency and delay so a "Check all" on 67 jobs doesn't hammer one ATS; identify with a clear User-Agent; honor 429/`Retry-After`.
+- Page text is untrusted: it is classified, never executed or followed as instructions.
+
+**Acceptance Criteria:**
+- Each status above has a fixture-based test; `unverified` is returned (not `dead`) for a blocked or JS-only page.
+- A URL pointing at `localhost`, a private IP, or redirecting to one is refused and never fetched.
+- "Check all" in the inbox updates statuses without leaving the view and respects per-host limits.
+- A job whose link was checked shows its status and time; a stale or never-checked job shows that too.
+- Checking never changes a job's section, URL or notes — only the `url_*` fields.
+- Saving a board edit never changes a job's `url_*` fields (unless its URL changed, in which case they are cleared), and a link check never changes anything else.
+
+### Slice 26 — Agent-assisted link repair
+
+**Goal:** when a link is `dead`, `generic`, `closed` or `mismatch`, an agent tries to find the correct posting and **proposes** it; the user confirms.
+
+**Flow:** search by company + role (Brave, the same source Slice 16 uses, and the company's ATS domains from `scrape-targets`) → fetch each candidate → run the Slice 25 classifier → accept only candidates that are `ok` with a matching title/company → present the best match as a proposed URL with the evidence.
+
+**Rules:**
+- Never overwrite a URL silently. The proposal is stored (`url_proposal` with its evidence) and shown in the UI; the user accepts or dismisses. An agent with `jobs:edit` may accept only if the user has explicitly enabled that for the agent.
+- If no verified candidate is found, say so; do not guess. A `closed` posting is reported as closed, not "repaired" to a different job.
+- Every accepted or dismissed proposal is recorded in `job_events` (Slice 20).
+- Exposed over the Agent API and MCP (`propose_url_fix`), under `jobs:evaluate` because it spends search and AI budget, with the per-agent budget from Slice 22.
+
+**Acceptance Criteria:**
+- Given a job with a generic careers URL and a findable specific posting, a proposal appears with the new URL and why it matched.
+- Given a closed posting, no replacement is proposed and the job is marked `closed`.
+- Accepting a proposal updates the URL, re-checks it, and logs the change; dismissing keeps the old URL and does not propose the same candidate again.
+
+### Open
+
+- Whether closed `prospect` jobs should offer one-click "pass" (move to `passed`) after the check, or leave triage to the user.
+- Re-check cadence and which sections the scheduled sweep covers (proposed: `pending` and `prospect`, weekly).
