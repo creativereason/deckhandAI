@@ -696,6 +696,9 @@ These are the same open/closed rules CLAUDE.md already applies before an agent a
 - A pure classifier (`lib/link-check.ts`): given the fetch result and the stored job, returns a status and a one-line reason. Fully unit-testable with fixture pages; no network in the tests.
 - Reuses `lib/job-fetcher.ts` for retrieval (fetch → Brave → optional Playwright). Playwright stays self-hosted-only (`ENABLE_PLAYWRIGHT_FALLBACK`).
 - Stored on the job: `url_status`, `url_checked_at`, `url_final`, `url_check_note` (migration; columns, not `extra`, so the board can filter on them).
+- Only the latest result is kept: each check overwrites the previous one. No history table and no dependency on the event log (Slice 20).
+- Written only by a dedicated single-purpose repository method (`recordLinkCheck(id, result)`) that touches just the `url_*` columns. They are not part of the whole-board read/diff/write mapping, so a stale board read can never overwrite a fresher check result.
+- Editing a job's URL clears the `url_*` fields in the same write, so a status never describes a URL that is no longer there.
 - UI: a status badge on cards and in the detail view, a "Check link" action per job, a "Check all" action on the inbox and each section, and a "broken links" filter. `unverified` is styled as neutral, not as an error.
 - Add-time: a job whose URL is `invalid` is rejected by validation (Zod) at create/edit; every other status is allowed and checked afterwards, since a slow check must not block adding.
 - Re-check: on demand, plus a scheduled sweep of `pending` and `prospect` (not `applied`/`passed`, where a closed posting is normal and not a problem). Re-check interval configurable; nothing is checked more than once per interval.
@@ -712,6 +715,7 @@ These are the same open/closed rules CLAUDE.md already applies before an agent a
 - "Check all" in the inbox updates statuses without leaving the view and respects per-host limits.
 - A job whose link was checked shows its status and time; a stale or never-checked job shows that too.
 - Checking never changes a job's section, URL or notes — only the `url_*` fields.
+- Saving a board edit never changes a job's `url_*` fields (unless its URL changed, in which case they are cleared), and a link check never changes anything else.
 
 ### Slice 26 — Agent-assisted link repair
 
