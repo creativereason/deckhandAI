@@ -18,6 +18,7 @@
 
 import { chromium } from "playwright";
 import { readFileSync, writeFileSync } from "fs";
+import { createSupabaseData, usesSupabase } from "./lib/supabase-data.mjs";
 import { resolve } from "path";
 
 const JOBS_PATH = resolve(process.cwd(), "data/jobs.json");
@@ -202,8 +203,10 @@ async function scrapeInsightGlobal(browser) {
   return found;
 }
 
+// DATA_BACKEND=supabase reads and inserts via Supabase instead of data/jobs.json.
+const store = usesSupabase() ? createSupabaseData() : undefined;
 const browser = await chromium.launch({ headless: true });
-const data = loadJobs();
+const data = store ? await store.readBoard() : loadJobs();
 if (!data.staffing) data.staffing = [];
 
 const allJobs = [
@@ -215,26 +218,30 @@ const allJobs = [
 await browser.close();
 
 let totalAdded = 0;
+const added = [];
 for (const job of allJobs) {
   if (!job.href || alreadyExists(data, job.href)) {
     console.log(`  [skip] Already tracked: ${job.title}`);
     continue;
   }
-  data.staffing.push({
+  const entry = {
     company: job.company,
     role: job.title,
     fit: "good",
     salary: "",
     notes: job.notes,
     url: job.href,
-  });
+  };
+  data.staffing.push(entry);
+  added.push(entry);
   totalAdded++;
   console.log(`  [added] ${job.company}: ${job.title}`);
 }
 
 if (totalAdded > 0) {
-  saveJobs(data);
-  console.log(`\nSaved ${totalAdded} new staffing role(s) to jobs.json`);
+  if (store) await store.addJobs("staffing", added, "push");
+  else saveJobs(data);
+  console.log(`\nSaved ${totalAdded} new staffing role(s) to ${store ? "Supabase" : "jobs.json"}`);
 } else {
   console.log("\nNo new staffing roles to add.");
 }

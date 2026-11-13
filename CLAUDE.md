@@ -82,6 +82,7 @@ data/
 - Jobs data lives in a private GitHub repo defined by `GITHUB_DATA_REPO` in `.env.local` — never in this repo
 - Storage is selected by `DATA_BACKEND` (`github` default, or `supabase`; see `lib/data-backend.ts`). Jobs go through `lib/jobs-repository.ts` (`readJobs`/`writeJobs`); config, profile and scrape-targets go through `lib/data-store.ts`. Nothing outside those two modules and `lib/github.ts` may call `githubRead`/`githubWrite`.
 - Supabase: `jobs` table (one row per job, `section` column, UUID `id`) and `documents` table, schema in `supabase/migrations/`. RLS is on with no policies; the server uses the service-role key (`lib/supabase.ts`) and it never reaches the browser. On Supabase `readJobs` must throw on failure (no empty-board fallback) because `writeJobs` diffs against stored rows and would delete them. Import existing data with `pnpm migrate:supabase` (`lib/jobs-import.ts` plans it, `lib/jobs-mapping.ts` maps rows).
+- The standalone `scripts/*.mjs` honor `DATA_BACKEND` through `scripts/lib/supabase-data.mjs`, which is dependency-free (plain `fetch` to PostgREST) so a bare checkout can run them. Its row mapping mirrors `lib/jobs-mapping.ts`; `lib/__tests__/scripts-supabase-data.test.ts` fails if they drift, so change both together. Known gap: `scrape-careers.mjs` and `scrape-staffing.mjs` still insert into `prospect`/`local`/`staffing` rather than `pending`, which predates the "scraping writes to pending only" invariant.
 
 ---
 

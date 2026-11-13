@@ -336,7 +336,7 @@ By default your data lives in a private GitHub repo. To store it in Supabase (Po
 
 `pnpm migrate:supabase --verify` compares Supabase with the source without writing. Use `--from-dir <dir>` to import from local `jobs.json`, `config.json`, `profile.json` and `scrape-targets.json` files instead of GitHub.
 
-> The scheduled scripts (`scrape-careers.mjs`, `job-search.mjs`, `backfill-ai-summaries.mjs`) still read and write the GitHub data repo. Keep `DATA_BACKEND=github` until they are migrated.
+**Scheduled scripts.** `scrape-careers.mjs`, `scrape-staffing.mjs`, `job-search.mjs` and `backfill-ai-summaries.mjs` follow the same `DATA_BACKEND` setting, and you run them with the same commands as before. With `DATA_BACKEND=supabase` the job that runs them needs `DATA_BACKEND`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in its environment. The `GITHUB_*` variables, the data-repo checkout and the git push are no longer used by those scripts. They need no `pnpm install` for this, because they talk to Supabase with plain `fetch`. Change the environment of every scheduled job at the same time you set `DATA_BACKEND=supabase` for the app, or their results will land in the wrong place.
 
 ## Data privacy
 
