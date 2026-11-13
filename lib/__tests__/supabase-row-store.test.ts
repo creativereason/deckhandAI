@@ -9,9 +9,9 @@ const manyRows = (n: number) =>
 
 function clientWith(result: { data?: unknown; error: { message: string } | null }) {
   const insert = vi.fn().mockResolvedValue(result);
-  const query = { limit: vi.fn().mockResolvedValue(result) };
-  const client = { from: () => ({ insert, select: () => query }) } as unknown as SupabaseClient;
-  return { client, insert };
+  const range = vi.fn().mockResolvedValue(result);
+  const client = { from: () => ({ insert, select: () => ({ order: () => ({ range }) }) }) } as unknown as SupabaseClient;
+  return { client, insert, range };
 }
 
 describe("createJobRowStore", () => {
@@ -43,5 +43,17 @@ describe("createJobRowStore", () => {
     const { client } = clientWith({ data: null, error: null });
 
     expect(await createJobRowStore(client).selectAll()).toEqual([]);
+  });
+
+  // B — Boundary: Supabase caps a response at 1000 rows; a short read would look like deletions
+  it("keeps reading pages until one comes back empty", async () => {
+    const { client, range } = clientWith({ error: null });
+    const page = (n: number) => ({ data: Array.from({ length: n }, (_, i) => ({ id: `${i}` })), error: null });
+    range.mockResolvedValueOnce(page(1000)).mockResolvedValueOnce(page(3)).mockResolvedValueOnce(page(0));
+
+    const rows = await createJobRowStore(client).selectAll();
+
+    expect(rows).toHaveLength(1003);
+    expect(range.mock.calls).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
   });
 });

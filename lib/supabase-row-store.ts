@@ -6,6 +6,8 @@ const COLUMNS =
   "id, section, company, role, url, salary, notes, ai_summary, score_rationale, status, fit, type, " +
   "applied_date, is_new, is_ghost, scrape_group, scrape_date, position, extra";
 const BATCH_SIZE = 500;
+// Supabase caps a single response at 1000 rows by default, so reads must page.
+const PAGE_SIZE = 1000;
 
 function check(error: { message: string } | null, action: string): void {
   if (error) throw new Error(`Supabase ${action} failed: ${error.message}`);
@@ -19,10 +21,16 @@ function batches<T>(items: T[]): T[][] {
 
 export function createJobRowStore(client: SupabaseClient): JobRowStore {
   return {
+    // Writes diff against this result, so a truncated read would delete the
+    // missing rows. Read until a page comes back empty (robust to a lower server cap).
     async selectAll() {
-      const { data, error } = await client.from("jobs").select(COLUMNS).limit(10000);
-      check(error, "select");
-      return (data ?? []) as unknown as JobRow[];
+      const rows: JobRow[] = [];
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data, error } = await client.from("jobs").select(COLUMNS).order("id").range(from, from + PAGE_SIZE - 1);
+        check(error, "select");
+        if (!data?.length) return rows;
+        rows.push(...(data as unknown as JobRow[]));
+      }
     },
     async insert(rows) {
       for (const batch of batches(rows)) check((await client.from("jobs").insert(batch)).error, "insert");
