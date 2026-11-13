@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import JobFormModal from "@/components/JobFormModal";
 import OnboardingWizard from "@/components/OnboardingWizard";
-import ScrapeReviewQueue from "@/components/ScrapeReviewQueue";
+import InboxView from "@/components/InboxView";
+import BoardViewSwitch from "@/components/BoardViewSwitch";
+import { useBoardView } from "@/components/use-board-view";
 import GenerateModal from "@/components/GenerateModal";
 import {
   JobsData,
@@ -585,6 +587,7 @@ function PassedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExport
 
 export default function Home() {
   const router = useRouter();
+  const [view, setView] = useBoardView();
   const [jobs, setJobs] = useState<JobsData | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
   const [showPassed, setShowPassed] = useState(true);
@@ -793,7 +796,8 @@ export default function Home() {
               <p className="text-sm text-muted-foreground mt-1">
                 {jobs.applied.length} applied · {totalProspects} prospects · {jobs.passed.length} passed
                 {(jobs.pending ?? []).length > 0 && (
-                  <> · <span className="text-tone-warning font-medium">{jobs.pending.length} pending review</span></>
+                  <> · <button type="button" onClick={() => setView("inbox")}
+                    className="text-tone-warning font-medium hover:underline">{jobs.pending.length} pending review</button></>
                 )}
                 {totalNew > 0 && (
                   <Badge variant="tone-highlight" className="ml-2 rounded uppercase tracking-wide">
@@ -829,6 +833,21 @@ export default function Home() {
           {/* Board */}
           <div className="order-2 md:order-1 md:col-span-2 space-y-4">
 
+            <BoardViewSwitch view={view} pendingCount={(jobs.pending ?? []).length} onChange={setView} />
+
+            {/* Demo mode banner */}
+            {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-3 text-sm text-primary flex items-center gap-2">
+                <span className="font-semibold">Demo mode</span> — try adding, editing, and evaluating jobs. This is a shared board that resets nightly. Clone the repo to set up your own tracker.
+              </div>
+            )}
+
+            {view === "inbox" && (
+              <InboxView pending={jobs.pending ?? []} onUpdate={load} onBackToBoard={() => setView("board")} />
+            )}
+
+            {view === "board" && (
+              <>
             {/* Filter bar */}
             <div className="bg-card rounded-xl border border-border shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
               <SectionVisibilityBar visible={visibleSections} onToggle={toggleSectionVisibility} />
@@ -856,18 +875,6 @@ export default function Home() {
                 )}
               </div>
             </div>
-
-            {/* Demo mode banner */}
-            {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
-              <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-3 text-sm text-primary flex items-center gap-2">
-                <span className="font-semibold">Demo mode</span> — try adding, editing, and evaluating jobs. This is a shared board that resets nightly. Clone the repo to set up your own tracker.
-              </div>
-            )}
-
-            {/* Scrape review queue */}
-            {(jobs.pending ?? []).length > 0 && (
-              <ScrapeReviewQueue pending={jobs.pending} onUpdate={load} />
-            )}
 
             {/* Accordion sections */}
         <Accordion
@@ -947,6 +954,8 @@ export default function Home() {
           )}
 
         </Accordion>
+              </>
+            )}
 
           </div>
         </div>
