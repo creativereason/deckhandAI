@@ -65,8 +65,8 @@ export type ScrapeGroup = "remote" | "local" | "all";
 // Runtime loader — reads from data/scrape-targets.json, falls back to static arrays
 export async function loadTargets(): Promise<{ remote: ScrapeTargetConfig[]; local: ScrapeTargetConfig[] }> {
   try {
-    const { githubRead } = await import("@/lib/github");
-    const raw = await githubRead("data/scrape-targets.json");
+    const { readDataFile } = await import("@/lib/data-store");
+    const raw = await readDataFile("data/scrape-targets.json");
     return JSON.parse(raw);
   } catch {
     return { remote: REMOTE_TARGETS, local: LOCAL_TARGETS };

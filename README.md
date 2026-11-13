@@ -324,6 +324,20 @@ Set your provider via the setup wizard (`node scripts/setup.mjs`) or edit `data/
 
 ---
 
+## Using Supabase instead of the GitHub data repo
+
+By default your data lives in a private GitHub repo. To store it in Supabase (Postgres) instead:
+
+1. Create a Supabase project and apply `supabase/migrations/*.sql` (Supabase CLI: `supabase db push`, or paste the file into the SQL editor). Row-level security is on with no policies, so only the server's service-role key can read or write.
+2. Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to `.env.local`.
+3. Preview the import (reads your GitHub data repo, writes nothing): `pnpm migrate:supabase`
+4. Import and verify: `pnpm migrate:supabase --apply`. Your GitHub data is never modified, and re-running is safe.
+5. Set `DATA_BACKEND=supabase` and restart. Set it back to `github` at any time to roll back.
+
+`pnpm migrate:supabase --verify` compares Supabase with the source without writing. Use `--from-dir <dir>` to import from local `jobs.json`, `config.json`, `profile.json` and `scrape-targets.json` files instead of GitHub.
+
+> The scheduled scripts (`scrape-careers.mjs`, `job-search.mjs`, `backfill-ai-summaries.mjs`) still read and write the GitHub data repo. Keep `DATA_BACKEND=github` until they are migrated.
+
 ## Data privacy
 
 `jobs.json`, `config.json`, and `profile.json` are gitignored by default. Your job search data, salary notes, application history, and work history never leave your own deployment. AI generation happens server-to-model — your data is not sent to any third party beyond the AI provider you configure.

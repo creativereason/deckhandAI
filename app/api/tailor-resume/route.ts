@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readConfig } from "@/lib/config-repository";
-import { githubRead } from "@/lib/github";
+import { readDataFile } from "@/lib/data-store";
 import { fetchGenerate } from "@/lib/model";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { fetchJdText } from "@/lib/fetch-jd";
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const [config, profileRaw] = await Promise.all([
       readConfig(),
-      githubRead("data/profile.json"),
+      readDataFile("data/profile.json"),
     ]);
 
     const profile = JSON.parse(profileRaw) as Profile;
