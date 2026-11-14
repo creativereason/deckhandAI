@@ -1,6 +1,6 @@
-import type { JobSection } from "@/lib/jobs";
+import type { JobSection, JobsData } from "@/lib/jobs";
 import { jobDetailHref } from "@/lib/job-detail";
-import { readJobs, writeJobs } from "@/lib/jobs-repository";
+import { addJob, archiveJob, getJob, readJobs, saveJob, updateJobs } from "@/lib/jobs-repository";
 import { readProfile } from "@/lib/profile-server";
 import { fetchJobDetails } from "@/lib/job-fetcher";
 import { generateAiSummary } from "@/lib/job-summary-server";
@@ -140,7 +140,7 @@ export const ANTHROPIC_TOOLS = [
   },
   {
     name: "delete_job",
-    description: "Permanently delete a job from the board.",
+    description: "Remove a job from the board. The job is archived, not erased, so it can be recovered later. Only do this when the user explicitly asks to remove it.",
     input_schema: {
       type: "object",
       properties: {
@@ -234,131 +234,117 @@ function detailHrefFor(section: JobSection, job: AnyJob): string {
   });
 }
 
+const SECTION_NAMES: JobSection[] = ["applied", "prospect", "local", "staffing", "passed", "pending"];
+
+interface JobArgs {
+  section: JobSection;
+  company: string;
+  role: string;
+}
+
+async function addJobTool(input: Record<string, unknown>): Promise<string> {
+  const { section, ...rest } = input;
+  const sec = section as JobSection;
+  if (!SECTION_NAMES.includes(sec)) return JSON.stringify({ error: `Unknown section: ${sec}` });
+  const job = normalizeForSection(rest, sec);
+  if (!job.aiSummary) {
+    job.aiSummary = await generateAiSummary({
+      company: String(job.company ?? ""),
+      role: String(job.role ?? ""),
+      salary: typeof job.salary === "string" ? job.salary : undefined,
+      notes: typeof job.notes === "string" ? job.notes : undefined,
+    });
+  }
+  const id = await addJob(sec, job);
+  return JSON.stringify({ ok: true, added: job, detailUrl: detailHrefFor(sec, { ...job, id }) });
+}
+
+async function updateJobTool(input: Record<string, unknown>): Promise<string> {
+  const { updates, ...ref } = input as unknown as JobArgs & { updates: Record<string, unknown> };
+  const found = await getJob(ref);
+  if (!found) return JSON.stringify({ error: "Job not found" });
+  const updated = { ...found.job, ...updates };
+  await saveJob(ref, { section: found.section, job: updated });
+  return JSON.stringify({ ok: true, updated });
+}
+
+async function updateJobsTool(input: Record<string, unknown>): Promise<string> {
+  const { section, jobs: targets, updates } = input as {
+    section: JobSection;
+    jobs: { company: string; role: string }[];
+    updates: Record<string, unknown>;
+  };
+  const refs = targets.map(({ company, role }) => ({ section, company, role }));
+  const { updated, notFound } = await updateJobs({ targets: refs, updates });
+  return JSON.stringify({ ok: true, updated, notFound: notFound.map(({ company, role }) => ({ company, role })) });
+}
+
+async function moveJobTool(input: Record<string, unknown>): Promise<string> {
+  const { from_section, to_section, company, role } = input as {
+    from_section: JobSection;
+    to_section: JobSection;
+    company: string;
+    role: string;
+  };
+  const ref = { section: from_section, company, role };
+  const found = await getJob(ref);
+  if (!found) return JSON.stringify({ error: "Job not found" });
+  const { isNew: _dropped, ...job } = found.job;
+  await saveJob(ref, { section: to_section, job: normalizeForSection(job, to_section) });
+  return JSON.stringify({ ok: true });
+}
+
+async function flagGhostTool(input: Record<string, unknown>): Promise<string> {
+  const ref = { section: "applied" as const, company: String(input.company), role: String(input.role) };
+  const found = await getJob(ref);
+  if (!found) return JSON.stringify({ error: "Not found in applied section" });
+  await saveJob(ref, { section: "applied", job: { ...found.job, isGhost: true } });
+  return JSON.stringify({ ok: true });
+}
+
+async function deleteJobTool(input: Record<string, unknown>): Promise<string> {
+  const archived = await archiveJob(input as unknown as JobArgs);
+  return JSON.stringify(archived ? { ok: true } : { error: "Job not found" });
+}
+
+function listJobsTool(jobs: JobsData, section: string | undefined): string {
+  const withDetailUrl = (sec: JobSection, list: AnyJob[]) =>
+    list.map((job) => ({ ...job, detailUrl: detailHrefFor(sec, job) }));
+
+  if (!section || section === "all") {
+    const withUrls = Object.fromEntries(
+      (Object.keys(jobs) as JobSection[]).map((sec) => [sec, withDetailUrl(sec, jobs[sec] as unknown as AnyJob[])])
+    );
+    return JSON.stringify(withUrls, null, 2);
+  }
+  return JSON.stringify(withDetailUrl(section as JobSection, (jobs[section as JobSection] ?? []) as unknown as AnyJob[]), null, 2);
+}
+
 export async function executeTool(
   name: string,
   input: Record<string, unknown>
 ): Promise<string> {
   try {
-    const jobs = await readJobs();
-
     switch (name) {
-      case "read_profile": {
-        const profile = await readProfile();
-        return JSON.stringify(profile, null, 2);
-      }
-
-      case "list_jobs": {
-        const section = input.section as string | undefined;
-        const withDetailUrl = (sec: JobSection, list: AnyJob[]) =>
-          list.map((job) => ({ ...job, detailUrl: detailHrefFor(sec, job) }));
-
-        if (!section || section === "all") {
-          const withUrls = Object.fromEntries(
-            (Object.keys(jobs) as JobSection[]).map((sec) => [sec, withDetailUrl(sec, jobs[sec] as unknown as AnyJob[])])
-          );
-          return JSON.stringify(withUrls, null, 2);
-        }
-        return JSON.stringify(withDetailUrl(section as JobSection, (jobs[section as JobSection] ?? []) as unknown as AnyJob[]), null, 2);
-      }
-
-      case "add_job": {
-        const { section, ...rest } = input;
-        const sec = section as JobSection;
-        if (!jobs[sec]) return JSON.stringify({ error: `Unknown section: ${sec}` });
-        const job = normalizeForSection(rest, sec);
-        if (!job.aiSummary) {
-          job.aiSummary = await generateAiSummary({
-            company: String(job.company ?? ""),
-            role: String(job.role ?? ""),
-            salary: typeof job.salary === "string" ? job.salary : undefined,
-            notes: typeof job.notes === "string" ? job.notes : undefined,
-          });
-        }
-        (jobs[sec] as unknown as AnyJob[]).unshift(job);
-        await writeJobs(jobs);
-        return JSON.stringify({ ok: true, added: job, detailUrl: detailHrefFor(sec, job) });
-      }
-
-      case "update_job": {
-        const { section, company, role, updates } = input as {
-          section: JobSection;
-          company: string;
-          role: string;
-          updates: Record<string, unknown>;
-        };
-        const list = jobs[section] as unknown as AnyJob[];
-        const idx = list.findIndex((j) => j.company === company && j.role === role);
-        if (idx === -1) return JSON.stringify({ error: "Job not found" });
-        list[idx] = { ...list[idx], ...updates };
-        await writeJobs(jobs);
-        return JSON.stringify({ ok: true, updated: list[idx] });
-      }
-
-      case "update_jobs": {
-        const { section, jobs: targets, updates } = input as {
-          section: JobSection;
-          jobs: { company: string; role: string }[];
-          updates: Record<string, unknown>;
-        };
-        const list = jobs[section] as unknown as AnyJob[];
-        const notFound: { company: string; role: string }[] = [];
-        let updated = 0;
-        for (const { company, role } of targets) {
-          const idx = list.findIndex((j) => j.company === company && j.role === role);
-          if (idx === -1) {
-            notFound.push({ company, role });
-            continue;
-          }
-          list[idx] = { ...list[idx], ...updates };
-          updated++;
-        }
-        if (updated > 0) await writeJobs(jobs);
-        return JSON.stringify({ ok: true, updated, notFound });
-      }
-
-      case "move_job": {
-        const { from_section, to_section, company, role } = input as {
-          from_section: JobSection;
-          to_section: JobSection;
-          company: string;
-          role: string;
-        };
-        const fromList = jobs[from_section] as unknown as AnyJob[];
-        const idx = fromList.findIndex((j) => j.company === company && j.role === role);
-        if (idx === -1) return JSON.stringify({ error: "Job not found" });
-        const [removed] = fromList.splice(idx, 1);
-        delete removed.isNew;
-        const normalized = normalizeForSection(removed, to_section);
-        (jobs[to_section] as unknown as AnyJob[]).unshift(normalized);
-        await writeJobs(jobs);
-        return JSON.stringify({ ok: true });
-      }
-
-      case "flag_ghost": {
-        const { company, role } = input as { company: string; role: string };
-        const list = jobs.applied as unknown as AnyJob[];
-        const idx = list.findIndex((j) => j.company === company && j.role === role);
-        if (idx === -1) return JSON.stringify({ error: "Not found in applied section" });
-        list[idx] = { ...list[idx], isGhost: true };
-        await writeJobs(jobs);
-        return JSON.stringify({ ok: true });
-      }
-
-      case "delete_job": {
-        const { section, company, role } = input as {
-          section: JobSection;
-          company: string;
-          role: string;
-        };
-        const list = jobs[section] as unknown as AnyJob[];
-        const idx = list.findIndex((j) => j.company === company && j.role === role);
-        if (idx === -1) return JSON.stringify({ error: "Job not found" });
-        list.splice(idx, 1);
-        await writeJobs(jobs);
-        return JSON.stringify({ ok: true });
-      }
+      case "read_profile":
+        return JSON.stringify(await readProfile(), null, 2);
+      case "list_jobs":
+        return listJobsTool(await readJobs(), input.section as string | undefined);
+      case "add_job":
+        return await addJobTool(input);
+      case "update_job":
+        return await updateJobTool(input);
+      case "update_jobs":
+        return await updateJobsTool(input);
+      case "move_job":
+        return await moveJobTool(input);
+      case "flag_ghost":
+        return await flagGhostTool(input);
+      case "delete_job":
+        return await deleteJobTool(input);
 
       case "detect_ghost_jobs": {
+        const jobs = await readJobs();
         const today = new Date();
         type GhostFlag = { section: string; company: string; role: string; reason: string; daysSince?: number };
         const flags: GhostFlag[] = [];

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JobsData } from "@/lib/jobs";
 import { jobsDataToRows, type JobRow } from "@/lib/jobs-mapping";
-import { addJobTo, archiveJobIn, getJobIn, saveJobIn } from "@/lib/job-ops";
+import { addJobTo, archiveJobIn, getJobIn, saveJobIn, updateJobsIn } from "@/lib/job-ops";
 import { readJobsFrom, type JobRowStore } from "@/lib/supabase-jobs";
 
 const EMPTY: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
@@ -143,5 +143,47 @@ describe("archiveJobIn", () => {
 
   it("returns false for an unknown job", async () => {
     expect(await archiveJobIn(fakeStore().store, { id: "nope" })).toBe(false);
+  });
+});
+
+describe("updateJobsIn", () => {
+  const ref = (role: string) => ({ section: "applied" as const, company: "Acme", role });
+  const applied = (role: string) => ({ ...prospect(role), status: "applied" as const, date: "2026-01-01" });
+
+  // O — One
+  it("merges the updates into each matching job", async () => {
+    const { store } = seeded({ applied: [applied("A"), applied("B")] });
+
+    const result = await updateJobsIn(store, { targets: [ref("A"), ref("B")], updates: { status: "declined" } });
+
+    expect(result).toEqual({ updated: 2, notFound: [] });
+    expect((await readJobsFrom(store)).applied.map((j) => (j as { status: string }).status)).toEqual(["declined", "declined"]);
+  });
+
+  // B — Boundary: 26 jobs must not mean 26 writes
+  it("writes every changed row in a single update and leaves other rows alone", async () => {
+    const { store, rows, writes } = seeded({ applied: [applied("A"), applied("B"), applied("C")] });
+    const [a, b] = [...rows.keys()];
+
+    await updateJobsIn(store, { targets: [ref("A"), ref("B")], updates: { notes: "x" } });
+
+    expect(writes).toEqual([{ op: "update", ids: [a, b] }]);
+  });
+
+  // E — Exception
+  it("reports the targets it could not find and still updates the rest", async () => {
+    const { store } = seeded({ applied: [applied("A")] });
+
+    const result = await updateJobsIn(store, { targets: [ref("A"), ref("Missing")], updates: { notes: "x" } });
+
+    expect(result).toEqual({ updated: 1, notFound: [ref("Missing")] });
+  });
+
+  it("writes nothing when no target matches", async () => {
+    const { store, writes } = seeded({ applied: [applied("A")] });
+
+    await updateJobsIn(store, { targets: [ref("Missing")], updates: { notes: "x" } });
+
+    expect(writes).toEqual([]);
   });
 });
