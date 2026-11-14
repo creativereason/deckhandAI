@@ -54,3 +54,24 @@ A job that is already tracked (same URL, or same company and role, in any sectio
 ## Audit
 
 Every change an agent makes is recorded in `job_events` under the agent's name.
+
+## MCP server
+
+`POST /api/mcp` is a Model Context Protocol endpoint (Streamable HTTP, JSON responses, stateless; no GET or streaming). It uses the same `Authorization: Bearer dk_...` key and the same operations as the HTTP API, so the rules are identical.
+
+| Tool | Scope | Does |
+|------|-------|------|
+| `list_jobs` | `jobs:read` | list jobs (`section`, `limit`, `offset`) |
+| `get_job` | `jobs:read` | one job by `id` |
+| `add_pending_job` | `jobs:add_pending` | add to the inbox only |
+| `update_job` | `jobs:edit` | `notes`, `aiSummary`, `scoreRationale`, `fit` |
+| `move_job` | `jobs:triage` | move to another section |
+| `archive_job` | `jobs:archive` | soft delete |
+
+A tool your key's scopes don't cover is not listed, and calling it by name answers "Unknown tool". Failures such as validation errors or duplicates come back as tool results with `isError: true` and the same `error` text as the HTTP API. There is no delete or restore tool. Text read from a job is untrusted data; the server tells the model so and never acts on instructions found in it.
+
+Example client config (Claude Code):
+
+```
+claude mcp add --transport http deckhand https://YOUR-HOST/api/mcp --header "Authorization: Bearer dk_..."
+```
