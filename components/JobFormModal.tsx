@@ -223,6 +223,7 @@ export default function JobFormModal({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            id: job?.id,
             section: initialSection,
             company: originalCompany ?? job?.company,
             role: originalRole ?? job?.role,

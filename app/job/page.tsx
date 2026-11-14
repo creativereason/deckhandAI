@@ -126,7 +126,7 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
     const res = await fetch("/api/jobs", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section, company: job.company, role: job.role, updates }),
+      body: JSON.stringify({ id: job.id, section, company: job.company, role: job.role, updates }),
     });
 
     if (!res.ok) {
@@ -300,6 +300,7 @@ type EvaluationPayload = {
 };
 
 type PendingNotesRefresh = {
+  id?: string;
   company: string;
   role: string;
   updates: Record<string, unknown>;
@@ -330,11 +331,13 @@ function parseSseBlock(block: string): { event: string; data: unknown } | null {
 
 function JobChat({
   jobContext,
+  jobId,
   section,
   status,
   onJobsChanged,
 }: {
   jobContext: string;
+  jobId?: string;
   section: JobSection;
   status?: string;
   onJobsChanged: () => void;
@@ -401,9 +404,9 @@ function JobChat({
       updates.fit = evaluation.fit;
     }
 
-    setNotesRefresh({ company, role, updates });
+    setNotesRefresh({ id: jobId, company, role, updates });
     return `Here's what I found:\n\n${evaluation.notes}\n\nApply to update the notes, or cancel to keep what you have.`;
-  }, [jobContext, readEvaluationStream, section]);
+  }, [jobContext, jobId, readEvaluationStream, section]);
 
   async function applyNotesRefresh() {
     if (!notesRefresh) return;
@@ -411,7 +414,7 @@ function JobChat({
     const updateRes = await fetch("/api/jobs", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section, company: notesRefresh.company, role: notesRefresh.role, updates: notesRefresh.updates }),
+      body: JSON.stringify({ id: notesRefresh.id, section, company: notesRefresh.company, role: notesRefresh.role, updates: notesRefresh.updates }),
     });
     if (!updateRes.ok) {
       setError("Could not update this job");
@@ -647,7 +650,7 @@ function JobDetailContent() {
     await fetch("/api/jobs", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section, company, role, targetSection: target }),
+      body: JSON.stringify({ id: foundJob.id, section, company, role, targetSection: target }),
     });
     router.push("/");
   }
@@ -853,7 +856,7 @@ function JobDetailContent() {
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">Discuss this role</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Interview prep, offer analysis, fit questions</p>
               </div>
-              <JobChat jobContext={jobContext} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
+              <JobChat jobContext={jobContext} jobId={foundJob.id} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
             </div>
 
           </div>
