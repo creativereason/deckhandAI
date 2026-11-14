@@ -412,7 +412,7 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 11 | Stable job identity (UUID) — fix silent data loss on delete/move for duplicate company+role | **Ready** — blocked on #5 |
 | 16 | "Evaluate Job URL" flow — fetch → Playwright fallback, streaming status, AI fit scoring, user-confirm before write to pending | **Ready** — blocked on #5, #10 |
 | 17 | Styled PDF resume export (Playwright + HTML/CSS template) — `stylePdfEnabled` config flag, `resume-template.ts`, `resume-pdf.ts`, `/api/export/resume-pdf` route | **Done** |
-| 18 | Inbox as a separate view — hide/show the pending queue instead of forcing it above the board | **Ready** |
+| 18 | Inbox as a separate view — hide/show the pending queue instead of forcing it above the board | **Done** |
 | 19 | Restore and browse deleted jobs — UI for the soft-delete markers (`deleted_at`) | **Ready** |
 | 20 | Job event log — `job_events` audit table recording who changed what, when | **Ready** — blocked on #5, #11 |
 | 21 | Agent identities and scoped keys — `agents` table, hashed per-agent keys, permission scopes | **Ready** — blocked on #20 |
@@ -576,7 +576,7 @@ The inbox is its own view. The user chooses to open it; the board is the default
 
 ### Open
 
-Whether the view is a route (`/inbox`, shareable and back-button friendly) or a toggle on `/`. Prefer a route unless the single-page state makes that costly.
+Resolved: a `?view=inbox` URL on `/` rather than a separate `/inbox` page. A second page would have had to duplicate the data loading, header, chat and modals owned by `app/page.tsx`. The URL is the source of truth (`useBoardView`), so reload, shared links and the back button all agree; a fresh visit to `/` is the board.
 
 ## Slice 19 — Restore and browse deleted jobs
 
