@@ -82,6 +82,7 @@ data/
 - Jobs data lives in a private GitHub repo defined by `GITHUB_DATA_REPO` in `.env.local` — never in this repo
 - Storage is selected by `DATA_BACKEND` (`github` default, or `supabase`; see `lib/data-backend.ts`). Jobs go through `lib/jobs-repository.ts` (`readJobs`/`writeJobs`); config, profile and scrape-targets go through `lib/data-store.ts`. Nothing outside those two modules and `lib/github.ts` may call `githubRead`/`githubWrite`.
 - Supabase: `jobs` table (one row per job, `section` column, UUID `id`) and `documents` table, schema in `supabase/migrations/`. RLS is on with no policies; the server uses the service-role key (`lib/supabase.ts`) and it never reaches the browser. Jobs are never physically deleted on Supabase: `writeJobs` soft-deletes by setting `deleted_at`, reads filter those rows out, and the service role has no DELETE privilege on `jobs` (migration `20261113120000_soft_delete_jobs.sql`). Scripts that dedupe pass `readBoard({ includeDeleted: true })` so a removed job is not re-added. On Supabase `readJobs` must throw on failure (no empty-board fallback) because `writeJobs` diffs against stored rows and would delete them. Import existing data with `pnpm migrate:supabase` (`lib/jobs-import.ts` plans it, `lib/jobs-mapping.ts` maps rows).
+- Single-job operations (`addJob`, `getJob`, `saveJob`, `archiveJob` in `lib/jobs-repository.ts`, logic in `lib/job-ops.ts`) write only the one row on Supabase, so overlapping writers cannot drop each other's jobs; on GitHub they fall back to read-modify-write because the JSON has no ids. `/api/jobs` POST/PATCH/DELETE use them and accept an optional `id` (else section + company + role). Still on whole-board `readJobs`/`writeJobs`: `chat-tools.ts`, `scrape-run.ts`, `scrape/review`, `scrape/score-pending`, `evaluate-job`; and the browser clients do not send `id` yet, so two jobs with the same company and role are still ambiguous from the UI.
 - The standalone `scripts/*.mjs` honor `DATA_BACKEND` through `scripts/lib/supabase-data.mjs`, which is dependency-free (plain `fetch` to PostgREST) so a bare checkout can run them. Its row mapping mirrors `lib/jobs-mapping.ts`; `lib/__tests__/scripts-supabase-data.test.ts` fails if they drift, so change both together. Known gap: `scrape-careers.mjs` and `scrape-staffing.mjs` still insert into `prospect`/`local`/`staffing` rather than `pending`, which predates the "scraping writes to pending only" invariant.
 
 ---
@@ -399,7 +400,7 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 2 | `jobKey()` — fix composite key, no separator bug | **Done** |
 | 3 | Auth middleware — enforce session on all routes | **Ready** — blocked on #1 |
 | 4 | Zod validation on `/api/jobs` | **Ready** — blocked on #1 |
-| 5 | `IJobRepository` interface + service contract tests | **Ready** — blocked on #1, #4 |
+| 5 | `IJobRepository` interface + service contract tests | **In progress** — single-job ops landed for `/api/jobs`; remaining callers and Zod (#4) still to do |
 | 6 | Scrape filter unit tests | **Ready** — blocked on #1 |
 | 7 | `resolveJobType` unit tests | **Ready** — blocked on #1 |
 | 12 | `table-sort.ts` unit tests — `nextSort`, `sortRows` | **Ready** — blocked on #1 |
@@ -409,7 +410,7 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 8 | Table deduplication — merge three tables into `JobTable` | **Ready** — blocked on #1 |
 | 9 | `toSlug()` and `downloadBlob()` utilities | **Ready** — blocked on #1 |
 | 10 | Rate limiting on `/api/generate` | **Ready** — blocked on #1, #3 |
-| 11 | Stable job identity (UUID) — fix silent data loss on delete/move for duplicate company+role | **Ready** — blocked on #5 |
+| 11 | Stable job identity (UUID) — fix silent data loss on delete/move for duplicate company+role | **In progress** — routes accept `id`; browser clients must send it |
 | 16 | "Evaluate Job URL" flow — fetch → Playwright fallback, streaming status, AI fit scoring, user-confirm before write to pending | **Ready** — blocked on #5, #10 |
 | 17 | Styled PDF resume export (Playwright + HTML/CSS template) — `stylePdfEnabled` config flag, `resume-template.ts`, `resume-pdf.ts`, `/api/export/resume-pdf` route | **Done** |
 | 18 | Inbox as a separate view — hide/show the pending queue instead of forcing it above the board | **Done** |

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { JobSection } from "@/lib/jobs";
-import { readJobs, writeJobs } from "@/lib/jobs-repository";
+import { addJob, archiveJob, getJob, readJobs, saveJob } from "@/lib/jobs-repository";
 import { generateAiSummary } from "@/lib/job-summary-server";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +36,7 @@ export async function POST(req: NextRequest) {
         notes: job.notes,
       });
     }
-    const jobs = await readJobs();
-    (jobs[section] as unknown as Record<string, string>[]).unshift(job);
-    await writeJobs(jobs);
+    await addJob(section, job);
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -49,28 +47,23 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { section, company, role, updates, targetSection } = body as {
+    const { id, section, company, role, updates, targetSection } = body as {
+      id?: string;
       section: JobSection;
       company: string;
       role: string;
       updates: Record<string, unknown>;
       targetSection?: JobSection;
     };
-    const jobs = await readJobs();
-    const list = jobs[section] as unknown as AnyJob[];
-    const idx = list.findIndex((j) => j.company === company && j.role === role);
-    if (idx === -1) return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    const ref = { id, section, company, role };
+    const found = await getJob(ref);
+    if (!found) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
-    const updated = { ...list[idx], ...updates };
-    const dest = targetSection ?? section;
-    if (dest !== section) {
-      delete updated.isNew;
-      list.splice(idx, 1);
-      (jobs[dest] as unknown as AnyJob[]).unshift(normalizeJobForSection(updated, dest));
-    } else {
-      list[idx] = updated;
-    }
-    await writeJobs(jobs);
+    const updated = { ...found.job, ...updates };
+    const dest = targetSection ?? found.section;
+    if (dest !== found.section) delete updated.isNew;
+    const job = dest !== found.section ? normalizeJobForSection(updated, dest) : updated;
+    await saveJob(ref, { section: dest, job });
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -81,23 +74,23 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const body = await req.json();
-    const { section, company, role, targetSection } = body as {
+    const { id, section, company, role, targetSection } = body as {
+      id?: string;
       section: JobSection;
       company: string;
       role: string;
       targetSection?: JobSection;
     };
-    const jobs = await readJobs();
-    const list = jobs[section] as unknown as AnyJob[];
-    const idx = list.findIndex((j) => j.company === company && j.role === role);
-    if (idx === -1) return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    const ref = { id, section, company, role };
+    const found = await getJob(ref);
+    if (!found) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
-    const [removed] = list.splice(idx, 1);
-    delete removed.isNew;
     if (targetSection) {
-      (jobs[targetSection] as unknown as AnyJob[]).unshift(normalizeJobForSection(removed, targetSection));
+      const { isNew: _dropped, ...job } = found.job;
+      await saveJob(ref, { section: targetSection, job: normalizeJobForSection(job, targetSection) });
+    } else {
+      await archiveJob(ref);
     }
-    await writeJobs(jobs);
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

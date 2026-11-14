@@ -78,7 +78,7 @@ function toRowFields(rest: Fields): Fields {
   return row;
 }
 
-function jobToRow(section: JobSection, job: Fields, ctx: { position: number; newId: IdFactory }): JobRow {
+export function jobToRow(section: JobSection, job: Fields, ctx: { position: number; newId: IdFactory }): JobRow {
   const { id, ...rest } = job;
   const fields = toRowFields(rest);
   const rowId = typeof id === "string" && id ? id : ctx.newId();
