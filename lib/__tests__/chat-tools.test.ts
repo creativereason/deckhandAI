@@ -62,3 +62,67 @@ describe("executeTool add_job", () => {
     }));
   });
 });
+
+describe("executeTool update_jobs", () => {
+  const applied = (company: string, status = "applied") =>
+    ({ company, role: "Designer", status, date: "2026-01-01", salary: "", notes: "", url: "" });
+  const board = (names: string[]): JobsData => ({ ...emptyJobs(), applied: names.map((n) => applied(n)) as never });
+  const target = (company: string) => ({ company, role: "Designer" });
+
+  // Z — Zero
+  it("changes nothing and writes nothing when the job list is empty", async () => {
+    const result = JSON.parse(await executeTool("update_jobs", { section: "applied", jobs: [], updates: { status: "declined" } }));
+
+    expect(result).toMatchObject({ ok: true, updated: 0 });
+    expect(writeJobs).not.toHaveBeenCalled();
+  });
+
+  // M — Many: the case that exhausted the step limit one job at a time
+  it("applies the same updates to every listed job with a single write", async () => {
+    vi.mocked(readJobs).mockResolvedValue(board(["A", "B", "C"]));
+
+    const result = JSON.parse(await executeTool("update_jobs", {
+      section: "applied",
+      jobs: [target("A"), target("C")],
+      updates: { status: "declined" },
+    }));
+
+    expect(result).toMatchObject({ ok: true, updated: 2 });
+    expect(writeJobs).toHaveBeenCalledTimes(1);
+    const written = vi.mocked(writeJobs).mock.calls[0][0].applied as unknown as { company: string; status: string }[];
+    expect(written.map((j) => [j.company, j.status])).toEqual([["A", "declined"], ["B", "applied"], ["C", "declined"]]);
+  });
+
+  // B — Boundary: a job that cannot be found is reported, not silently skipped, and the rest still apply
+  it("reports jobs it could not find and still updates the others", async () => {
+    vi.mocked(readJobs).mockResolvedValue(board(["A"]));
+
+    const result = JSON.parse(await executeTool("update_jobs", {
+      section: "applied",
+      jobs: [target("A"), target("Missing")],
+      updates: { status: "declined" },
+    }));
+
+    expect(result).toMatchObject({ ok: true, updated: 1, notFound: [target("Missing")] });
+    expect(writeJobs).toHaveBeenCalledTimes(1);
+  });
+
+  // E — Exception: nothing matched means nothing to save
+  it("does not write when none of the jobs are found", async () => {
+    vi.mocked(readJobs).mockResolvedValue(board(["A"]));
+
+    const result = JSON.parse(await executeTool("update_jobs", {
+      section: "applied", jobs: [target("Nope")], updates: { status: "declined" },
+    }));
+
+    expect(result).toMatchObject({ updated: 0, notFound: [target("Nope")] });
+    expect(writeJobs).not.toHaveBeenCalled();
+  });
+
+  // I — Interface: the model can discover the tool
+  it("is offered to the model alongside update_job", async () => {
+    const { ANTHROPIC_TOOLS } = await import("@/lib/chat-tools");
+
+    expect(ANTHROPIC_TOOLS.map((t) => t.name)).toContain("update_jobs");
+  });
+});

@@ -79,6 +79,33 @@ export const ANTHROPIC_TOOLS = [
     },
   },
   {
+    name: "update_jobs",
+    description: "Apply the same field updates to several jobs in one section in a single step. Use this instead of calling update_job repeatedly whenever more than one job needs the same change, for example marking many applied jobs declined. Returns how many were updated and which were not found.",
+    input_schema: {
+      type: "object",
+      properties: {
+        section: {
+          type: "string",
+          enum: ["applied", "prospect", "local", "staffing", "passed", "pending"],
+        },
+        jobs: {
+          type: "array",
+          description: "The jobs to update, each identified by company and role exactly as returned by list_jobs.",
+          items: {
+            type: "object",
+            properties: { company: { type: "string" }, role: { type: "string" } },
+            required: ["company", "role"],
+          },
+        },
+        updates: {
+          type: "object",
+          description: "Key-value pairs applied to every listed job. Same updatable fields as update_job.",
+        },
+      },
+      required: ["section", "jobs", "updates"],
+    },
+  },
+  {
     name: "move_job",
     description: "Move a job from one section to another.",
     input_schema: {
@@ -264,6 +291,28 @@ export async function executeTool(
         list[idx] = { ...list[idx], ...updates };
         await writeJobs(jobs);
         return JSON.stringify({ ok: true, updated: list[idx] });
+      }
+
+      case "update_jobs": {
+        const { section, jobs: targets, updates } = input as {
+          section: JobSection;
+          jobs: { company: string; role: string }[];
+          updates: Record<string, unknown>;
+        };
+        const list = jobs[section] as unknown as AnyJob[];
+        const notFound: { company: string; role: string }[] = [];
+        let updated = 0;
+        for (const { company, role } of targets) {
+          const idx = list.findIndex((j) => j.company === company && j.role === role);
+          if (idx === -1) {
+            notFound.push({ company, role });
+            continue;
+          }
+          list[idx] = { ...list[idx], ...updates };
+          updated++;
+        }
+        if (updated > 0) await writeJobs(jobs);
+        return JSON.stringify({ ok: true, updated, notFound });
       }
 
       case "move_job": {
