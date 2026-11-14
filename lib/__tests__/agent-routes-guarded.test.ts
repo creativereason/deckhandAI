@@ -32,4 +32,12 @@ describe("agent routes are all behind withAgent", () => {
     expect(handlerLines.length).toBeGreaterThan(0);
     expect(unguarded).toEqual([]);
   });
+
+  // withAgent(null, ...) skips the route-level scope check, so only the MCP endpoint (which
+  // checks each tool's scope itself) may use it.
+  it.each(files.map((file) => [file.replace(process.cwd() + "/", ""), readFileSync(file, "utf8")]))("%s only uses a null scope under app/api/mcp", (name, source) => {
+    const usesNull = /withAgent(<[^>]*>)?\(\s*null\b/.test(source);
+
+    expect(usesNull && !name.startsWith("app/api/mcp/")).toBe(false);
+  });
 });

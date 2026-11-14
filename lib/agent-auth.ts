@@ -43,7 +43,11 @@ function bearerKey(req: NextRequest): string {
 const unauthorized = () =>
   NextResponse.json({ error: "Invalid or revoked key" }, { status: 401, headers: { "WWW-Authenticate": 'Bearer realm="deckhandAI agent API"' } });
 
-export function withAgent<P = Record<string, never>>(scope: AgentScope, handler: Handler<P>) {
+/**
+ * `scope` is the scope the whole route needs. `null` means "any valid key": only for the MCP
+ * endpoint, which checks each tool's scope itself because the tools an agent sees depend on it.
+ */
+export function withAgent<P = Record<string, never>>(scope: AgentScope | null, handler: Handler<P>) {
   return async (req: NextRequest, route: RouteContext<P>): Promise<NextResponse> => {
     if (dataBackend() !== "supabase") {
       return NextResponse.json({ error: "The agent API needs DATA_BACKEND=supabase" }, { status: 409 });
@@ -55,7 +59,7 @@ export function withAgent<P = Record<string, never>>(scope: AgentScope, handler:
     if (!limit.allowed) {
       return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } });
     }
-    if (!hasScope(auth.agent, scope)) {
+    if (scope && !hasScope(auth.agent, scope)) {
       return NextResponse.json({ error: `This key lacks the ${scope} scope` }, { status: 403 });
     }
     return handler(req, { agent: auth.agent, repo: jobRepository(auth.agent.name), params: await route.params });
