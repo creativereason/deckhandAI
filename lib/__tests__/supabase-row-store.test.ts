@@ -14,10 +14,11 @@ function clientWith(result: { data?: unknown; error: { message: string } | null 
   const inFilter = vi.fn().mockResolvedValue(result);
   const update = vi.fn(() => ({ in: inFilter }));
   const hardDelete = vi.fn();
+  const upsert = vi.fn().mockResolvedValue(result);
   const client = {
-    from: () => ({ insert, update, delete: hardDelete, select: () => ({ is: isFilter }) }),
+    from: () => ({ insert, upsert, update, delete: hardDelete, select: () => ({ is: isFilter }) }),
   } as unknown as SupabaseClient;
-  return { client, insert, range, isFilter, update, inFilter, hardDelete };
+  return { client, insert, upsert, range, isFilter, update, inFilter, hardDelete };
 }
 
 describe("createJobRowStore", () => {
@@ -59,7 +60,7 @@ describe("createJobRowStore", () => {
 
     await createJobRowStore(client).softDelete(["a", "b"]);
 
-    expect(update).toHaveBeenCalledWith({ deleted_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) });
+    expect(update).toHaveBeenCalledWith({ deleted_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/), last_actor: "user" });
     expect(inFilter).toHaveBeenCalledWith("id", ["a", "b"]);
     expect(hardDelete).not.toHaveBeenCalled();
   });
@@ -88,5 +89,40 @@ describe("createJobRowStore", () => {
 
     expect(rows).toHaveLength(1003);
     expect(range.mock.calls).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
+  });
+
+  // The database trigger reads last_actor to say who made each change (Slice 20).
+  describe("actor", () => {
+    it("stamps the actor on inserted rows", async () => {
+      const { client, insert } = clientWith({ error: null });
+
+      await createJobRowStore(client, "scraper").insert(manyRows(2));
+
+      expect(insert.mock.calls[0][0].map((r: { last_actor: string }) => r.last_actor)).toEqual(["scraper", "scraper"]);
+    });
+
+    it("stamps the actor on updated rows", async () => {
+      const { client, upsert } = clientWith({ error: null });
+
+      await createJobRowStore(client, "muse").update(manyRows(1));
+
+      expect(upsert.mock.calls[0][0][0].last_actor).toBe("muse");
+    });
+
+    it("stamps the actor on a soft delete", async () => {
+      const { client, update } = clientWith({ error: null });
+
+      await createJobRowStore(client, "grokbot").softDelete(["a"]);
+
+      expect(update).toHaveBeenCalledWith(expect.objectContaining({ last_actor: "grokbot" }));
+    });
+
+    it("defaults to the signed-in user", async () => {
+      const { client, insert } = clientWith({ error: null });
+
+      await createJobRowStore(client).insert(manyRows(1));
+
+      expect(insert.mock.calls[0][0][0].last_actor).toBe("user");
+    });
   });
 });

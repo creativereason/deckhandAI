@@ -1,5 +1,5 @@
 import type { PendingJob } from "@/lib/jobs";
-import { addJobs, readJobs } from "@/lib/jobs-repository";
+import { jobRepository, readJobs } from "@/lib/jobs-repository";
 import { scoreNewPendingJobs } from "@/lib/score";
 import {
   buildLocalRegex,
@@ -143,7 +143,7 @@ export type RunScrapeOptions = {
 export async function saveScrapedJobs(added: PendingJob[]): Promise<void> {
   if (added.length === 0) return;
   await scoreNewPendingJobs(added);
-  await addJobs("pending", added as unknown as Record<string, unknown>[]);
+  await jobRepository("scraper").addMany("pending", added as unknown as Record<string, unknown>[]);
 }
 
 export async function runScrape(

@@ -19,7 +19,15 @@ function batches<T>(items: T[]): T[][] {
   return out;
 }
 
-export function createJobRowStore(client: SupabaseClient): JobRowStore {
+/** Who is writing: "user", "scraper", or an agent's name. Recorded in job_events by a database trigger. */
+export type Actor = string;
+
+/** Tags each row with the actor; the trigger reads `last_actor` and clears it, so it never goes stale. */
+function stamped(rows: JobRow[], actor: Actor): (JobRow & { last_actor: Actor })[] {
+  return rows.map((row) => ({ ...row, last_actor: actor }));
+}
+
+export function createJobRowStore(client: SupabaseClient, actor: Actor = "user"): JobRowStore {
   return {
     // Writes diff against this result, so a truncated read would delete the
     // missing rows. Read until a page comes back empty (robust to a lower server cap).
@@ -34,11 +42,11 @@ export function createJobRowStore(client: SupabaseClient): JobRowStore {
       }
     },
     async insert(rows) {
-      for (const batch of batches(rows)) check((await client.from("jobs").insert(batch)).error, "insert");
+      for (const batch of batches(stamped(rows, actor))) check((await client.from("jobs").insert(batch)).error, "insert");
     },
     // Upsert on id with `source`/`legacy_key` absent from the payload leaves those columns untouched.
     async update(rows) {
-      for (const batch of batches(rows)) {
+      for (const batch of batches(stamped(rows, actor))) {
         check((await client.from("jobs").upsert(batch, { onConflict: "id" })).error, "update");
       }
     },
@@ -46,7 +54,7 @@ export function createJobRowStore(client: SupabaseClient): JobRowStore {
     async softDelete(ids) {
       const deletedAt = new Date().toISOString();
       for (const batch of batches(ids)) {
-        check((await client.from("jobs").update({ deleted_at: deletedAt }).in("id", batch)).error, "delete");
+        check((await client.from("jobs").update({ deleted_at: deletedAt, last_actor: actor }).in("id", batch)).error, "delete");
       }
     },
   };

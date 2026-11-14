@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { addJobs } from "@/lib/jobs-repository";
+import { jobRepository } from "@/lib/jobs-repository";
 import { scoreNewPendingJobs } from "@/lib/score";
 import { saveScrapedJobs } from "@/lib/scrape-run";
 import type { PendingJob } from "@/lib/jobs";
 
-vi.mock("@/lib/jobs-repository", () => ({ readJobs: vi.fn(), addJobs: vi.fn(), writeJobs: vi.fn() }));
+const addMany = vi.fn();
+vi.mock("@/lib/jobs-repository", () => ({ readJobs: vi.fn(), jobRepository: vi.fn(() => ({ addMany })) }));
 vi.mock("@/lib/score", () => ({ scoreNewPendingJobs: vi.fn() }));
 
 const job = (role: string): PendingJob => ({
@@ -12,7 +13,8 @@ const job = (role: string): PendingJob => ({
 });
 
 beforeEach(() => {
-  vi.mocked(addJobs).mockReset();
+  addMany.mockReset();
+  vi.mocked(jobRepository).mockClear();
   vi.mocked(scoreNewPendingJobs).mockReset();
 });
 
@@ -22,7 +24,7 @@ describe("saveScrapedJobs", () => {
     await saveScrapedJobs([]);
 
     expect(scoreNewPendingJobs).not.toHaveBeenCalled();
-    expect(addJobs).not.toHaveBeenCalled();
+    expect(addMany).not.toHaveBeenCalled();
   });
 
   // M — Many
@@ -31,18 +33,25 @@ describe("saveScrapedJobs", () => {
 
     await saveScrapedJobs(found);
 
-    expect(addJobs).toHaveBeenCalledTimes(1);
-    expect(addJobs).toHaveBeenCalledWith("pending", found);
+    expect(addMany).toHaveBeenCalledTimes(1);
+    expect(addMany).toHaveBeenCalledWith("pending", found);
   });
 
   // B — Boundary: scoring fills fit in place, so it must finish before the jobs are saved
   it("saves the jobs with the scores that scoring added", async () => {
     vi.mocked(scoreNewPendingJobs).mockImplementation(async (jobs) => { jobs[0].fit = "strong"; });
     let savedFit: unknown;
-    vi.mocked(addJobs).mockImplementation(async (_section, jobs) => { savedFit = jobs[0].fit; });
+    addMany.mockImplementation(async (_section, jobs) => { savedFit = jobs[0].fit; });
 
     await saveScrapedJobs([job("A")]);
 
     expect(savedFit).toBe("strong");
+  });
+
+  // I — Interface: the event log must say these came from the scraper, not the signed-in user
+  it("writes as the scraper actor", async () => {
+    await saveScrapedJobs([job("A")]);
+
+    expect(jobRepository).toHaveBeenCalledWith("scraper");
   });
 });
