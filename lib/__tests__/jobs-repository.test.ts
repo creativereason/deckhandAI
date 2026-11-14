@@ -194,6 +194,21 @@ describe("single-job operations on the github backend", () => {
     expect(written().prospect.map((j) => j.notes)).toEqual(["bulk", "bulk"]);
   });
 
+  // M — Many: different updates per job, still one file write
+  it("applies a different patch to each job with a single file write", async () => {
+    const { patchJobs } = await import("@/lib/jobs-repository");
+    const ref = (role: string) => ({ section: "prospect" as const, company: "Acme", role });
+
+    const result = await patchJobs([
+      { target: ref("A"), updates: { notes: "one" } },
+      { target: ref("B"), updates: { notes: "two" } },
+    ]);
+
+    expect(result.updated).toBe(2);
+    expect(githubWrite).toHaveBeenCalledTimes(1);
+    expect(written().prospect.map((j) => j.notes)).toEqual(["one", "two"]);
+  });
+
   // I — Interface: no ids on the JSON backend
   it("returns no id when adding on the JSON backend", async () => {
     const { addJob } = await import("@/lib/jobs-repository");

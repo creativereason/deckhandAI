@@ -7,7 +7,7 @@ import { githubRead, githubWrite } from "@/lib/github";
 import { getSupabase } from "@/lib/supabase";
 import { createJobRowStore } from "@/lib/supabase-row-store";
 import { readJobsFrom, writeJobsTo } from "@/lib/supabase-jobs";
-import { addJobTo, archiveJobIn, getJobIn, saveJobIn, updateJobsIn, type BatchResult, type BatchUpdate, type FoundJob, type JobRef } from "@/lib/job-ops";
+import { addJobTo, archiveJobIn, getJobIn, saveJobIn, patchJobsIn, type BatchResult, type BatchUpdate, type FoundJob, type JobPatch, type JobRef } from "@/lib/job-ops";
 import type { AppliedJob, ProspectJob, PassedJob, PendingJob, JobsData, JobSection } from "@/lib/jobs";
 
 const JOBS_PATH = "data/jobs.json";
@@ -76,21 +76,26 @@ export async function addJob(section: JobSection, job: Job): Promise<string | un
   return undefined;
 }
 
-/** Merges the same updates into many jobs: one row write on Supabase, one file write on GitHub. */
-export async function updateJobs(batch: BatchUpdate): Promise<BatchResult> {
-  if (dataBackend() === "supabase") return updateJobsIn(supabaseStore(), batch);
+/** Merges each patch's updates into its job: one row write on Supabase, one file write on GitHub. */
+export async function patchJobs(patches: JobPatch[]): Promise<BatchResult> {
+  if (dataBackend() === "supabase") return patchJobsIn(supabaseStore(), patches);
   const board = await readJobs();
   const notFound: JobRef[] = [];
   let updated = 0;
-  for (const target of batch.targets) {
+  for (const { target, updates } of patches) {
     const index = githubIndex(board, target);
     if (index === -1 || !target.section) { notFound.push(target); continue; }
     const list = boardList(board, target.section);
-    list[index] = { ...list[index], ...batch.updates };
+    list[index] = { ...list[index], ...updates };
     updated++;
   }
   if (updated) await writeJobs(board);
   return { updated, notFound };
+}
+
+/** The same updates for many jobs. */
+export function updateJobs({ targets, updates }: BatchUpdate): Promise<BatchResult> {
+  return patchJobs(targets.map((target) => ({ target, updates })));
 }
 
 export async function getJob(ref: JobRef): Promise<FoundJob | undefined> {

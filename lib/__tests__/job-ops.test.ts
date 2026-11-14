@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JobsData } from "@/lib/jobs";
 import { jobsDataToRows, type JobRow } from "@/lib/jobs-mapping";
-import { addJobTo, archiveJobIn, getJobIn, saveJobIn, updateJobsIn } from "@/lib/job-ops";
+import { addJobTo, archiveJobIn, getJobIn, patchJobsIn, saveJobIn, updateJobsIn } from "@/lib/job-ops";
 import { readJobsFrom, type JobRowStore } from "@/lib/supabase-jobs";
 
 const EMPTY: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
@@ -184,6 +184,54 @@ describe("updateJobsIn", () => {
 
     await updateJobsIn(store, { targets: [ref("Missing")], updates: { notes: "x" } });
 
+    expect(writes).toEqual([]);
+  });
+});
+
+describe("patchJobsIn", () => {
+  const pending = (role: string) => ({ company: "Acme", role, url: "", salary: "", notes: "", scrapeGroup: "remote" as const, scrapeDate: "2026-01-01" });
+  const ref = (role: string) => ({ section: "pending" as const, company: "Acme", role });
+
+  // O — One / M — Many: each job gets its own updates
+  it("applies different updates to different jobs in one row write", async () => {
+    const { store, rows, writes } = seeded({ pending: [pending("A"), pending("B")] });
+    const ids = [...rows.keys()];
+
+    const result = await patchJobsIn(store, [
+      { target: ref("A"), updates: { fit: "strong" } },
+      { target: ref("B"), updates: { fit: "weak" } },
+    ]);
+
+    expect(result).toEqual({ updated: 2, notFound: [] });
+    expect(writes).toEqual([{ op: "update", ids }]);
+    expect((await readJobsFrom(store)).pending.map((j) => (j as { fit?: string }).fit)).toEqual(["strong", "weak"]);
+  });
+
+  // B — Boundary: patching by id survives an edit made while the caller was busy (slow AI scoring)
+  it("keeps fields changed since the caller last read, touching only the patched ones", async () => {
+    const { store, rows } = seeded({ pending: [pending("A")] });
+    const id = [...rows.keys()][0];
+    rows.set(id, { ...rows.get(id)!, notes: "edited meanwhile" });
+
+    await patchJobsIn(store, [{ target: { id }, updates: { fit: "good" } }]);
+
+    expect((await readJobsFrom(store)).pending[0]).toMatchObject({ notes: "edited meanwhile", fit: "good" });
+  });
+
+  // E — Exception
+  it("reports unknown targets and writes nothing when none match", async () => {
+    const { store, writes } = seeded({ pending: [pending("A")] });
+
+    const result = await patchJobsIn(store, [{ target: ref("Nope"), updates: { fit: "good" } }]);
+
+    expect(result).toEqual({ updated: 0, notFound: [ref("Nope")] });
+    expect(writes).toEqual([]);
+  });
+
+  it("does nothing for an empty list", async () => {
+    const { store, writes } = seeded({});
+
+    expect(await patchJobsIn(store, [])).toEqual({ updated: 0, notFound: [] });
     expect(writes).toEqual([]);
   });
 });
