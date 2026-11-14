@@ -126,3 +126,29 @@ describe("executeTool update_jobs", () => {
     expect(ANTHROPIC_TOOLS.map((t) => t.name)).toContain("update_jobs");
   });
 });
+
+describe("executeTool list_jobs detail links", () => {
+  const listed = async () => {
+    const out = JSON.parse(await executeTool("list_jobs", { section: "prospect" })) as { detailUrl: string }[];
+    return out.map((j) => new URL(j.detailUrl, "http://x").searchParams);
+  };
+
+  // B — Boundary: two jobs share a company and role, so each link must carry its own id
+  it("gives each job a link with its own id", async () => {
+    const job = (id: string) => ({ id, company: "Acme", role: "Designer", fit: "good" as const, salary: "", notes: "", url: "" });
+    vi.mocked(readJobs).mockResolvedValue({ ...emptyJobs(), prospect: [job("a"), job("b")] });
+
+    expect((await listed()).map((p) => p.get("id"))).toEqual(["a", "b"]);
+  });
+
+  // I — Interface: JSON-backed jobs have no id and still link by company + role
+  it("links by company and role when a job has no id", async () => {
+    vi.mocked(readJobs).mockResolvedValue({
+      ...emptyJobs(),
+      prospect: [{ company: "Acme", role: "Designer", fit: "good", salary: "", notes: "", url: "" }],
+    });
+
+    const [params] = await listed();
+    expect([params.get("id"), params.get("company")]).toEqual([null, "Acme"]);
+  });
+});

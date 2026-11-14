@@ -2,6 +2,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { jobDetailHref } from "@/lib/job-detail";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,11 +72,6 @@ function formatEvaluation(evaluation: EvaluationPayload): string {
     : "";
   const source = evaluation.retrieval.source_url ? `\n\nSource: ${evaluation.retrieval.source_url}` : "";
   return `**${evaluation.role || "Role"} at ${evaluation.company || "Company"}**\n\nFit: **${evaluation.fit}**\n\n${evaluation.scoreRationale || "Review the retrieved details before adding this job."}\n\n${evaluation.notes}${source}${retrieval}\n\nAdd this to pending when you're ready.`;
-}
-
-function jobDetailHref(section: string, company: string, role: string): string {
-  const params = new URLSearchParams({ section, company, role });
-  return `/job?${params.toString()}`;
 }
 
 function formatLogLine(entry: ScrapeLogEntry): string {
@@ -234,7 +230,7 @@ export default function ChatDrawer({ onJobsChanged }: { onJobsChanged: () => voi
     setError("");
     try {
       await putEvaluationToPending(evaluation);
-      const href = jobDetailHref("pending", evaluation.company, evaluation.role);
+      const href = jobDetailHref({ section: "pending", company: evaluation.company, role: evaluation.role });
       setMessages((current) => [
         ...current,
         { role: "assistant", content: `Added to pending for review.\n\n[View Job](${href})` },

@@ -1,4 +1,5 @@
 import type { JobSection } from "@/lib/jobs";
+import { jobDetailHref } from "@/lib/job-detail";
 import { readJobs, writeJobs } from "@/lib/jobs-repository";
 import { readProfile } from "@/lib/profile-server";
 import { fetchJobDetails } from "@/lib/job-fetcher";
@@ -224,13 +225,13 @@ function normalizeForSection(job: AnyJob, section: JobSection): AnyJob {
   return out;
 }
 
-function jobDetailHref(section: JobSection, company: unknown, role: unknown): string {
-  const params = new URLSearchParams({
+function detailHrefFor(section: JobSection, job: AnyJob): string {
+  return jobDetailHref({
     section,
-    company: String(company ?? ""),
-    role: String(role ?? ""),
+    company: String(job.company ?? ""),
+    role: String(job.role ?? ""),
+    id: typeof job.id === "string" ? job.id : undefined,
   });
-  return `/job?${params.toString()}`;
 }
 
 export async function executeTool(
@@ -249,7 +250,7 @@ export async function executeTool(
       case "list_jobs": {
         const section = input.section as string | undefined;
         const withDetailUrl = (sec: JobSection, list: AnyJob[]) =>
-          list.map((job) => ({ ...job, detailUrl: jobDetailHref(sec, job.company, job.role) }));
+          list.map((job) => ({ ...job, detailUrl: detailHrefFor(sec, job) }));
 
         if (!section || section === "all") {
           const withUrls = Object.fromEntries(
@@ -275,7 +276,7 @@ export async function executeTool(
         }
         (jobs[sec] as unknown as AnyJob[]).unshift(job);
         await writeJobs(jobs);
-        return JSON.stringify({ ok: true, added: job, detailUrl: jobDetailHref(sec, job.company, job.role) });
+        return JSON.stringify({ ok: true, added: job, detailUrl: detailHrefFor(sec, job) });
       }
 
       case "update_job": {
