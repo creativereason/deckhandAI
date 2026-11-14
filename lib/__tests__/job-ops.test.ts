@@ -17,6 +17,7 @@ function fakeStore(initial: JobRow[] = []) {
     insert: async (batch) => { writes.push({ op: "insert", ids: batch.map((r) => r.id) }); batch.forEach((r) => rows.set(r.id, r)); },
     update: async (batch) => { writes.push({ op: "update", ids: batch.map((r) => r.id) }); batch.forEach((r) => rows.set(r.id, r)); },
     softDelete: async (ids) => { writes.push({ op: "softDelete", ids }); ids.forEach((id) => deleted.add(id)); },
+    findExisting: async () => [],
   };
   return { store, rows, deleted, writes };
 }

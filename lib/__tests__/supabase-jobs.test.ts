@@ -19,6 +19,7 @@ function fakeStore(initial: JobRow[] = []): JobRowStore & { rows: Map<string, Jo
     insert: async (batch) => { calls.push("insert"); batch.forEach((r) => rows.set(r.id, r)); },
     update: async (batch) => { calls.push("update"); batch.forEach((r) => rows.set(r.id, r)); },
     softDelete: async (ids) => { calls.push("softDelete"); ids.forEach((id) => deleted.add(id)); },
+    findExisting: async () => [],
   };
 }
 

@@ -126,3 +126,56 @@ describe("createJobRowStore", () => {
     });
   });
 });
+
+describe("createJobRowStore findExisting", () => {
+  const match = (id: string, deleted = false) => ({ id, section: "prospect", deleted_at: deleted ? "2026-01-01T00:00:00Z" : null });
+
+  // B — Boundary: values are matched with equality filters, never spliced into a filter string
+  it("matches company, role and url with eq filters and never builds an or() filter", async () => {
+    const { client, calls } = clientWithEq({ data: [match("a")], error: null });
+
+    await createJobRowStore(client).findExisting({ url: "https://x.test/1", company: "A,B)", role: "R" });
+
+    expect(calls).toContainEqual({ method: "eq", args: ["company", "A,B)"] });
+    expect(calls).toContainEqual({ method: "eq", args: ["url", "https://x.test/1"] });
+    expect(calls.some((c) => c.method === "or")).toBe(false);
+  });
+
+  it("includes archived rows and flags them", async () => {
+    const { client } = clientWithEq({ data: [match("a", true)], error: null });
+
+    expect(await createJobRowStore(client).findExisting({ url: "", company: "A", role: "R" })).toEqual([{ id: "a", section: "prospect", deleted: true }]);
+  });
+
+  it("does not search by url when there is none", async () => {
+    const { client, calls } = clientWithEq({ data: [], error: null });
+
+    await createJobRowStore(client).findExisting({ url: "", company: "A", role: "R" });
+
+    expect(calls.some((c) => c.method === "eq" && c.args[0] === "url")).toBe(false);
+  });
+
+  it("reports a row that matches both ways once", async () => {
+    const { client } = clientWithEq({ data: [match("a")], error: null });
+
+    expect(await createJobRowStore(client).findExisting({ url: "https://x.test/1", company: "A", role: "R" })).toHaveLength(1);
+  });
+
+  // E — Exception: a failed lookup must not look like "no duplicate"
+  it("throws when the lookup fails", async () => {
+    const { client } = clientWithEq({ data: null, error: { message: "timeout" } });
+
+    await expect(createJobRowStore(client).findExisting({ url: "", company: "A", role: "R" })).rejects.toThrow(/find failed: timeout/);
+  });
+});
+
+/** A client whose select chain records its calls and resolves to `result`. */
+function clientWithEq(result: { data?: unknown; error: { message: string } | null }) {
+  const calls: { method: string; args: unknown[] }[] = [];
+  const builder: Record<string, unknown> = {};
+  for (const method of ["select", "eq", "or"]) {
+    builder[method] = (...args: unknown[]) => { calls.push({ method, args }); return builder; };
+  }
+  builder.then = (resolve: (value: unknown) => void) => resolve(result);
+  return { client: { from: () => builder } as unknown as SupabaseClient, calls };
+}

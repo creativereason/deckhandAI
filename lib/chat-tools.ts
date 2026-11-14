@@ -1,5 +1,6 @@
 import type { JobSection, JobsData } from "@/lib/jobs";
 import { jobDetailHref } from "@/lib/job-detail";
+import { normalizeForSection } from "@/lib/job-normalize";
 import { addJob, archiveJob, getJob, readJobs, saveJob, updateJobs } from "@/lib/jobs-repository";
 import { readProfile } from "@/lib/profile-server";
 import { fetchJobDetails } from "@/lib/job-fetcher";
@@ -210,20 +211,6 @@ export const OPENAI_TOOLS = ANTHROPIC_TOOLS.map((t) => ({
 // ─── Tool execution ───────────────────────────────────────────────────────────
 
 type AnyJob = Record<string, unknown>;
-
-function normalizeForSection(job: AnyJob, section: JobSection): AnyJob {
-  const out = { ...job };
-  if (section === "applied") {
-    if (!out.status) out.status = "applied";
-    if (!out.date) out.date = new Date().toISOString().split("T")[0];
-  } else if (section === "prospect" || section === "local" || section === "staffing") {
-    if (!out.fit) out.fit = "good";
-  } else if (section === "pending") {
-    if (!out.scrapeGroup) out.scrapeGroup = "remote";
-    if (!out.scrapeDate) out.scrapeDate = new Date().toISOString().split("T")[0];
-  }
-  return out;
-}
 
 function detailHrefFor(section: JobSection, job: AnyJob): string {
   return jobDetailHref({
