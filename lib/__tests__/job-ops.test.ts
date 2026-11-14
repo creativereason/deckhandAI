@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { JobsData } from "@/lib/jobs";
 import { jobsDataToRows, type JobRow } from "@/lib/jobs-mapping";
-import { addJobTo, archiveJobIn, getJobIn, patchJobsIn, saveJobIn, updateJobsIn } from "@/lib/job-ops";
+import { addJobsTo, addJobTo, archiveJobIn, getJobIn, patchJobsIn, saveJobIn, updateJobsIn } from "@/lib/job-ops";
 import { readJobsFrom, type JobRowStore } from "@/lib/supabase-jobs";
 
 const EMPTY: JobsData = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: [] };
@@ -233,5 +233,35 @@ describe("patchJobsIn", () => {
 
     expect(await patchJobsIn(store, [])).toEqual({ updated: 0, notFound: [] });
     expect(writes).toEqual([]);
+  });
+});
+
+describe("addJobsTo", () => {
+  // Z — Zero
+  it("writes nothing for an empty list", async () => {
+    const { store, writes } = seeded({});
+
+    expect(await addJobsTo(store, "pending", [])).toEqual([]);
+    expect(writes).toEqual([]);
+  });
+
+  // M — Many / B — Boundary: one insert, and the order matches adding them one at a time
+  it("inserts all jobs in one write, last added first, like repeated unshift", async () => {
+    const { store, writes } = seeded({ pending: [] });
+    const job = (role: string) => ({ company: "Acme", role, url: "", salary: "", notes: "", scrapeGroup: "remote", scrapeDate: "2026-01-01" });
+
+    const ids = await addJobsTo(store, "pending", [job("A"), job("B"), job("C")]);
+
+    expect(writes).toEqual([{ op: "insert", ids: expect.arrayContaining(ids) }]);
+    expect(writes).toHaveLength(1);
+    expect((await readJobsFrom(store)).pending.map((j) => j.role)).toEqual(["C", "B", "A"]);
+  });
+
+  it("places the new jobs ahead of those already in the section", async () => {
+    const { store } = seeded({ pending: [{ company: "Acme", role: "Old", url: "", salary: "", notes: "", scrapeGroup: "remote", scrapeDate: "2026-01-01" }] });
+
+    await addJobsTo(store, "pending", [{ company: "Acme", role: "New", url: "", salary: "", notes: "" }]);
+
+    expect((await readJobsFrom(store)).pending.map((j) => j.role)).toEqual(["New", "Old"]);
   });
 });

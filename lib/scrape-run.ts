@@ -1,5 +1,5 @@
 import type { PendingJob } from "@/lib/jobs";
-import { readJobs, writeJobs } from "@/lib/jobs-repository";
+import { addJobs, readJobs } from "@/lib/jobs-repository";
 import { scoreNewPendingJobs } from "@/lib/score";
 import {
   buildLocalRegex,
@@ -136,6 +136,16 @@ export type RunScrapeOptions = {
   onProgress?: (entry: ScrapeLogEntry) => void;
 };
 
+/**
+ * Scores the new jobs and adds just them to the inbox. A scrape runs for minutes, so
+ * writing back the board read at its start would overwrite anything edited meanwhile.
+ */
+export async function saveScrapedJobs(added: PendingJob[]): Promise<void> {
+  if (added.length === 0) return;
+  await scoreNewPendingJobs(added);
+  await addJobs("pending", added as unknown as Record<string, unknown>[]);
+}
+
 export async function runScrape(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   playwright: any,
@@ -238,7 +248,6 @@ export async function runScrape(
             scrapeDate: new Date().toISOString().split("T")[0],
           };
 
-          jobs.pending.unshift(job);
           existingKeys.add(key);
           added.push(job);
           addedForTarget++;
@@ -272,10 +281,7 @@ export async function runScrape(
       }
     }
 
-    if (added.length > 0) {
-      await scoreNewPendingJobs(added);
-      await writeJobs(jobs);
-    }
+    await saveScrapedJobs(added);
   } finally {
     await browser.close();
   }

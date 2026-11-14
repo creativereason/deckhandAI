@@ -209,6 +209,25 @@ describe("single-job operations on the github backend", () => {
     expect(written().prospect.map((j) => j.notes)).toEqual(["one", "two"]);
   });
 
+  // M — Many: one file write for the batch, last added first like repeated unshift
+  it("adds several jobs with a single file write", async () => {
+    const { addJobs } = await import("@/lib/jobs-repository");
+    const job = (role: string) => ({ company: "N", role, salary: "", notes: "", url: "" });
+
+    await addJobs("pending", [job("A"), job("B")]);
+
+    expect(githubWrite).toHaveBeenCalledTimes(1);
+    expect(written().pending.map((j) => j.role)).toEqual(["B", "A"]);
+  });
+
+  it("writes nothing when adding an empty list", async () => {
+    const { addJobs } = await import("@/lib/jobs-repository");
+
+    await addJobs("pending", []);
+
+    expect(githubWrite).not.toHaveBeenCalled();
+  });
+
   // I — Interface: no ids on the JSON backend
   it("returns no id when adding on the JSON backend", async () => {
     const { addJob } = await import("@/lib/jobs-repository");

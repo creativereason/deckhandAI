@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST, PUT } from "@/app/api/evaluate-job/route";
 import { getSession } from "@/lib/auth";
 import { fetchJobDetails } from "@/lib/job-fetcher";
-import { readJobs, writeJobs } from "@/lib/jobs-repository";
+import { addJob, readJobs } from "@/lib/jobs-repository";
 import { fetchGenerate } from "@/lib/model";
 
 vi.mock("@/lib/auth", () => ({
@@ -25,6 +25,7 @@ vi.mock("@/lib/model", () => ({
 vi.mock("@/lib/jobs-repository", () => ({
   readJobs: vi.fn(),
   writeJobs: vi.fn(),
+  addJob: vi.fn(),
 }));
 
 function request(method: "POST" | "PUT", body: unknown) {
@@ -56,7 +57,7 @@ beforeEach(() => {
   vi.mocked(fetchJobDetails).mockReset();
   vi.mocked(fetchGenerate).mockReset();
   vi.mocked(readJobs).mockReset();
-  vi.mocked(writeJobs).mockReset();
+  vi.mocked(addJob).mockReset();
 });
 
 afterEach(() => {
@@ -80,7 +81,7 @@ describe("/api/evaluate-job", () => {
     expect(response.status).toBe(400);
     expect(body.error.fieldErrors).toHaveProperty("role");
     expect(body.error.fieldErrors).toHaveProperty("url");
-    expect(writeJobs).not.toHaveBeenCalled();
+    expect(addJob).not.toHaveBeenCalled();
   });
 
   it("returns 400 when PUT fit is not one of the JobFit enum values", async () => {
@@ -319,10 +320,8 @@ describe("/api/evaluate-job", () => {
     }));
 
     expect(response.status).toBe(200);
-    expect(writeJobs).toHaveBeenCalledWith(expect.objectContaining({
-      pending: [expect.objectContaining({
-        aiSummary: "Acme builds logistics software. The role owns end-to-end design.",
-      })],
+    expect(addJob).toHaveBeenCalledWith("pending", expect.objectContaining({
+      aiSummary: "Acme builds logistics software. The role owns end-to-end design.",
     }));
   });
 
@@ -354,13 +353,11 @@ describe("/api/evaluate-job", () => {
     }));
 
     expect(response.status).toBe(200);
-    expect(writeJobs).toHaveBeenCalledWith(expect.objectContaining({
-      pending: [expect.objectContaining({
-        company: "Acme",
-        role: "Senior UX Designer",
-        url: "https://example.com/job",
-        fit: "strong",
-      })],
+    expect(addJob).toHaveBeenCalledWith("pending", expect.objectContaining({
+      company: "Acme",
+      role: "Senior UX Designer",
+      url: "https://example.com/job",
+      fit: "strong",
     }));
   });
 });

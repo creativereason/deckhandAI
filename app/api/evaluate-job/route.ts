@@ -6,7 +6,7 @@ import { fetchGenerate } from "@/lib/model";
 import { fetchJobDetails, type JobFetchResult } from "@/lib/job-fetcher";
 import type { JobFit, PendingJob } from "@/lib/jobs";
 import { normalizeAiSummary } from "@/lib/job-summary";
-import { readJobs, writeJobs } from "@/lib/jobs-repository";
+import { addJob, readJobs } from "@/lib/jobs-repository";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -417,7 +417,6 @@ export async function PUT(req: NextRequest) {
   const pending = pendingFromEvaluation(payload);
   if (alreadyTracked(jobs, pending)) return NextResponse.json({ ok: true, duplicate: true });
 
-  jobs.pending.unshift(pending);
-  await writeJobs(jobs);
+  await addJob("pending", { ...pending });
   return NextResponse.json({ ok: true, pending });
 }

@@ -7,7 +7,7 @@ import { githubRead, githubWrite } from "@/lib/github";
 import { getSupabase } from "@/lib/supabase";
 import { createJobRowStore } from "@/lib/supabase-row-store";
 import { readJobsFrom, writeJobsTo } from "@/lib/supabase-jobs";
-import { addJobTo, archiveJobIn, getJobIn, saveJobIn, patchJobsIn, type BatchResult, type BatchUpdate, type FoundJob, type JobPatch, type JobRef } from "@/lib/job-ops";
+import { addJobsTo, addJobTo, archiveJobIn, getJobIn, saveJobIn, patchJobsIn, type BatchResult, type BatchUpdate, type FoundJob, type JobPatch, type JobRef } from "@/lib/job-ops";
 import type { AppliedJob, ProspectJob, PassedJob, PendingJob, JobsData, JobSection } from "@/lib/jobs";
 
 const JOBS_PATH = "data/jobs.json";
@@ -74,6 +74,18 @@ export async function addJob(section: JobSection, job: Job): Promise<string | un
   boardList(board, section).unshift(job);
   await writeJobs(board);
   return undefined;
+}
+
+/** Adds many jobs at the front of a section: one insert on Supabase, one file write on GitHub. */
+export async function addJobs(section: JobSection, jobs: Job[]): Promise<void> {
+  if (!jobs.length) return;
+  if (dataBackend() === "supabase") {
+    await addJobsTo(supabaseStore(), section, jobs);
+    return;
+  }
+  const board = await readJobs();
+  for (const job of jobs) boardList(board, section).unshift(job);
+  await writeJobs(board);
 }
 
 /** Merges each patch's updates into its job: one row write on Supabase, one file write on GitHub. */
