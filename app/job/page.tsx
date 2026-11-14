@@ -23,6 +23,7 @@ import AppFooter from "@/components/AppFooter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job-badges";
+import { findJobForDetail, jobDetailHref } from "@/lib/job-detail";
 import { fetchAiSummary, fetchSummarizerConfigured } from "@/lib/summarize-job-client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -586,8 +587,11 @@ function JobChat({
 function JobDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const company = searchParams.get("company") ?? "";
-  const role = searchParams.get("role") ?? "";
+  const target = {
+    id: searchParams.get("id") ?? undefined,
+    company: searchParams.get("company") ?? "",
+    role: searchParams.get("role") ?? "",
+  };
   const section = (searchParams.get("section") ?? "applied") as JobSection;
 
   const [jobs, setJobs] = useState<JobsData | null>(null);
@@ -613,7 +617,7 @@ function JobDetailContent() {
   }
 
   const sectionData = (jobs[section] ?? []) as AnyJob[];
-  const job = sectionData.find((j) => j.company === company && j.role === role);
+  const job = findJobForDetail(sectionData, target);
 
   if (!job) {
     return (
@@ -625,6 +629,8 @@ function JobDetailContent() {
   }
 
   const foundJob = job as AnyJob;
+  // The URL may be stale after an edit renamed the job, so use the stored values.
+  const { company, role } = foundJob;
   const isApplied = section === "applied";
   const isProspect = section === "prospect" || section === "local" || section === "staffing";
   const appliedJob = isApplied ? (foundJob as AppliedJob) : null;
@@ -661,13 +667,12 @@ function JobDetailContent() {
     setJobs(nextJobs);
 
     const sameSection = (nextJobs[section] ?? []) as AnyJob[];
-    if (sameSection.some((j) => j.company === company && j.role === role)) return;
+    if (findJobForDetail(sameSection, foundJob)) return;
     if (!foundJob.url) return;
 
     const updated = sameSection.find((j) => j.url === foundJob.url);
     if (!updated) return;
-    const params = new URLSearchParams({ section, company: updated.company, role: updated.role });
-    router.replace(`/job?${params.toString()}`);
+    router.replace(jobDetailHref({ ...updated, section }));
   }
 
   const jobContext = [

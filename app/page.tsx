@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { formatModelLabel } from "@/lib/ai-settings";
+import { jobDetailHref } from "@/lib/job-detail";
 import AppHeader from "@/components/AppHeader";
 import AppFooter from "@/components/AppFooter";
 import ChatDrawer from "@/components/ChatDrawer";
@@ -900,7 +901,7 @@ export default function Home() {
                   onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
                   onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
                   onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
-                  onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=applied`)}
+                  onDetail={(j) => router.push(jobDetailHref({ ...j, section: "applied" }))}
                 />
               </AccordionContent>
             </AccordionItem>
@@ -927,7 +928,7 @@ export default function Home() {
                   onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
                   onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
                   otherSections={otherSectionsFor("prospect")}
-                  onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=${j._section}`)}
+                  onDetail={(j) => router.push(jobDetailHref({ ...j, section: j._section }))}
                 />
               </AccordionContent>
             </AccordionItem>
@@ -948,7 +949,7 @@ export default function Home() {
                   onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
                   onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
                   onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
-                  onDetail={(j) => router.push(`/job?company=${encodeURIComponent(j.company)}&role=${encodeURIComponent(j.role)}&section=passed`)}
+                  onDetail={(j) => router.push(jobDetailHref({ ...j, section: "passed" }))}
                 />
               </AccordionContent>
             </AccordionItem>
