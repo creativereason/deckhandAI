@@ -182,6 +182,25 @@ describe("single-job operations on the github backend", () => {
     expect(githubWrite).not.toHaveBeenCalled();
   });
 
+  // M — Many: one file write for the whole batch
+  it("updates several jobs with a single file write and reports the ones it missed", async () => {
+    const { updateJobs } = await import("@/lib/jobs-repository");
+    const ref = (role: string) => ({ section: "prospect" as const, company: "Acme", role });
+
+    const result = await updateJobs({ targets: [ref("A"), ref("B"), ref("Missing")], updates: { notes: "bulk" } });
+
+    expect(result).toEqual({ updated: 2, notFound: [ref("Missing")] });
+    expect(githubWrite).toHaveBeenCalledTimes(1);
+    expect(written().prospect.map((j) => j.notes)).toEqual(["bulk", "bulk"]);
+  });
+
+  // I — Interface: no ids on the JSON backend
+  it("returns no id when adding on the JSON backend", async () => {
+    const { addJob } = await import("@/lib/jobs-repository");
+
+    expect(await addJob("pending", { company: "N", role: "N", salary: "", notes: "", url: "" })).toBeUndefined();
+  });
+
   // O — One: the JSON file has no deleted marker, so archive removes the entry
   it("removes an archived job from the JSON board", async () => {
     const { archiveJob } = await import("@/lib/jobs-repository");

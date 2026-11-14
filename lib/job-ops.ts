@@ -71,3 +71,27 @@ export async function archiveJobIn(store: JobRowStore, ref: JobRef): Promise<boo
   await store.softDelete([row.id]);
   return true;
 }
+
+export interface BatchUpdate {
+  targets: JobRef[];
+  updates: Job;
+}
+
+export interface BatchResult {
+  updated: number;
+  notFound: JobRef[];
+}
+
+/** Merges `updates` into every matching job with one read and one row write. Section never changes. */
+export async function updateJobsIn(store: JobRowStore, { targets, updates }: BatchUpdate): Promise<BatchResult> {
+  const rows = await store.selectAll();
+  const changed: JobRow[] = [];
+  const notFound: JobRef[] = [];
+  for (const target of targets) {
+    const row = rows.find((r) => matches(r, target));
+    if (!row) notFound.push(target);
+    else changed.push(jobToRow(row.section, { ...toJob(row), ...updates, id: row.id }, { position: row.position, newId: () => row.id }));
+  }
+  if (changed.length) await store.update(changed);
+  return { updated: changed.length, notFound };
+}

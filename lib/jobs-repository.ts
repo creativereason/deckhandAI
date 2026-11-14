@@ -7,7 +7,7 @@ import { githubRead, githubWrite } from "@/lib/github";
 import { getSupabase } from "@/lib/supabase";
 import { createJobRowStore } from "@/lib/supabase-row-store";
 import { readJobsFrom, writeJobsTo } from "@/lib/supabase-jobs";
-import { addJobTo, archiveJobIn, getJobIn, saveJobIn, type FoundJob, type JobRef } from "@/lib/job-ops";
+import { addJobTo, archiveJobIn, getJobIn, saveJobIn, updateJobsIn, type BatchResult, type BatchUpdate, type FoundJob, type JobRef } from "@/lib/job-ops";
 import type { AppliedJob, ProspectJob, PassedJob, PendingJob, JobsData, JobSection } from "@/lib/jobs";
 
 const JOBS_PATH = "data/jobs.json";
@@ -67,14 +67,30 @@ function supabaseStore() {
   return createJobRowStore(getSupabase());
 }
 
-export async function addJob(section: JobSection, job: Job): Promise<void> {
-  if (dataBackend() === "supabase") {
-    await addJobTo(supabaseStore(), section, job);
-    return;
-  }
+/** Returns the new row's id on Supabase; the JSON backend has no ids. */
+export async function addJob(section: JobSection, job: Job): Promise<string | undefined> {
+  if (dataBackend() === "supabase") return addJobTo(supabaseStore(), section, job);
   const board = await readJobs();
   boardList(board, section).unshift(job);
   await writeJobs(board);
+  return undefined;
+}
+
+/** Merges the same updates into many jobs: one row write on Supabase, one file write on GitHub. */
+export async function updateJobs(batch: BatchUpdate): Promise<BatchResult> {
+  if (dataBackend() === "supabase") return updateJobsIn(supabaseStore(), batch);
+  const board = await readJobs();
+  const notFound: JobRef[] = [];
+  let updated = 0;
+  for (const target of batch.targets) {
+    const index = githubIndex(board, target);
+    if (index === -1 || !target.section) { notFound.push(target); continue; }
+    const list = boardList(board, target.section);
+    list[index] = { ...list[index], ...batch.updates };
+    updated++;
+  }
+  if (updated) await writeJobs(board);
+  return { updated, notFound };
 }
 
 export async function getJob(ref: JobRef): Promise<FoundJob | undefined> {
