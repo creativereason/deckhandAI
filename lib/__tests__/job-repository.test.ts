@@ -16,6 +16,10 @@ function fakeStore(): { store: JobRowStore; load(rows: JobRow[]): void } {
     insert: async (batch) => batch.forEach((r) => rows.set(r.id, r)),
     update: async (batch) => batch.forEach((r) => rows.set(r.id, r)),
     softDelete: async (ids) => ids.forEach((id) => deleted.add(id)),
+    findExisting: async ({ url, company, role }) =>
+      [...rows.values()]
+        .filter((r) => (url !== "" && r.url === url) || (r.company === company && r.role === role))
+        .map((r) => ({ id: r.id, section: r.section, deleted: deleted.has(r.id) })),
   };
   return { store, load: (initial) => initial.forEach((r) => rows.set(r.id, r)) };
 }
@@ -52,5 +56,25 @@ describe("JobRepository by id (Supabase rows only)", () => {
     const repo = createJsonRepository({ read: async () => structuredClone(EMPTY), write: async () => {} });
 
     expect(await repo.add("prospect", { company: "Acme", role: "A" })).toBeUndefined();
+  });
+
+  // B — Boundary: removing a job must not let it be re-added by an agent
+  it("still finds a job that was archived, and says so", async () => {
+    const { store } = fakeStore();
+    const repo = createSupabaseRepository(store);
+    const id = await repo.add("prospect", { company: "Acme", role: "A", url: "https://x.test/1", salary: "", notes: "" });
+    await repo.archive({ id: id! });
+
+    expect(await repo.findExisting({ url: "https://x.test/1", company: "Acme", role: "A" })).toEqual({ id, section: "prospect", deleted: true });
+  });
+
+  it("prefers a live job over an archived one with the same company and role", async () => {
+    const { store } = fakeStore();
+    const repo = createSupabaseRepository(store);
+    const old = await repo.add("prospect", { company: "Acme", role: "A", url: "", salary: "", notes: "" });
+    await repo.archive({ id: old! });
+    const live = await repo.add("pending", { company: "Acme", role: "A", url: "", salary: "", notes: "" });
+
+    expect((await repo.findExisting({ url: "", company: "Acme", role: "A" }))?.id).toBe(live);
   });
 });

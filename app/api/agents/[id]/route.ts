@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { agentAdminStore, agentErrorResponse, parseAgentBody } from "@/lib/agent-admin";
+import { agentAdminStore, agentErrorResponse } from "@/lib/agent-admin";
+import { parseBody } from "@/lib/parse-body";
 import { AgentId, UpdateAgentBody } from "@/lib/agent-schemas";
 import { setAgentScopes } from "@/lib/agents";
 
@@ -10,7 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ("response" in guard) return guard.response;
   const id = AgentId.safeParse((await params).id);
   if (!id.success) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
-  const body = await parseAgentBody(req, UpdateAgentBody);
+  const body = await parseBody(req, UpdateAgentBody);
   if ("response" in body) return body.response;
   try {
     const found = await setAgentScopes(guard.value, id.data, body.value.scopes);
