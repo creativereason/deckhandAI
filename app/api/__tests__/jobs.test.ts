@@ -156,3 +156,59 @@ describe("PATCH /api/jobs", () => {
     expect(saveJob).not.toHaveBeenCalled();
   });
 });
+
+describe("request validation", () => {
+  const raw = (method: string, body: string) =>
+    new NextRequest("http://localhost/api/jobs", { method, body, headers: { "Content-Type": "application/json" } });
+  const nothingWritten = () => {
+    expect(addJob).not.toHaveBeenCalled();
+    expect(saveJob).not.toHaveBeenCalled();
+    expect(archiveJob).not.toHaveBeenCalled();
+  };
+
+  // Z — Zero
+  it.each([["POST", POST], ["PATCH", PATCH], ["DELETE", DELETE]] as const)("%s returns 400, not 500, for an empty or malformed body", async (method, handler) => {
+    expect((await handler(raw(method, "{}"))).status).toBe(400);
+    expect((await handler(raw(method, "not json"))).status).toBe(400);
+    nothingWritten();
+  });
+
+  // E — Exception: the error names the field to fix
+  it("POST names the invalid field and does not call the AI summary generator", async () => {
+    const response = await POST(request({ section: "prospect", job: { company: "Acme", role: "Designer", fit: "great" } }));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.issues).toEqual([expect.objectContaining({ path: "job.fit" })]);
+    expect(typeof body.error).toBe("string");
+    expect(body.error).toContain("job.fit");
+    expect(generateAiSummary).not.toHaveBeenCalled();
+    nothingWritten();
+  });
+
+  it("POST rejects an unknown section instead of crashing", async () => {
+    expect((await POST(request({ section: "nowhere", job: prospectJob }))).status).toBe(400);
+    nothingWritten();
+  });
+
+  it("PATCH rejects invalid updates before looking the job up", async () => {
+    const response = await PATCH(patchRequest({ section: "prospect", company: "Acme", role: "Designer", updates: { status: "nope" } }));
+
+    expect(response.status).toBe(400);
+    expect(getJob).not.toHaveBeenCalled();
+    nothingWritten();
+  });
+
+  it("DELETE rejects a body that does not name a job", async () => {
+    expect((await DELETE(deleteRequest({ section: "prospect" }))).status).toBe(400);
+    nothingWritten();
+  });
+
+  // B — Boundary: valid bodies are unaffected, including fields the schema does not list
+  it("still accepts a job with extra fields", async () => {
+    const response = await POST(request({ section: "prospect", job: { ...prospectJob, aiSummary: "s", custom: "kept" } }));
+
+    expect(response.status).toBe(200);
+    expect(addJob).toHaveBeenCalledWith("prospect", expect.objectContaining({ custom: "kept" }));
+  });
+});
