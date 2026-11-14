@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { agentAdminStore, agentErrorResponse, parseAgentBody } from "@/lib/agent-admin";
+import { agentAdminStore, agentErrorResponse } from "@/lib/agent-admin";
+import { parseBody } from "@/lib/parse-body";
 import { CreateAgentBody } from "@/lib/agent-schemas";
 import { createAgent, listAgents } from "@/lib/agents";
 
@@ -18,7 +19,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const guard = await agentAdminStore();
   if ("response" in guard) return guard.response;
-  const body = await parseAgentBody(req, CreateAgentBody);
+  const body = await parseBody(req, CreateAgentBody);
   if ("response" in body) return body.response;
   try {
     const { agent, key } = await createAgent(guard.value, body.value);

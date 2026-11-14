@@ -1,7 +1,14 @@
-import type { JobsData } from "@/lib/jobs";
+import type { JobSection, JobsData } from "@/lib/jobs";
 import { diffRows, jobsDataToRows, rowsToJobsData, type JobRow } from "@/lib/jobs-mapping";
 
-/** The four row operations the jobs repository needs; keeps the logic testable without a database. */
+/** A job that already exists, found by URL or by company + role, deleted or not. */
+export interface ExistingJob {
+  id: string;
+  section: JobSection;
+  deleted: boolean;
+}
+
+/** The row operations the jobs repository needs; keeps the logic testable without a database. */
 export interface JobRowStore {
   /** Live rows only: soft-deleted rows are never returned. */
   selectAll(): Promise<JobRow[]>;
@@ -9,6 +16,8 @@ export interface JobRowStore {
   update(rows: JobRow[]): Promise<void>;
   /** Marks rows deleted. Rows are never physically removed. */
   softDelete(ids: string[]): Promise<void>;
+  /** Rows matching by URL (when there is one) or by company + role. Unlike selectAll, includes soft-deleted rows. */
+  findExisting(candidate: { url: string; company: string; role: string }): Promise<ExistingJob[]>;
 }
 
 export async function readJobsFrom(store: JobRowStore): Promise<JobsData> {

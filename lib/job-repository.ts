@@ -3,10 +3,10 @@
 // shared suite in lib/__tests__/helpers/job-repository-contract.ts (Liskov).
 import type { JobSection, JobsData } from "@/lib/jobs";
 import {
-  addJobsTo, addJobTo, archiveJobIn, getJobIn, patchJobsIn, saveJobIn,
+  addJobsTo, addJobTo, archiveJobIn, findExistingIn, getJobIn, patchJobsIn, saveJobIn,
   type BatchResult, type FoundJob, type JobPatch, type JobRef,
 } from "@/lib/job-ops";
-import { readJobsFrom, type JobRowStore } from "@/lib/supabase-jobs";
+import { readJobsFrom, type ExistingJob, type JobRowStore } from "@/lib/supabase-jobs";
 
 type Job = Record<string, unknown>;
 
@@ -23,6 +23,11 @@ export interface JobRepository {
   patch(patches: JobPatch[]): Promise<BatchResult>;
   /** Takes the job off the board. Rows are soft-deleted where the backend can; false when not found. */
   archive(ref: JobRef): Promise<boolean>;
+  /**
+   * The job a new one would duplicate: same URL (when it has one) or same company + role, in any
+   * section. Backends that keep archived jobs include them, flagged `deleted`.
+   */
+  findExisting(candidate: { url: string; company: string; role: string }): Promise<ExistingJob | undefined>;
 }
 
 /** One row per job. Each operation writes only the rows it touches. */
@@ -35,6 +40,7 @@ export function createSupabaseRepository(store: JobRowStore): JobRepository {
     save: (ref, next) => saveJobIn(store, ref, next),
     patch: (patches) => patchJobsIn(store, patches),
     archive: (ref) => archiveJobIn(store, ref),
+    findExisting: (candidate) => findExistingIn(store, candidate),
   };
 }
 
@@ -92,6 +98,16 @@ function addManyIn(board: JobsData, section: JobSection, jobs: Job[]): boolean {
   return jobs.length > 0;
 }
 
+const SECTION_NAMES: JobSection[] = ["applied", "prospect", "local", "staffing", "passed", "pending"];
+
+function findInBoard(board: JobsData, c: { url: string; company: string; role: string }): ExistingJob | undefined {
+  for (const section of SECTION_NAMES) {
+    const hit = list(board, section).find((j) => (c.url !== "" && j.url === c.url) || (j.company === c.company && j.role === c.role));
+    if (hit) return { id: "", section, deleted: false };
+  }
+  return undefined;
+}
+
 /** The whole board is one JSON file with no ids, so each change reads it, edits it and writes it back. */
 export function createJsonRepository(io: BoardIo): JobRepository {
   /** Reads, applies `edit`, and writes only when the edit says it changed something. */
@@ -117,5 +133,8 @@ export function createJsonRepository(io: BoardIo): JobRepository {
       return { changed: result.updated > 0, result };
     }),
     archive: (ref) => change((board) => flag(archiveIn(board, ref))),
+    async findExisting(candidate) {
+      return findInBoard(await io.read(), candidate);
+    },
   };
 }

@@ -115,6 +115,37 @@ export function describeJobRepositoryContract(name: string, make: () => Contract
       expect(await repo.get(ref("Drop"))).toBeUndefined();
     });
 
+    // B — Boundary: an agent must not add what is already tracked
+    it("finds an existing job by URL", async () => {
+      const { repo, seed } = make();
+      await seed({ prospect: [prospect("A", { url: "https://x.test/1" })] as never });
+
+      const found = await repo.findExisting({ url: "https://x.test/1", company: "Other", role: "Other" });
+
+      expect(found?.section).toBe("prospect");
+    });
+
+    it("finds an existing job by company and role in any section", async () => {
+      const { repo, seed } = make();
+      await seed({ passed: [prospect("A")] as never });
+
+      expect((await repo.findExisting({ url: "", company: "Acme", role: "A" }))?.section).toBe("passed");
+    });
+
+    it("finds nothing for a new job", async () => {
+      const { repo, seed } = make();
+      await seed({ prospect: [prospect("A", { url: "https://x.test/1" })] as never });
+
+      expect(await repo.findExisting({ url: "https://x.test/2", company: "Acme", role: "B" })).toBeUndefined();
+    });
+
+    it("does not treat two jobs with no URL as the same job", async () => {
+      const { repo, seed } = make();
+      await seed({ prospect: [prospect("A", { url: "" })] as never });
+
+      expect(await repo.findExisting({ url: "", company: "Other", role: "Other" })).toBeUndefined();
+    });
+
     // I — Interface: patch reports what it could not find and still applies the rest
     it("reports unknown patch targets and still updates the others", async () => {
       const { repo, seed } = make();

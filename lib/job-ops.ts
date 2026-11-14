@@ -3,7 +3,7 @@
 // writes only that row, so two overlapping writers can no longer drop each other's jobs.
 import type { JobSection } from "@/lib/jobs";
 import { jobToRow, rowsToJobsData, type JobRow } from "@/lib/jobs-mapping";
-import type { JobRowStore } from "@/lib/supabase-jobs";
+import type { ExistingJob, JobRowStore } from "@/lib/supabase-jobs";
 
 type Job = Record<string, unknown>;
 
@@ -118,4 +118,14 @@ export async function patchJobsIn(store: JobRowStore, patches: JobPatch[]): Prom
 /** The same updates for every target. */
 export function updateJobsIn(store: JobRowStore, { targets, updates }: BatchUpdate): Promise<BatchResult> {
   return patchJobsIn(store, targets.map((target) => ({ target, updates })));
+}
+
+/** The job a new one would duplicate, if any. A blank URL never matches, or all URL-less jobs would be duplicates of each other. */
+export async function findExistingIn(
+  store: JobRowStore,
+  candidate: { url: string; company: string; role: string },
+): Promise<ExistingJob | undefined> {
+  const matches = await store.findExisting(candidate);
+  // Report the job that is actually on the board before one that was archived.
+  return matches.find((m) => !m.deleted) ?? matches[0];
 }
