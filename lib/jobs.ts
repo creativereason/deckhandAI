@@ -7,6 +7,13 @@ export type JobFit = "strong" | "good" | "caution" | "weak";
 export type JobType = "remote" | "hybrid" | "local" | "contract";
 export type JobSection = "applied" | "prospect" | "local" | "staffing" | "passed" | "pending";
 
+/** Enough to name one job to /api/jobs: the id when the backend has one, else company + role. */
+export interface JobIdentity {
+  id?: string;
+  company: string;
+  role: string;
+}
+
 export interface AppliedJob {
   /** Row id when the Supabase backend is active; absent for JSON-backed data and unsaved jobs. */
   id?: string;

@@ -19,6 +19,7 @@ import {
   JobType,
   resolveJobType,
   jobKey,
+  type JobIdentity,
 } from "@/lib/jobs";
 import { nextSort, sortRows, type SortState } from "@/lib/table-sort";
 import { getAppliedIcon, getProspectIcon, iconSortKey } from "@/lib/job-signal";
@@ -427,7 +428,7 @@ function AppliedTable({ jobs, otherSections, onEdit, onMove, onGenerate, onExpor
 
 function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportResume, onExportCoverLetter, otherSections, onDetail }: {
   jobs: TaggedProspectJob[];
-  onMove: (from: JobSection, company: string, role: string, to: JobSection) => void;
+  onMove: (from: JobSection, job: JobIdentity, to: JobSection) => void;
   onEdit: (job: ProspectJob) => void;
   onDismiss: (job: ProspectJob) => void;
   onGenerate: (job: ProspectJob) => void;
@@ -449,7 +450,7 @@ function ProspectTable({ jobs, onMove, onEdit, onDismiss, onGenerate, onExportRe
     const label = DISPLAY_SECTIONS.find((s) => s.value === target)?.label ?? target;
     setExitingKey(key);
     toast.success(`Moved to ${label}`);
-    setTimeout(() => onMove(j._section, j.company, j.role, target), 300);
+    setTimeout(() => onMove(j._section, j, target), 300);
   }
 
   if (jobs.length === 0) return <p className="text-sm text-muted-foreground py-4 px-1">No roles match the current filter.</p>;
@@ -659,11 +660,11 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
-  async function moveJob(fromSection: JobSection, company: string, role: string, toSection: JobSection) {
+  async function moveJob(fromSection: JobSection, job: JobIdentity, toSection: JobSection) {
     await fetch(`/api/jobs`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section: fromSection, company, role, targetSection: toSection }),
+      body: JSON.stringify({ id: job.id, section: fromSection, company: job.company, role: job.role, targetSection: toSection }),
     });
     load();
   }
@@ -726,11 +727,11 @@ export default function Home() {
     }
   }
 
-  async function dismissNew(section: JobSection, company: string, role: string) {
+  async function dismissNew(section: JobSection, job: JobIdentity) {
     await fetch(`/api/jobs`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ section, company, role, updates: { isNew: false } }),
+      body: JSON.stringify({ id: job.id, section, company: job.company, role: job.role, updates: { isNew: false } }),
     });
     load();
   }
@@ -895,7 +896,7 @@ export default function Home() {
                   jobs={filteredApplied}
                   otherSections={otherSectionsFor("applied")}
                   onEdit={(j) => setEditing({ section: "applied", job: j })}
-                  onMove={(t, j) => moveJob("applied", j.company, j.role, t)}
+                  onMove={(t, j) => moveJob("applied", j, t)}
                   onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
                   onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
                   onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
@@ -921,7 +922,7 @@ export default function Home() {
                   jobs={filteredProspects}
                   onMove={moveJob}
                   onEdit={(job) => setEditing({ section: (job as TaggedProspectJob)._section ?? "prospect", job })}
-                  onDismiss={(job) => dismissNew((job as TaggedProspectJob)._section ?? "prospect", job.company, job.role)}
+                  onDismiss={(job) => dismissNew((job as TaggedProspectJob)._section ?? "prospect", job)}
                   onGenerate={(job) => setGenerating({ company: job.company, role: job.role, url: job.url })}
                   onExportResume={hasProfile ? (job) => exportResume(job.company, job.role) : undefined}
                   onExportCoverLetter={hasProfile ? (job) => exportCoverLetter(job.company, job.role, job.url) : undefined}
@@ -943,7 +944,7 @@ export default function Home() {
                   jobs={filteredPassed}
                   otherSections={otherSectionsFor("passed")}
                   onEdit={(j) => setEditing({ section: "passed", job: j })}
-                  onMove={(t, j) => moveJob("passed", j.company, j.role, t)}
+                  onMove={(t, j) => moveJob("passed", j, t)}
                   onGenerate={(j) => setGenerating({ company: j.company, role: j.role, url: j.url })}
                   onExportResume={hasProfile ? (j) => exportResume(j.company, j.role) : undefined}
                   onExportCoverLetter={hasProfile ? (j) => exportCoverLetter(j.company, j.role, j.url) : undefined}
