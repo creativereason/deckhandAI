@@ -49,6 +49,15 @@ export async function addJobTo(store: JobRowStore, section: JobSection, job: Job
   return row.id;
 }
 
+/** Adds many jobs with one insert. The last job ends up first, as if each had been added in turn. */
+export async function addJobsTo(store: JobRowStore, section: JobSection, jobs: Job[]): Promise<string[]> {
+  if (!jobs.length) return [];
+  const start = frontPosition(await store.selectAll(), section);
+  const rows = jobs.map((job, i) => jobToRow(section, job, { position: start - i, newId: () => crypto.randomUUID() }));
+  await store.insert(rows);
+  return rows.map((row) => row.id);
+}
+
 /**
  * Replaces one job's fields, keeping its id. A section change moves it to the front
  * of the new section. Returns false when the job does not exist.
