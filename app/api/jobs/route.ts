@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { ZodType } from "zod";
 import { JobSection } from "@/lib/jobs";
+import { DeleteJobBody, PatchJobBody, PostJobBody } from "@/lib/job-schemas";
 import { addJob, archiveJob, getJob, readJobs, saveJob } from "@/lib/jobs-repository";
 import { generateAiSummary } from "@/lib/job-summary-server";
 
@@ -18,6 +20,16 @@ function normalizeJobForSection(job: AnyJob, targetSection: JobSection): AnyJob 
   return normalized;
 }
 
+/** Parses the request body; a bad or missing body is the caller's mistake (400), never a server error. */
+async function parseBody<T>(req: NextRequest, schema: ZodType<T>): Promise<{ data: T } | { response: NextResponse }> {
+  const parsed = schema.safeParse(await req.json().catch(() => undefined));
+  if (parsed.success) return { data: parsed.data };
+  // `error` is a plain string because the UI shows it as text; `issues` carries the full field paths.
+  const issues = parsed.error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message }));
+  const error = `Invalid request: ${issues.map((i) => `${i.path || "body"} ${i.message}`).join("; ")}`;
+  return { response: NextResponse.json({ error, issues }, { status: 400 }) };
+}
+
 export async function GET() {
   const jobs = await readJobs();
   return NextResponse.json(jobs);
@@ -25,13 +37,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { section, job } = body as { section: JobSection; job: Record<string, string> };
-    if (!section || !job) return NextResponse.json({ error: "Missing section or job" }, { status: 400 });
+    const body = await parseBody(req, PostJobBody);
+    if ("response" in body) return body.response;
+    const { section, job } = body.data;
     if (!job.aiSummary) {
       job.aiSummary = await generateAiSummary({
-        company: job.company ?? "",
-        role: job.role ?? "",
+        company: job.company,
+        role: job.role,
         salary: job.salary,
         notes: job.notes,
       });
@@ -46,15 +58,9 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { id, section, company, role, updates, targetSection } = body as {
-      id?: string;
-      section: JobSection;
-      company: string;
-      role: string;
-      updates: Record<string, unknown>;
-      targetSection?: JobSection;
-    };
+    const body = await parseBody(req, PatchJobBody);
+    if ("response" in body) return body.response;
+    const { id, section, company, role, updates, targetSection } = body.data;
     const ref = { id, section, company, role };
     const found = await getJob(ref);
     if (!found) return NextResponse.json({ error: "Job not found" }, { status: 404 });
@@ -73,14 +79,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { id, section, company, role, targetSection } = body as {
-      id?: string;
-      section: JobSection;
-      company: string;
-      role: string;
-      targetSection?: JobSection;
-    };
+    const body = await parseBody(req, DeleteJobBody);
+    if ("response" in body) return body.response;
+    const { id, section, company, role, targetSection } = body.data;
     const ref = { id, section, company, role };
     const found = await getJob(ref);
     if (!found) return NextResponse.json({ error: "Job not found" }, { status: 404 });
