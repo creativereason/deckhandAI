@@ -5,7 +5,7 @@
 import { dataBackend } from "@/lib/data-backend";
 import { githubRead, githubWrite } from "@/lib/github";
 import { getSupabase } from "@/lib/supabase";
-import { createJobRowStore } from "@/lib/supabase-row-store";
+import { createJobRowStore, type Actor } from "@/lib/supabase-row-store";
 import { writeJobsTo } from "@/lib/supabase-jobs";
 import type { BatchResult, BatchUpdate, FoundJob, JobPatch, JobRef } from "@/lib/job-ops";
 import { createJsonRepository, createSupabaseRepository, type JobRepository } from "@/lib/job-repository";
@@ -50,9 +50,11 @@ async function writeGithubBoard(data: JobsData): Promise<void> {
  * own rows, so overlapping writers cannot drop each other's jobs. The JSON file has no
  * ids or soft-delete marker, so there each change is a read-modify-write on section +
  * company + role. Both implementations pass the same contract tests.
+ * `actor` names who is writing, for the job_events log: "user" by default, "scraper", or an agent.
  */
-export function jobRepository(): JobRepository {
-  if (dataBackend() === "supabase") return createSupabaseRepository(createJobRowStore(getSupabase()));
+export function jobRepository(actor: Actor = "user"): JobRepository {
+  // The JSON file has no event log, so the actor only matters on Supabase.
+  if (dataBackend() === "supabase") return createSupabaseRepository(createJobRowStore(getSupabase(), actor));
   return createJsonRepository({ read: readGithubBoard, write: writeGithubBoard });
 }
 

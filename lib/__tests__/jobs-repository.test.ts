@@ -278,3 +278,39 @@ describe("single-job operations on the supabase backend", () => {
     expect(githubWrite).not.toHaveBeenCalled();
   });
 });
+
+describe("jobRepository actor", () => {
+  const createJobRowStore = vi.fn();
+
+  beforeEach(() => {
+    vi.stubEnv("DATA_BACKEND", "supabase");
+    createJobRowStore.mockReset();
+    createJobRowStore.mockReturnValue({ selectAll: vi.fn().mockResolvedValue([]), insert: vi.fn(), update: vi.fn(), softDelete: vi.fn() });
+    vi.doMock("@/lib/supabase", () => ({ getSupabase: () => ({}) }));
+    vi.doMock("@/lib/supabase-row-store", () => ({ createJobRowStore }));
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock("@/lib/supabase");
+    vi.doUnmock("@/lib/supabase-row-store");
+  });
+
+  // I — Interface: the event log attributes changes to whoever the caller says they are
+  it("records changes as the signed-in user unless told otherwise", async () => {
+    const { jobRepository } = await import("@/lib/jobs-repository");
+
+    jobRepository();
+
+    expect(createJobRowStore).toHaveBeenCalledWith(expect.anything(), "user");
+  });
+
+  it("passes a named actor through to the row store", async () => {
+    const { jobRepository } = await import("@/lib/jobs-repository");
+
+    jobRepository("scraper");
+
+    expect(createJobRowStore).toHaveBeenCalledWith(expect.anything(), "scraper");
+  });
+});
