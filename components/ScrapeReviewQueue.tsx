@@ -117,6 +117,7 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: j.id,
           company: j.company,
           role: j.role,
           action,

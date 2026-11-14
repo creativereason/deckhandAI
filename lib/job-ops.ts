@@ -77,21 +77,36 @@ export interface BatchUpdate {
   updates: Job;
 }
 
+export interface JobPatch {
+  target: JobRef;
+  updates: Job;
+}
+
 export interface BatchResult {
   updated: number;
   notFound: JobRef[];
 }
 
-/** Merges `updates` into every matching job with one read and one row write. Section never changes. */
-export async function updateJobsIn(store: JobRowStore, { targets, updates }: BatchUpdate): Promise<BatchResult> {
+/**
+ * Merges each patch's updates into its job, reading the stored job at write time, with
+ * one read and one row write. Fields the caller did not name keep whatever is stored now,
+ * so a slow caller (AI scoring) cannot overwrite an edit made while it was busy.
+ * Section never changes.
+ */
+export async function patchJobsIn(store: JobRowStore, patches: JobPatch[]): Promise<BatchResult> {
   const rows = await store.selectAll();
   const changed: JobRow[] = [];
   const notFound: JobRef[] = [];
-  for (const target of targets) {
+  for (const { target, updates } of patches) {
     const row = rows.find((r) => matches(r, target));
     if (!row) notFound.push(target);
     else changed.push(jobToRow(row.section, { ...toJob(row), ...updates, id: row.id }, { position: row.position, newId: () => row.id }));
   }
   if (changed.length) await store.update(changed);
   return { updated: changed.length, notFound };
+}
+
+/** The same updates for every target. */
+export function updateJobsIn(store: JobRowStore, { targets, updates }: BatchUpdate): Promise<BatchResult> {
+  return patchJobsIn(store, targets.map((target) => ({ target, updates })));
 }
