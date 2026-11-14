@@ -6,8 +6,9 @@ import { dataBackend } from "@/lib/data-backend";
 import { githubRead, githubWrite } from "@/lib/github";
 import { getSupabase } from "@/lib/supabase";
 import { createJobRowStore } from "@/lib/supabase-row-store";
-import { readJobsFrom, writeJobsTo } from "@/lib/supabase-jobs";
-import { addJobsTo, addJobTo, archiveJobIn, getJobIn, saveJobIn, patchJobsIn, type BatchResult, type BatchUpdate, type FoundJob, type JobPatch, type JobRef } from "@/lib/job-ops";
+import { writeJobsTo } from "@/lib/supabase-jobs";
+import type { BatchResult, BatchUpdate, FoundJob, JobPatch, JobRef } from "@/lib/job-ops";
+import { createJsonRepository, createSupabaseRepository, type JobRepository } from "@/lib/job-repository";
 import type { AppliedJob, ProspectJob, PassedJob, PendingJob, JobsData, JobSection } from "@/lib/jobs";
 
 const JOBS_PATH = "data/jobs.json";
@@ -31,10 +32,7 @@ function normalizeJobsData(value: Partial<JobsData>): JobsData {
   };
 }
 
-export async function readJobs(): Promise<JobsData> {
-  // No empty-board fallback on Supabase: the write path diffs against stored
-  // rows, so writing back an empty board after a failed read would delete them all.
-  if (dataBackend() === "supabase") return readJobsFrom(createJobRowStore(getSupabase()));
+async function readGithubBoard(): Promise<JobsData> {
   try {
     const raw = await githubRead(JOBS_PATH);
     return normalizeJobsData(JSON.parse(raw) as Partial<JobsData>);
@@ -43,104 +41,51 @@ export async function readJobs(): Promise<JobsData> {
   }
 }
 
-export async function writeJobs(data: JobsData): Promise<void> {
-  if (dataBackend() === "supabase") return writeJobsTo(createJobRowStore(getSupabase()), data);
+async function writeGithubBoard(data: JobsData): Promise<void> {
   await githubWrite(JOBS_PATH, JSON.stringify(data, null, 2), "Update jobs.json");
 }
 
-// Single-job operations. On Supabase each writes only its own row, so overlapping
-// writers cannot drop each other's jobs. The JSON file has no row ids or soft-delete
-// marker, so there they keep the original read-modify-write, matched on section +
-// company + role.
+/**
+ * The repository for the configured backend. On Supabase each operation writes only its
+ * own rows, so overlapping writers cannot drop each other's jobs. The JSON file has no
+ * ids or soft-delete marker, so there each change is a read-modify-write on section +
+ * company + role. Both implementations pass the same contract tests.
+ */
+export function jobRepository(): JobRepository {
+  if (dataBackend() === "supabase") return createSupabaseRepository(createJobRowStore(getSupabase()));
+  return createJsonRepository({ read: readGithubBoard, write: writeGithubBoard });
+}
+
+// No empty-board fallback on Supabase: writeJobs diffs against stored rows, so writing
+// back an empty board after a failed read would soft-delete them all.
+export const readJobs = (): Promise<JobsData> => jobRepository().readBoard();
+
+/** Whole-board write, kept for the importer and tests. Application code uses the operations below. */
+export async function writeJobs(data: JobsData): Promise<void> {
+  if (dataBackend() === "supabase") return writeJobsTo(createJobRowStore(getSupabase()), data);
+  await writeGithubBoard(data);
+}
+
 type Job = Record<string, unknown>;
 
-function boardList(board: JobsData, section: JobSection): Job[] {
-  return board[section] as unknown as Job[];
-}
-
-function githubIndex(board: JobsData, ref: JobRef): number {
-  if (!ref.section) return -1;
-  return boardList(board, ref.section).findIndex((j) => j.company === ref.company && j.role === ref.role);
-}
-
-function supabaseStore() {
-  return createJobRowStore(getSupabase());
-}
-
 /** Returns the new row's id on Supabase; the JSON backend has no ids. */
-export async function addJob(section: JobSection, job: Job): Promise<string | undefined> {
-  if (dataBackend() === "supabase") return addJobTo(supabaseStore(), section, job);
-  const board = await readJobs();
-  boardList(board, section).unshift(job);
-  await writeJobs(board);
-  return undefined;
-}
+export const addJob = (section: JobSection, job: Job): Promise<string | undefined> => jobRepository().add(section, job);
 
 /** Adds many jobs at the front of a section: one insert on Supabase, one file write on GitHub. */
-export async function addJobs(section: JobSection, jobs: Job[]): Promise<void> {
-  if (!jobs.length) return;
-  if (dataBackend() === "supabase") {
-    await addJobsTo(supabaseStore(), section, jobs);
-    return;
-  }
-  const board = await readJobs();
-  for (const job of jobs) boardList(board, section).unshift(job);
-  await writeJobs(board);
-}
+export const addJobs = (section: JobSection, jobs: Job[]): Promise<void> => jobRepository().addMany(section, jobs);
 
 /** Merges each patch's updates into its job: one row write on Supabase, one file write on GitHub. */
-export async function patchJobs(patches: JobPatch[]): Promise<BatchResult> {
-  if (dataBackend() === "supabase") return patchJobsIn(supabaseStore(), patches);
-  const board = await readJobs();
-  const notFound: JobRef[] = [];
-  let updated = 0;
-  for (const { target, updates } of patches) {
-    const index = githubIndex(board, target);
-    if (index === -1 || !target.section) { notFound.push(target); continue; }
-    const list = boardList(board, target.section);
-    list[index] = { ...list[index], ...updates };
-    updated++;
-  }
-  if (updated) await writeJobs(board);
-  return { updated, notFound };
-}
+export const patchJobs = (patches: JobPatch[]): Promise<BatchResult> => jobRepository().patch(patches);
 
 /** The same updates for many jobs. */
 export function updateJobs({ targets, updates }: BatchUpdate): Promise<BatchResult> {
   return patchJobs(targets.map((target) => ({ target, updates })));
 }
 
-export async function getJob(ref: JobRef): Promise<FoundJob | undefined> {
-  if (dataBackend() === "supabase") return getJobIn(supabaseStore(), ref);
-  const board = await readJobs();
-  const index = githubIndex(board, ref);
-  if (index === -1 || !ref.section) return undefined;
-  return { id: "", section: ref.section, job: boardList(board, ref.section)[index] };
-}
+export const getJob = (ref: JobRef): Promise<FoundJob | undefined> => jobRepository().get(ref);
 
 /** Replaces a job's fields; a section change moves it to the front of the new section. False when not found. */
-export async function saveJob(ref: JobRef, next: { section: JobSection; job: Job }): Promise<boolean> {
-  if (dataBackend() === "supabase") return saveJobIn(supabaseStore(), ref, next);
-  const board = await readJobs();
-  const index = githubIndex(board, ref);
-  if (index === -1 || !ref.section) return false;
-  if (next.section === ref.section) {
-    boardList(board, ref.section)[index] = next.job;
-  } else {
-    boardList(board, ref.section).splice(index, 1);
-    boardList(board, next.section).unshift(next.job);
-  }
-  await writeJobs(board);
-  return true;
-}
+export const saveJob = (ref: JobRef, next: { section: JobSection; job: Job }): Promise<boolean> => jobRepository().save(ref, next);
 
 /** Soft-deletes on Supabase, removes the entry from the JSON file. False when not found. */
-export async function archiveJob(ref: JobRef): Promise<boolean> {
-  if (dataBackend() === "supabase") return archiveJobIn(supabaseStore(), ref);
-  const board = await readJobs();
-  const index = githubIndex(board, ref);
-  if (index === -1 || !ref.section) return false;
-  boardList(board, ref.section).splice(index, 1);
-  await writeJobs(board);
-  return true;
-}
+export const archiveJob = (ref: JobRef): Promise<boolean> => jobRepository().archive(ref);
