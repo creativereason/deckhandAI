@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import AgentsSettings from "@/components/AgentsSettings";
 import type { AgentRecord } from "@/lib/agents";
@@ -84,6 +84,42 @@ describe("AgentsSettings", () => {
       expect(screen.getByText("Revoked")).toBeInTheDocument();
       expect(screen.getByRole("checkbox", { name: "Muse: jobs:read" })).toBeDisabled();
       expect(screen.getByRole("checkbox", { name: "Grokbot: jobs:archive" })).toBeEnabled();
+    });
+  });
+
+  describe("when a scope checkbox is clicked", () => {
+    it("sends the toggled scope list to PATCH /api/agents/{id} and shows it checked", async () => {
+      // Arrange
+      const a = agent();
+      const fetchMock = mockApi({
+        "GET /api/agents": () => ({ status: 200, body: { agents: [a] } }),
+        [`PATCH /api/agents/${a.id}`]: () => ({ status: 200, body: { ok: true } }),
+      });
+      render(<AgentsSettings />);
+      const archive = await screen.findByRole("checkbox", { name: "Grokbot: jobs:archive" });
+
+      // Act
+      fireEvent.click(archive);
+
+      // Assert
+      await waitFor(() => expect(archive).toBeChecked());
+      const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+      expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ scopes: ["jobs:read", "jobs:add_pending", "jobs:archive"] });
+    });
+
+    it("sends nothing when the click would remove the agent's only scope", async () => {
+      // Arrange
+      const a = agent({ scopes: ["jobs:read"] });
+      const fetchMock = mockApi({ "GET /api/agents": () => ({ status: 200, body: { agents: [a] } }) });
+      render(<AgentsSettings />);
+      const read = await screen.findByRole("checkbox", { name: "Grokbot: jobs:read" });
+
+      // Act
+      fireEvent.click(read);
+
+      // Assert
+      expect(read).toBeChecked();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });
