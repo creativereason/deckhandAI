@@ -28,3 +28,10 @@ export const SCOPE_DESCRIPTIONS: Record<AgentScope, string> = {
   "jobs:check_url": "Check whether a posting is still open (reserved, no tool uses it yet)",
   "jobs:archive": "Archive jobs",
 };
+
+/** One-click starting points for a new agent; the checklist stays available to fine-tune them. */
+export const SCOPE_PRESETS: ReadonlyArray<{ label: string; hint: string; scopes: readonly AgentScope[] }> = [
+  { label: "Read only", hint: "Can look, not touch", scopes: ["jobs:read"] },
+  { label: "Inbox contributor", hint: "Reads and adds to pending", scopes: ["jobs:read", "jobs:add_pending"] },
+  { label: "Triager", hint: "Also edits and moves jobs", scopes: ["jobs:read", "jobs:add_pending", "jobs:edit", "jobs:triage"] },
+];

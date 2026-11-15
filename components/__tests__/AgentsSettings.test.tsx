@@ -32,13 +32,22 @@ function mockApi(routes: Record<string, Handler>) {
   return fetchMock;
 }
 
+/** The list shows summaries; permissions and Revoke live on an agent's own view. */
+async function openAgent(name: string) {
+  fireEvent.click(await screen.findByRole("button", { name: `Open ${name}` }));
+}
+
+async function openCreateForm() {
+  fireEvent.click(await screen.findByRole("button", { name: "New agent" }));
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe("AgentsSettings", () => {
   describe("when no agents exist yet", () => {
-    it("says there are none and still offers the create form", async () => {
+    it("says there are none and offers a New agent button", async () => {
       // Arrange
       mockApi({ "GET /api/agents": () => ({ status: 200, body: { agents: [] } }) });
 
@@ -47,12 +56,12 @@ describe("AgentsSettings", () => {
 
       // Assert
       expect(await screen.findByText("No agents yet.")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Create agent" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "New agent" })).toBeInTheDocument();
     });
   });
 
   describe("when one agent exists", () => {
-    it("shows its name, key prefix and a checked box for each granted scope", async () => {
+    it("lists its name and key prefix, and its detail view checks each granted scope", async () => {
       // Arrange
       mockApi({ "GET /api/agents": () => ({ status: 200, body: { agents: [agent()] } }) });
 
@@ -62,6 +71,8 @@ describe("AgentsSettings", () => {
       // Assert
       expect(await screen.findByText("Grokbot")).toBeInTheDocument();
       expect(screen.getByText("dk_AbCd1234…")).toBeInTheDocument();
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+      await openAgent("Grokbot");
       expect(screen.getByRole("checkbox", { name: "Grokbot: jobs:read" })).toBeChecked();
       expect(screen.getByRole("checkbox", { name: "Grokbot: jobs:add_pending" })).toBeChecked();
       expect(screen.getByRole("checkbox", { name: "Grokbot: jobs:archive" })).not.toBeChecked();
@@ -82,7 +93,10 @@ describe("AgentsSettings", () => {
       expect(await screen.findByText("Grokbot")).toBeInTheDocument();
       expect(screen.getByText("Muse")).toBeInTheDocument();
       expect(screen.getByText("Revoked")).toBeInTheDocument();
+      await openAgent("Muse");
       expect(screen.getByRole("checkbox", { name: "Muse: jobs:read" })).toBeDisabled();
+      fireEvent.click(screen.getByRole("button", { name: "← All agents" }));
+      await openAgent("Grokbot");
       expect(screen.getByRole("checkbox", { name: "Grokbot: jobs:archive" })).toBeEnabled();
     });
   });
@@ -96,6 +110,7 @@ describe("AgentsSettings", () => {
         [`PATCH /api/agents/${a.id}`]: () => ({ status: 200, body: { ok: true } }),
       });
       render(<AgentsSettings />);
+      await openAgent("Grokbot");
       const archive = await screen.findByRole("checkbox", { name: "Grokbot: jobs:archive" });
 
       // Act
@@ -112,6 +127,7 @@ describe("AgentsSettings", () => {
       const a = agent({ scopes: ["jobs:read"] });
       const fetchMock = mockApi({ "GET /api/agents": () => ({ status: 200, body: { agents: [a] } }) });
       render(<AgentsSettings />);
+      await openAgent("Grokbot");
       const read = await screen.findByRole("checkbox", { name: "Grokbot: jobs:read" });
 
       // Act
@@ -132,6 +148,7 @@ describe("AgentsSettings", () => {
         "POST /api/agents": () => ({ status: 201, body: { agent: created, key: "dk_Duet1234secretsecret" } }),
       });
       render(<AgentsSettings />);
+      await openCreateForm();
       fireEvent.change(await screen.findByLabelText("Agent name"), { target: { value: "Duet" } });
       fireEvent.click(screen.getByRole("checkbox", { name: "New agent: jobs:edit" }));
 
@@ -139,7 +156,10 @@ describe("AgentsSettings", () => {
       fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
 
       // Assert
-      expect(await screen.findByText("dk_Duet1234secretsecret")).toBeInTheDocument();
+      expect(await screen.findByText("Key for Duet: copy it now. It will not be shown again.")).toBeInTheDocument();
+      expect(screen.queryByText("dk_Duet1234secretsecret")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Show key" }));
+      expect(screen.getByText("dk_Duet1234secretsecret")).toBeInTheDocument();
       expect(screen.getByText(/claude mcp add --transport http deckhand .*\/api\/mcp --header "Authorization: Bearer dk_Duet1234secretsecret"/)).toBeInTheDocument();
       expect(screen.getByText("Duet")).toBeInTheDocument();
       const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
@@ -153,8 +173,10 @@ describe("AgentsSettings", () => {
         "POST /api/agents": () => ({ status: 201, body: { agent: agent({ name: "Duet" }), key: "dk_Duet1234secretsecret" } }),
       });
       render(<AgentsSettings />);
+      await openCreateForm();
       fireEvent.change(await screen.findByLabelText("Agent name"), { target: { value: "Duet" } });
       fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Show key" }));
       await screen.findByText("dk_Duet1234secretsecret");
 
       // Act
@@ -175,6 +197,7 @@ describe("AgentsSettings", () => {
       });
       vi.stubGlobal("confirm", vi.fn(() => true));
       render(<AgentsSettings />);
+      await openAgent("Grokbot");
 
       // Act
       fireEvent.click(await screen.findByRole("button", { name: "Revoke Grokbot" }));
@@ -190,6 +213,7 @@ describe("AgentsSettings", () => {
       const fetchMock = mockApi({ "GET /api/agents": () => ({ status: 200, body: { agents: [agent()] } }) });
       vi.stubGlobal("confirm", vi.fn(() => false));
       render(<AgentsSettings />);
+      await openAgent("Grokbot");
 
       // Act
       fireEvent.click(await screen.findByRole("button", { name: "Revoke Grokbot" }));
@@ -220,6 +244,7 @@ describe("AgentsSettings", () => {
         "POST /api/agents": () => ({ status: 409, body: { error: "An agent named Grokbot already exists" } }),
       });
       render(<AgentsSettings />);
+      await openCreateForm();
       fireEvent.change(await screen.findByLabelText("Agent name"), { target: { value: "Grokbot" } });
 
       // Act
@@ -238,6 +263,7 @@ describe("AgentsSettings", () => {
         [`PATCH /api/agents/${a.id}`]: () => ({ status: 500, body: { error: "database unavailable" } }),
       });
       render(<AgentsSettings />);
+      await openAgent("Grokbot");
       const archive = await screen.findByRole("checkbox", { name: "Grokbot: jobs:archive" });
 
       // Act
@@ -257,6 +283,7 @@ describe("AgentsSettings", () => {
       });
       vi.stubGlobal("confirm", vi.fn(() => true));
       render(<AgentsSettings />);
+      await openAgent("Grokbot");
 
       // Act
       fireEvent.click(await screen.findByRole("button", { name: "Revoke Grokbot" }));

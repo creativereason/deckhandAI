@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AGENT_SCOPES, DEFAULT_AGENT_SCOPES, type AgentScope } from "@/lib/agent-scopes";
-import { mcpAddCommand, SCOPE_DESCRIPTIONS, toggleScope } from "@/lib/agent-settings";
+import { mcpAddCommand, SCOPE_DESCRIPTIONS, SCOPE_PRESETS, toggleScope } from "@/lib/agent-settings";
 import type { AgentRecord } from "@/lib/agents";
 
 const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
@@ -39,13 +39,43 @@ function ScopeChecklist({ owner, scopes, disabled, onToggle }: ScopeChecklistPro
   );
 }
 
-interface AgentRowProps {
+function formatDate(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleDateString() : "never";
+}
+
+function AgentSummaryRow({ agent, onOpen }: { agent: AgentRecord; onOpen: () => void }) {
+  const revoked = agent.revokedAt !== null;
+  return (
+    <li>
+      <button type="button" onClick={onOpen} aria-label={`Open ${agent.name}`} className={`${SECTION} w-full text-left space-y-2 hover:ring-2 hover:ring-primary`}>
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="font-semibold text-gray-900 dark:text-white">
+            {agent.name}
+            {revoked && <span className="ml-2 text-xs font-medium text-destructive">Revoked</span>}
+          </h3>
+          <code className="text-xs text-muted-foreground">{agent.keyPrefix}…</code>
+        </div>
+        <ul className="flex flex-wrap gap-1.5" aria-label={`${agent.name} permissions`}>
+          {agent.scopes.map((scope) => (
+            <li key={scope} className="rounded-full bg-muted px-2 py-0.5 text-xs font-mono">{scope.replace("jobs:", "")}</li>
+          ))}
+        </ul>
+        <p className="text-xs text-muted-foreground">
+          Created {formatDate(agent.createdAt)} · last used {formatDate(agent.lastUsedAt)}
+        </p>
+      </button>
+    </li>
+  );
+}
+
+interface AgentDetailProps {
   agent: AgentRecord;
+  onBack: () => void;
   onScopesChange: (scopes: AgentScope[]) => void;
   onRevoke: () => void;
 }
 
-function AgentRow({ agent, onScopesChange, onRevoke }: AgentRowProps) {
+function AgentDetail({ agent, onBack, onScopesChange, onRevoke }: AgentDetailProps) {
   const revoked = agent.revokedAt !== null;
   function toggle(scope: AgentScope) {
     const next = toggleScope(agent.scopes, scope);
@@ -53,7 +83,8 @@ function AgentRow({ agent, onScopesChange, onRevoke }: AgentRowProps) {
     if (next.length !== agent.scopes.length) onScopesChange(next);
   }
   return (
-    <li className={SECTION}>
+    <div className={SECTION}>
+      <Button variant="outline" size="sm" onClick={onBack}>← All agents</Button>
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="font-semibold text-gray-900 dark:text-white">
           {agent.name}
@@ -61,13 +92,16 @@ function AgentRow({ agent, onScopesChange, onRevoke }: AgentRowProps) {
         </h3>
         <code className="text-xs text-muted-foreground">{agent.keyPrefix}…</code>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Created {formatDate(agent.createdAt)} · last used {formatDate(agent.lastUsedAt)}. The full key is shown only when the agent is created.
+      </p>
       <ScopeChecklist owner={agent.name} scopes={agent.scopes} disabled={revoked} onToggle={toggle} />
       {!revoked && (
         <Button variant="destructive" size="sm" aria-label={`Revoke ${agent.name}`} onClick={onRevoke}>
           Revoke
         </Button>
       )}
-    </li>
+    </div>
   );
 }
 
@@ -77,14 +111,16 @@ interface NewKey {
 }
 
 function NewKeyNotice({ agentName, keyValue, onDone }: { agentName: string; keyValue: string; onDone: () => void }) {
+  const [revealed, setRevealed] = useState(false);
   const command = mcpAddCommand(window.location.origin, keyValue);
   return (
     <div role="status" className={`${SECTION} border border-primary`}>
       <p className="text-sm font-semibold">Key for {agentName}: copy it now. It will not be shown again.</p>
-      <code className="block break-all rounded bg-muted p-2 text-xs">{keyValue}</code>
+      <code className="block break-all rounded bg-muted p-2 text-xs">{revealed ? keyValue : "•".repeat(keyValue.length)}</code>
       <p className="text-xs text-muted-foreground">Connect Claude Code with:</p>
-      <code className="block break-all rounded bg-muted p-2 text-xs">{command}</code>
+      <code className="block break-all rounded bg-muted p-2 text-xs">{revealed ? command : mcpAddCommand(window.location.origin, "•".repeat(keyValue.length))}</code>
       <div className="flex gap-2">
+        <Button variant="outline" onClick={() => setRevealed(!revealed)}>{revealed ? "Hide key" : "Show key"}</Button>
         <Button variant="outline" onClick={() => navigator.clipboard.writeText(keyValue)}>Copy key</Button>
         <Button variant="outline" onClick={() => navigator.clipboard.writeText(command)}>Copy command</Button>
         <Button onClick={onDone}>Done</Button>
@@ -138,6 +174,13 @@ function CreateAgentForm({ onCreated, onError }: CreateAgentFormProps) {
       <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">New agent</h2>
       <label className={LABEL} htmlFor="agent-name">Agent name</label>
       <input id="agent-name" className={INPUT} maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Permission presets">
+        {SCOPE_PRESETS.map((preset) => (
+          <Button key={preset.label} type="button" variant="outline" size="sm" title={preset.hint} onClick={() => setScopes([...preset.scopes])}>
+            {preset.label}
+          </Button>
+        ))}
+      </div>
       <ScopeChecklist owner="New agent" scopes={scopes} disabled={false} onToggle={(s) => setScopes(toggleScope(scopes, s))} />
       <Button type="submit" disabled={name.trim() === ""}>Create agent</Button>
     </form>
@@ -183,8 +226,11 @@ function agentActions(setAgents: SetAgents, setError: (message: string | null) =
   return { changeScopes, revoke };
 }
 
+type View = { kind: "list" } | { kind: "create" } | { kind: "detail"; id: string };
+
 export default function AgentsSettings() {
   const { agents, setAgents, loadError } = useAgentList();
+  const [view, setView] = useState<View>({ kind: "list" });
   const [newKey, setNewKey] = useState<NewKey | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { changeScopes, revoke } = agentActions(setAgents, setError);
@@ -193,22 +239,42 @@ export default function AgentsSettings() {
     setError(null);
     setAgents((prev) => [...(prev ?? []), agent]);
     setNewKey({ agentName: agent.name, key });
+    setView({ kind: "list" });
   }
 
   if (loadError) return <p role="alert" className="text-sm text-destructive py-8">{loadError}</p>;
   if (agents === null) return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
 
+  const selected = view.kind === "detail" ? agents.find((a) => a.id === view.id) : undefined;
+  const backToList = () => setView({ kind: "list" });
+
   return (
     <div className="space-y-6">
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {newKey && <NewKeyNotice agentName={newKey.agentName} keyValue={newKey.key} onDone={() => setNewKey(null)} />}
-      {agents.length === 0 && <p className="text-sm text-muted-foreground">No agents yet.</p>}
-      <ul className="space-y-4">
-        {agents.map((a) => (
-          <AgentRow key={a.id} agent={a} onScopesChange={(scopes) => changeScopes(a, scopes)} onRevoke={() => revoke(a)} />
-        ))}
-      </ul>
-      <CreateAgentForm onCreated={addCreated} onError={setError} />
+      {view.kind === "create" && (
+        <>
+          <Button variant="outline" size="sm" onClick={backToList}>← All agents</Button>
+          <CreateAgentForm onCreated={addCreated} onError={setError} />
+        </>
+      )}
+      {selected && (
+        <AgentDetail agent={selected} onBack={backToList} onScopesChange={(scopes) => changeScopes(selected, scopes)} onRevoke={() => revoke(selected)} />
+      )}
+      {view.kind === "list" && (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Agents</h2>
+            <Button onClick={() => setView({ kind: "create" })}>New agent</Button>
+          </div>
+          {agents.length === 0 && <p className="text-sm text-muted-foreground">No agents yet.</p>}
+          <ul className="space-y-3">
+            {agents.map((a) => (
+              <AgentSummaryRow key={a.id} agent={a} onOpen={() => setView({ kind: "detail", id: a.id })} />
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

@@ -18,7 +18,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <Link
@@ -31,7 +31,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           </div>
         </div>
 
-        <nav className="flex flex-wrap gap-1 border-b border-border pb-0 overflow-x-auto">
+        <nav className="flex flex-nowrap gap-1 border-b border-border pb-0 overflow-x-auto">
           {TABS.map((tab) => {
             const active = tab.href === "/settings"
               ? pathname === "/settings"
