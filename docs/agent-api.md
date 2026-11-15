@@ -4,7 +4,7 @@ For Grokbot, Muse, Duet and scripts. Base path: `/api/agent/v1`. Needs `DATA_BAC
 
 ## Authentication
 
-Create an agent in the app (Settings, once that page lands) or with `POST /api/agents` while signed in. The response includes the key **once**: `dk_...`. Send it on every request:
+Create an agent in the app under **Settings → Agents** (pick its scopes there; the page also builds the `claude mcp add` command for you), or with `POST /api/agents` while signed in. The response includes the key **once**: `dk_...`. Send it on every request:
 
 ```
 Authorization: Bearer dk_...

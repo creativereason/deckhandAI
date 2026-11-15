@@ -10,6 +10,7 @@ const TABS = [
   { label: "AI Profile", href: "/settings/profile-ai" },
   { label: "AI Model", href: "/settings/model" },
   { label: "Export Style", href: "/settings/export" },
+  { label: "Agents", href: "/settings/agents" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
