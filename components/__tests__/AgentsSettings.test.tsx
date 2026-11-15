@@ -122,4 +122,46 @@ describe("AgentsSettings", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("when an agent is created", () => {
+    it("posts the name and chosen scopes, then shows the key and connect command once", async () => {
+      // Arrange
+      const created = agent({ id: "5d4c3b2a-2222-4abc-9def-0123456789ab", name: "Duet", keyPrefix: "dk_Duet1234", scopes: ["jobs:read", "jobs:add_pending", "jobs:edit"] });
+      const fetchMock = mockApi({
+        "GET /api/agents": () => ({ status: 200, body: { agents: [] } }),
+        "POST /api/agents": () => ({ status: 201, body: { agent: created, key: "dk_Duet1234secretsecret" } }),
+      });
+      render(<AgentsSettings />);
+      fireEvent.change(await screen.findByLabelText("Agent name"), { target: { value: "Duet" } });
+      fireEvent.click(screen.getByRole("checkbox", { name: "New agent: jobs:edit" }));
+
+      // Act
+      fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+
+      // Assert
+      expect(await screen.findByText("dk_Duet1234secretsecret")).toBeInTheDocument();
+      expect(screen.getByText(/claude mcp add --transport http deckhand .*\/api\/mcp --header "Authorization: Bearer dk_Duet1234secretsecret"/)).toBeInTheDocument();
+      expect(screen.getByText("Duet")).toBeInTheDocument();
+      const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+      expect(JSON.parse(String(post?.[1]?.body))).toEqual({ name: "Duet", scopes: ["jobs:read", "jobs:add_pending", "jobs:edit"] });
+    });
+
+    it("removes the key from the page when Done is clicked", async () => {
+      // Arrange
+      mockApi({
+        "GET /api/agents": () => ({ status: 200, body: { agents: [] } }),
+        "POST /api/agents": () => ({ status: 201, body: { agent: agent({ name: "Duet" }), key: "dk_Duet1234secretsecret" } }),
+      });
+      render(<AgentsSettings />);
+      fireEvent.change(await screen.findByLabelText("Agent name"), { target: { value: "Duet" } });
+      fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+      await screen.findByText("dk_Duet1234secretsecret");
+
+      // Act
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+      // Assert
+      expect(screen.queryByText("dk_Duet1234secretsecret")).not.toBeInTheDocument();
+    });
+  });
 });
