@@ -67,4 +67,23 @@ describe("AgentsSettings", () => {
       expect(screen.getByRole("checkbox", { name: "Grokbot: jobs:archive" })).not.toBeChecked();
     });
   });
+
+  describe("when several agents exist and one is revoked", () => {
+    it("lists all of them and locks the revoked agent's scopes", async () => {
+      // Arrange
+      const active = agent();
+      const revoked = agent({ id: "0b6c9f3e-1111-4c2d-8e3f-2a3b4c5d6e7f", name: "Muse", keyPrefix: "dk_Muse0000", revokedAt: "2026-11-15T09:00:00.000Z" });
+      mockApi({ "GET /api/agents": () => ({ status: 200, body: { agents: [active, revoked] } }) });
+
+      // Act
+      render(<AgentsSettings />);
+
+      // Assert
+      expect(await screen.findByText("Grokbot")).toBeInTheDocument();
+      expect(screen.getByText("Muse")).toBeInTheDocument();
+      expect(screen.getByText("Revoked")).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "Muse: jobs:read" })).toBeDisabled();
+      expect(screen.getByRole("checkbox", { name: "Grokbot: jobs:archive" })).toBeEnabled();
+    });
+  });
 });

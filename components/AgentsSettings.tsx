@@ -7,7 +7,13 @@ import type { AgentRecord } from "@/lib/agents";
 
 const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
-function ScopeChecklist({ owner, scopes }: { owner: string; scopes: readonly AgentScope[] }) {
+interface ScopeChecklistProps {
+  owner: string;
+  scopes: readonly AgentScope[];
+  disabled: boolean;
+}
+
+function ScopeChecklist({ owner, scopes, disabled }: ScopeChecklistProps) {
   return (
     <ul className="space-y-1">
       {AGENT_SCOPES.map((scope) => (
@@ -17,6 +23,7 @@ function ScopeChecklist({ owner, scopes }: { owner: string; scopes: readonly Age
             className="mt-0.5 w-4 h-4 accent-primary"
             aria-label={`${owner}: ${scope}`}
             checked={scopes.includes(scope)}
+            disabled={disabled}
             readOnly
           />
           <span>
@@ -30,13 +37,17 @@ function ScopeChecklist({ owner, scopes }: { owner: string; scopes: readonly Age
 }
 
 function AgentRow({ agent }: { agent: AgentRecord }) {
+  const revoked = agent.revokedAt !== null;
   return (
     <li className={SECTION}>
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="font-semibold text-gray-900 dark:text-white">{agent.name}</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-white">
+          {agent.name}
+          {revoked && <span className="ml-2 text-xs font-medium text-destructive">Revoked</span>}
+        </h3>
         <code className="text-xs text-muted-foreground">{agent.keyPrefix}…</code>
       </div>
-      <ScopeChecklist owner={agent.name} scopes={agent.scopes} />
+      <ScopeChecklist owner={agent.name} scopes={agent.scopes} disabled={revoked} />
     </li>
   );
 }
