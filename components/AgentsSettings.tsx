@@ -42,9 +42,10 @@ function ScopeChecklist({ owner, scopes, disabled, onToggle }: ScopeChecklistPro
 interface AgentRowProps {
   agent: AgentRecord;
   onScopesChange: (scopes: AgentScope[]) => void;
+  onRevoke: () => void;
 }
 
-function AgentRow({ agent, onScopesChange }: AgentRowProps) {
+function AgentRow({ agent, onScopesChange, onRevoke }: AgentRowProps) {
   const revoked = agent.revokedAt !== null;
   function toggle(scope: AgentScope) {
     const next = toggleScope(agent.scopes, scope);
@@ -61,6 +62,11 @@ function AgentRow({ agent, onScopesChange }: AgentRowProps) {
         <code className="text-xs text-muted-foreground">{agent.keyPrefix}…</code>
       </div>
       <ScopeChecklist owner={agent.name} scopes={agent.scopes} disabled={revoked} onToggle={toggle} />
+      {!revoked && (
+        <Button variant="destructive" size="sm" aria-label={`Revoke ${agent.name}`} onClick={onRevoke}>
+          Revoke
+        </Button>
+      )}
     </li>
   );
 }
@@ -138,6 +144,13 @@ export default function AgentsSettings() {
     });
   }
 
+  async function revoke(agent: AgentRecord) {
+    if (!window.confirm(`Revoke ${agent.name}? Its key stops working immediately and cannot be restored.`)) return;
+    await fetch(`/api/agents/${agent.id}/revoke`, { method: "POST" });
+    const revokedAt = new Date().toISOString();
+    setAgents((prev) => prev?.map((a) => (a.id === agent.id ? { ...a, revokedAt } : a)) ?? prev);
+  }
+
   function addCreated(agent: AgentRecord, key: string) {
     setAgents((prev) => [...(prev ?? []), agent]);
     setNewKey({ agentName: agent.name, key });
@@ -150,7 +163,9 @@ export default function AgentsSettings() {
       {newKey && <NewKeyNotice agentName={newKey.agentName} keyValue={newKey.key} onDone={() => setNewKey(null)} />}
       {agents.length === 0 && <p className="text-sm text-muted-foreground">No agents yet.</p>}
       <ul className="space-y-4">
-        {agents.map((a) => <AgentRow key={a.id} agent={a} onScopesChange={(scopes) => changeScopes(a.id, scopes)} />)}
+        {agents.map((a) => (
+          <AgentRow key={a.id} agent={a} onScopesChange={(scopes) => changeScopes(a.id, scopes)} onRevoke={() => revoke(a)} />
+        ))}
       </ul>
       <CreateAgentForm onCreated={addCreated} />
     </div>

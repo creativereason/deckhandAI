@@ -164,4 +164,39 @@ describe("AgentsSettings", () => {
       expect(screen.queryByText("dk_Duet1234secretsecret")).not.toBeInTheDocument();
     });
   });
+
+  describe("when Revoke is clicked", () => {
+    it("revokes the agent after confirmation and marks it revoked", async () => {
+      // Arrange
+      const a = agent();
+      const fetchMock = mockApi({
+        "GET /api/agents": () => ({ status: 200, body: { agents: [a] } }),
+        [`POST /api/agents/${a.id}/revoke`]: () => ({ status: 200, body: { ok: true } }),
+      });
+      vi.stubGlobal("confirm", vi.fn(() => true));
+      render(<AgentsSettings />);
+
+      // Act
+      fireEvent.click(await screen.findByRole("button", { name: "Revoke Grokbot" }));
+
+      // Assert
+      expect(await screen.findByText("Revoked")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Revoke Grokbot" })).not.toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledWith(`/api/agents/${a.id}/revoke`, expect.objectContaining({ method: "POST" }));
+    });
+
+    it("sends nothing when the confirmation is cancelled", async () => {
+      // Arrange
+      const fetchMock = mockApi({ "GET /api/agents": () => ({ status: 200, body: { agents: [agent()] } }) });
+      vi.stubGlobal("confirm", vi.fn(() => false));
+      render(<AgentsSettings />);
+
+      // Act
+      fireEvent.click(await screen.findByRole("button", { name: "Revoke Grokbot" }));
+
+      // Assert
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText("Revoked")).not.toBeInTheDocument();
+    });
+  });
 });
