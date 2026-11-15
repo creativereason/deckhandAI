@@ -12,3 +12,8 @@ export function toggleScope(scopes: readonly AgentScope[], scope: AgentScope): A
   if (next.size === 0) return [...scopes];
   return AGENT_SCOPES.filter((s) => next.has(s));
 }
+
+/** The one line a person pastes to connect Claude Code to this deckhand with a new key. */
+export function mcpAddCommand(origin: string, key: string): string {
+  return `claude mcp add --transport http deckhand ${origin}/api/mcp --header "Authorization: Bearer ${key}"`;
+}

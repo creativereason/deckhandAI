@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toggleScope } from "@/lib/agent-settings";
+import { mcpAddCommand, toggleScope } from "@/lib/agent-settings";
 
 describe("toggleScope", () => {
   it("returns a list holding only the scope when toggled on an empty list", () => {
@@ -46,5 +46,20 @@ describe("toggleScope", () => {
       // Assert
       expect(next).toEqual(["jobs:read"]);
     });
+  });
+});
+
+describe("mcpAddCommand", () => {
+  it("returns a claude mcp add command pointing at the site's /api/mcp with the key as a Bearer header", () => {
+    // Arrange
+    const origin = "https://deckhand.example.com";
+
+    // Act
+    const command = mcpAddCommand(origin, "dk_abc123");
+
+    // Assert
+    expect(command).toBe(
+      'claude mcp add --transport http deckhand https://deckhand.example.com/api/mcp --header "Authorization: Bearer dk_abc123"',
+    );
   });
 });
