@@ -93,23 +93,42 @@ function NewKeyNotice({ agentName, keyValue, onDone }: { agentName: string; keyV
   );
 }
 
-async function postAgent(name: string, scopes: AgentScope[]): Promise<{ agent: AgentRecord; key: string }> {
-  const res = await fetch("/api/agents", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, scopes }),
-  });
-  return res.json();
+type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+function errorMessage(body: unknown, status: number): string {
+  const error = typeof body === "object" && body !== null ? (body as { error?: unknown }).error : undefined;
+  return typeof error === "string" ? error : `Request failed (${status})`;
 }
 
-function CreateAgentForm({ onCreated }: { onCreated: (agent: AgentRecord, key: string) => void }) {
+/** Every agents call goes through here, so a refused request always surfaces as a message. */
+async function requestJson<T>(url: string, init?: RequestInit): Promise<ApiResult<T>> {
+  try {
+    const res = await fetch(url, init);
+    const body: unknown = await res.json().catch(() => undefined);
+    return res.ok ? { ok: true, data: body as T } : { ok: false, error: errorMessage(body, res.status) };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+function jsonInit(method: string, body: unknown): RequestInit {
+  return { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+}
+
+interface CreateAgentFormProps {
+  onCreated: (agent: AgentRecord, key: string) => void;
+  onError: (message: string) => void;
+}
+
+function CreateAgentForm({ onCreated, onError }: CreateAgentFormProps) {
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<AgentScope[]>([...DEFAULT_AGENT_SCOPES]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const { agent, key } = await postAgent(name.trim(), scopes);
-    onCreated(agent, key);
+    const result = await requestJson<{ agent: AgentRecord; key: string }>("/api/agents", jsonInit("POST", { name: name.trim(), scopes }));
+    if (!result.ok) return onError(result.error);
+    onCreated(result.data.agent, result.data.key);
     setName("");
     setScopes([...DEFAULT_AGENT_SCOPES]);
   }
@@ -125,49 +144,71 @@ function CreateAgentForm({ onCreated }: { onCreated: (agent: AgentRecord, key: s
   );
 }
 
-export default function AgentsSettings() {
+type SetAgents = React.Dispatch<React.SetStateAction<AgentRecord[] | null>>;
+
+function useAgentList() {
   const [agents, setAgents] = useState<AgentRecord[] | null>(null);
-  const [newKey, setNewKey] = useState<NewKey | null>(null);
-
+  const [loadError, setLoadError] = useState<string | null>(null);
   useEffect(() => {
-    fetch("/api/agents")
-      .then((r) => r.json())
-      .then((data: { agents: AgentRecord[] }) => setAgents(data.agents));
+    requestJson<{ agents: AgentRecord[] }>("/api/agents").then((result) =>
+      result.ok ? setAgents(result.data.agents) : setLoadError(result.error),
+    );
   }, []);
+  return { agents, setAgents, loadError };
+}
 
-  function changeScopes(id: string, scopes: AgentScope[]) {
-    setAgents((prev) => prev?.map((a) => (a.id === id ? { ...a, scopes } : a)) ?? prev);
-    fetch(`/api/agents/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scopes }),
-    });
+/** Changes apply on screen at once and are undone if the server refuses them. */
+function agentActions(setAgents: SetAgents, setError: (message: string | null) => void) {
+  const patchLocal = (id: string, patch: Partial<AgentRecord>) =>
+    setAgents((prev) => prev?.map((a) => (a.id === id ? { ...a, ...patch } : a)) ?? prev);
+
+  async function changeScopes(agent: AgentRecord, scopes: AgentScope[]) {
+    setError(null);
+    patchLocal(agent.id, { scopes });
+    const result = await requestJson(`/api/agents/${agent.id}`, jsonInit("PATCH", { scopes }));
+    if (!result.ok) {
+      patchLocal(agent.id, { scopes: agent.scopes });
+      setError(result.error);
+    }
   }
 
   async function revoke(agent: AgentRecord) {
     if (!window.confirm(`Revoke ${agent.name}? Its key stops working immediately and cannot be restored.`)) return;
-    await fetch(`/api/agents/${agent.id}/revoke`, { method: "POST" });
-    const revokedAt = new Date().toISOString();
-    setAgents((prev) => prev?.map((a) => (a.id === agent.id ? { ...a, revokedAt } : a)) ?? prev);
+    setError(null);
+    const result = await requestJson(`/api/agents/${agent.id}/revoke`, { method: "POST" });
+    if (!result.ok) return setError(result.error);
+    patchLocal(agent.id, { revokedAt: new Date().toISOString() });
   }
 
+  return { changeScopes, revoke };
+}
+
+export default function AgentsSettings() {
+  const { agents, setAgents, loadError } = useAgentList();
+  const [newKey, setNewKey] = useState<NewKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { changeScopes, revoke } = agentActions(setAgents, setError);
+
   function addCreated(agent: AgentRecord, key: string) {
+    setError(null);
     setAgents((prev) => [...(prev ?? []), agent]);
     setNewKey({ agentName: agent.name, key });
   }
 
+  if (loadError) return <p role="alert" className="text-sm text-destructive py-8">{loadError}</p>;
   if (agents === null) return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
 
   return (
     <div className="space-y-6">
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {newKey && <NewKeyNotice agentName={newKey.agentName} keyValue={newKey.key} onDone={() => setNewKey(null)} />}
       {agents.length === 0 && <p className="text-sm text-muted-foreground">No agents yet.</p>}
       <ul className="space-y-4">
         {agents.map((a) => (
-          <AgentRow key={a.id} agent={a} onScopesChange={(scopes) => changeScopes(a.id, scopes)} onRevoke={() => revoke(a)} />
+          <AgentRow key={a.id} agent={a} onScopesChange={(scopes) => changeScopes(a, scopes)} onRevoke={() => revoke(a)} />
         ))}
       </ul>
-      <CreateAgentForm onCreated={addCreated} />
+      <CreateAgentForm onCreated={addCreated} onError={setError} />
     </div>
   );
 }

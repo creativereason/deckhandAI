@@ -199,4 +199,71 @@ describe("AgentsSettings", () => {
       expect(screen.queryByText("Revoked")).not.toBeInTheDocument();
     });
   });
+
+  describe("when the server refuses a request", () => {
+    it("explains that agents need Supabase when the list answers 409", async () => {
+      // Arrange
+      mockApi({ "GET /api/agents": () => ({ status: 409, body: { error: "Agents need DATA_BACKEND=supabase" } }) });
+
+      // Act
+      render(<AgentsSettings />);
+
+      // Assert
+      expect(await screen.findByRole("alert")).toHaveTextContent("Agents need DATA_BACKEND=supabase");
+      expect(screen.queryByRole("button", { name: "Create agent" })).not.toBeInTheDocument();
+    });
+
+    it("shows the error and no key when the name is already taken", async () => {
+      // Arrange
+      mockApi({
+        "GET /api/agents": () => ({ status: 200, body: { agents: [] } }),
+        "POST /api/agents": () => ({ status: 409, body: { error: "An agent named Grokbot already exists" } }),
+      });
+      render(<AgentsSettings />);
+      fireEvent.change(await screen.findByLabelText("Agent name"), { target: { value: "Grokbot" } });
+
+      // Act
+      fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+
+      // Assert
+      expect(await screen.findByRole("alert")).toHaveTextContent("An agent named Grokbot already exists");
+      expect(screen.queryByRole("button", { name: "Done" })).not.toBeInTheDocument();
+    });
+
+    it("puts the scopes back and shows the error when the scope change fails", async () => {
+      // Arrange
+      const a = agent();
+      mockApi({
+        "GET /api/agents": () => ({ status: 200, body: { agents: [a] } }),
+        [`PATCH /api/agents/${a.id}`]: () => ({ status: 500, body: { error: "database unavailable" } }),
+      });
+      render(<AgentsSettings />);
+      const archive = await screen.findByRole("checkbox", { name: "Grokbot: jobs:archive" });
+
+      // Act
+      fireEvent.click(archive);
+
+      // Assert
+      expect(await screen.findByRole("alert")).toHaveTextContent("database unavailable");
+      expect(archive).not.toBeChecked();
+    });
+
+    it("keeps the agent active and shows the error when revoking fails", async () => {
+      // Arrange
+      const a = agent();
+      mockApi({
+        "GET /api/agents": () => ({ status: 200, body: { agents: [a] } }),
+        [`POST /api/agents/${a.id}/revoke`]: () => ({ status: 500, body: { error: "database unavailable" } }),
+      });
+      vi.stubGlobal("confirm", vi.fn(() => true));
+      render(<AgentsSettings />);
+
+      // Act
+      fireEvent.click(await screen.findByRole("button", { name: "Revoke Grokbot" }));
+
+      // Assert
+      expect(await screen.findByRole("alert")).toHaveTextContent("database unavailable");
+      expect(screen.queryByText("Revoked")).not.toBeInTheDocument();
+    });
+  });
 });
