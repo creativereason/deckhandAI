@@ -17,3 +17,14 @@ export function toggleScope(scopes: readonly AgentScope[], scope: AgentScope): A
 export function mcpAddCommand(origin: string, key: string): string {
   return `claude mcp add --transport http deckhand ${origin}/api/mcp --header "Authorization: Bearer ${key}"`;
 }
+
+/** Plain-language meaning of each scope, shown beside its checkbox. */
+export const SCOPE_DESCRIPTIONS: Record<AgentScope, string> = {
+  "jobs:read": "List and read jobs",
+  "jobs:add_pending": "Add jobs to the pending inbox",
+  "jobs:edit": "Edit notes, summary, fit and rationale",
+  "jobs:triage": "Move jobs between sections",
+  "jobs:evaluate": "Evaluate a job URL (reserved, no tool uses it yet)",
+  "jobs:check_url": "Check whether a posting is still open (reserved, no tool uses it yet)",
+  "jobs:archive": "Archive jobs",
+};
