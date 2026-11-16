@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import TriageView from "@/components/TriageView";
 import { submitReview } from "@/lib/review-client";
@@ -127,6 +127,40 @@ describe("TriageView", () => {
     renderView([job("Fresh", { scoreRationale: undefined, fit: undefined })]);
 
     expect(screen.getByText(/not scored yet/i)).toBeInTheDocument();
+  });
+
+  // I — Interface: pressing a shortcut visibly acknowledges it right away
+  describe("when an action key is pressed", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("marks the matching button as pressed straight away, before the save returns", () => {
+      vi.mocked(submitReview).mockReturnValue(new Promise(() => {}));
+      renderView();
+
+      fireEvent.keyDown(window, { key: "k" });
+
+      expect(screen.getByRole("button", { name: /^keep/i })).toHaveAttribute("data-pressed", "true");
+      expect(screen.getByRole("button", { name: /^pass/i })).not.toHaveAttribute("data-pressed");
+    });
+
+    it("marks the skip button too, since skipping saves nothing to toast about", () => {
+      renderView();
+
+      fireEvent.keyDown(window, { key: "s" });
+
+      expect(screen.getByRole("button", { name: /^skip/i })).toHaveAttribute("data-pressed", "true");
+    });
+
+    it("clears the pressed mark after a moment", () => {
+      vi.useFakeTimers();
+      renderView();
+
+      fireEvent.keyDown(window, { key: "p" });
+      expect(screen.getByRole("button", { name: /^pass/i })).toHaveAttribute("data-pressed", "true");
+      act(() => { vi.advanceTimersByTime(400); });
+
+      expect(screen.getByRole("button", { name: /^pass/i })).not.toHaveAttribute("data-pressed");
+    });
   });
 
   // I — Interface: the assistant lives in the right pane, under Up next
