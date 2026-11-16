@@ -111,6 +111,9 @@ function BoardContent() {
     return () => window.removeEventListener(JOBS_CHANGED_EVENT, load);
   }, [load]);
 
+  // Reloads this page and the nav badge together: both listen for this event.
+  const announceJobsChanged = () => window.dispatchEvent(new Event(JOBS_CHANGED_EVENT));
+
   async function moveJob(fromSection: JobSection, job: JobIdentity, toSection: JobSection) {
     await fetch(`/api/jobs`, {
       method: "DELETE",
@@ -203,7 +206,7 @@ function BoardContent() {
       )}
 
       {view === "today" && <TodayView jobs={jobs} onOpenInbox={() => setView("inbox")} />}
-      {view === "inbox" && <InboxView pending={jobs.pending ?? []} onUpdate={load} onBackToBoard={() => setView("board")} />}
+      {view === "inbox" && <InboxView pending={jobs.pending ?? []} onUpdate={announceJobsChanged} onBackToBoard={() => setView("board")} />}
 
       {view === "board" && (
         <div className="flex flex-col gap-4">
