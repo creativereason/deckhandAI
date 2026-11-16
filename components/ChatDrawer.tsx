@@ -316,7 +316,7 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
 
       {messages.map((m, i) => (
         <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-          <div className={cn("max-w-[85%] rounded-lg px-3 py-2", m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
+          <div className={cn("min-w-0 max-w-[85%] rounded-lg px-3 py-2 break-words", m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
             {m.role === "user"
               ? <p className="text-sm whitespace-pre-wrap">{m.content}</p>
               : <MarkdownContent text={m.content} />

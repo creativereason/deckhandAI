@@ -207,7 +207,7 @@ export function MarkdownContent({ text, className }: Props) {
 
     // Paragraph / plain text
     nodes.push(
-      <p key={key++} className="text-sm leading-relaxed">
+      <p key={key++} className="text-sm leading-relaxed break-words">
         <InlineParsed text={line} />
       </p>
     );

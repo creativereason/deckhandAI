@@ -478,7 +478,7 @@ function JobChat({
 
       {messages.map((m, i) => (
         <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-          <div className={m.role === "user" ? "max-w-[90%] rounded-lg bg-primary px-3 py-2 text-primary-foreground" : "max-w-[90%] rounded-lg bg-muted px-3 py-2 text-foreground"}>
+          <div className={m.role === "user" ? "min-w-0 max-w-[90%] rounded-lg bg-primary px-3 py-2 break-words text-primary-foreground" : "min-w-0 max-w-[90%] rounded-lg bg-muted px-3 py-2 break-words text-foreground"}>
             {m.role === "user" ? <p className="text-sm whitespace-pre-wrap">{m.content}</p> : <MarkdownContent text={m.content} />}
           </div>
         </div>
