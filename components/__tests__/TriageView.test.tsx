@@ -28,7 +28,7 @@ describe("TriageView", () => {
     renderView([]);
 
     expect(screen.getByText(/all caught up/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^keep/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^add to prospects/i })).not.toBeInTheDocument();
   });
 
   // O — One
@@ -65,12 +65,12 @@ describe("TriageView", () => {
     expect(submitReview).not.toHaveBeenCalled();
   });
 
-  // I — Interface: keep and pass, by button and by key
+  // I — Interface: add and pass, by button and by key
   it("keeps the current job with its fit and rationale, then shows the next one", async () => {
     const onUpdate = vi.fn();
     renderView(three, onUpdate);
 
-    fireEvent.keyDown(window, { key: "k" });
+    fireEvent.keyDown(window, { key: "a" });
 
     await waitFor(() => expect(screen.getByRole("heading", { name: "Bravo Role" })).toBeInTheDocument());
     expect(submitReview).toHaveBeenCalledWith(
@@ -106,7 +106,7 @@ describe("TriageView", () => {
     vi.mocked(submitReview).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
     renderView();
 
-    fireEvent.keyDown(window, { key: "k" });
+    fireEvent.keyDown(window, { key: "a" });
     fireEvent.keyDown(window, { key: "p" });
     finish({ ok: true });
 
@@ -118,7 +118,7 @@ describe("TriageView", () => {
   it("ends on the all-caught-up message after the last job", async () => {
     renderView([job("Solo")]);
 
-    fireEvent.keyDown(window, { key: "k" });
+    fireEvent.keyDown(window, { key: "a" });
 
     await waitFor(() => expect(screen.getByText(/all caught up/i)).toBeInTheDocument());
   });
@@ -137,9 +137,9 @@ describe("TriageView", () => {
       vi.mocked(submitReview).mockReturnValue(new Promise(() => {}));
       renderView();
 
-      fireEvent.keyDown(window, { key: "k" });
+      fireEvent.keyDown(window, { key: "a" });
 
-      expect(screen.getByRole("button", { name: /^keep/i })).toHaveAttribute("data-pressed", "true");
+      expect(screen.getByRole("button", { name: /^add to prospects/i })).toHaveAttribute("data-pressed", "true");
       expect(screen.getByRole("button", { name: /^pass/i })).not.toHaveAttribute("data-pressed");
     });
 

@@ -1,7 +1,7 @@
 // The rules for working through the inbox one job at a time. Pure, so the view and its
 // keyboard shortcuts are testable without a browser.
 
-export type TriageAction = "pass" | "keep" | "skip" | "back";
+export type TriageAction = "pass" | "add" | "skip" | "back";
 export type InboxMode = "triage" | "list";
 
 const mod = (n: number, size: number) => ((n % size) + size) % size;
@@ -36,7 +36,7 @@ interface KeyPress {
 
 const KEY_ACTIONS: Record<string, TriageAction> = {
   p: "pass",
-  k: "keep",
+  a: "add",
   s: "skip",
   arrowright: "skip",
   arrowleft: "back",

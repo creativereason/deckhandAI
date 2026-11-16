@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Card } from "@/components/ui/card";
 import { useAssistant } from "@/components/shell/assistant-context";
 import { Inbox, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useScorePending } from "@/components/use-score-pending";
 import { groupBadgeVariant } from "@/lib/job-badges";
 import type { PendingJob } from "@/lib/jobs";
@@ -46,7 +47,7 @@ function useTriage(pending: PendingJob[], onUpdate: () => void) {
     const result = await submitReview({ job: current, action, fit: current.fit ?? "good", scoreRationale: current.scoreRationale });
     saving.current = false;
     if (!result.ok) return void (result.demo ? toast.info("Demo mode — changes are read-only") : toast.error(`Failed: ${result.message}`));
-    toast.success(action === "approve" ? `Kept ${current.company}` : `Passed on ${current.company}`);
+    toast.success(action === "approve" ? `Added ${current.company} to Prospects` : `Passed on ${current.company}`);
     setOffset(settleOffset(offset, queue.length));
     setGone((prev) => new Set(prev).add(keyOf(current)));
     onUpdate();
@@ -54,7 +55,7 @@ function useTriage(pending: PendingJob[], onUpdate: () => void) {
 
   function act(action: TriageAction) {
     flash(action);
-    if (action === "keep") void review("approve");
+    if (action === "add") void review("approve");
     else if (action === "pass") void review("reject");
     else setOffset(stepOffset(offset, action === "skip" ? 1 : -1, queue.length));
   }
@@ -132,15 +133,15 @@ function JobCard({ job, scoring }: { job: PendingJob; scoring: boolean }) {
 }
 
 function ActionBar({ act, pressed }: { act: (action: TriageAction) => void; pressed: TriageAction | null }) {
-  const mark = (action: TriageAction) => ({
+  const mark = (action: TriageAction, extra?: string) => ({
     "data-pressed": pressed === action ? "true" : undefined,
-    className: "data-[pressed=true]:scale-95 data-[pressed=true]:border-primary transition-transform duration-(--duration-fast)",
+    className: cn("data-[pressed=true]:scale-95 data-[pressed=true]:border-primary transition-transform duration-(--duration-fast)", extra),
   });
   return (
-    <div className="sticky bottom-16 -mx-4 -mb-4 grid grid-cols-3 gap-3 rounded-b-lg border-t border-border bg-card p-4 md:bottom-0">
+    <div className="sticky bottom-16 -mx-4 -mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 rounded-b-lg border-t border-border bg-card p-4 md:bottom-0">
       <Button variant="outline" size="lg" onClick={() => act("pass")} {...mark("pass")}>Pass <Kbd>P</Kbd></Button>
       <Button variant="outline" size="lg" onClick={() => act("skip")} {...mark("skip")}>Skip <Kbd>S</Kbd></Button>
-      <Button size="lg" onClick={() => act("keep")} {...mark("keep")}>Keep <Kbd>K</Kbd></Button>
+      <Button size="lg" onClick={() => act("add")} {...mark("add", "order-first col-span-2 sm:order-last sm:col-span-1")}>Add to Prospects <Kbd>A</Kbd></Button>
     </div>
   );
 }
@@ -168,7 +169,7 @@ function Progress({ reviewed, total }: { reviewed: number; total: number }) {
       <div className="h-2 flex-1 overflow-hidden rounded-sm bg-muted" role="progressbar" aria-label="Triage progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={reviewed}>
         <div className="h-full bg-primary" style={{ width: `${total ? (reviewed / total) * 100 : 0}%` }} />
       </div>
-      <span className="hidden sm:inline">P pass · K keep · S or → skip · ← back</span>
+      <span className="hidden sm:inline">P pass · A add · S or → skip · ← back</span>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { chromium } from "playwright";
 import { mkdirSync } from "fs";
 
 const persona = process.argv[2];
+const ONLY = process.env.ONLY;
 const BASE = process.argv[3] ?? "http://localhost:3789";
 const OUT = "docs/screenshots";
 mkdirSync(OUT, { recursive: true });
@@ -22,6 +23,7 @@ const SHOTS = {
 
 const browser = await chromium.launch({ channel: "chrome" });
 for (const s of SHOTS) {
+  if (ONLY && s.name !== ONLY) continue;
   const ctx = await browser.newContext({ viewport: { width: s.w, height: s.h }, deviceScaleFactor: 2 });
   await ctx.addInitScript(({ s }) => {
     localStorage.setItem("theme", s.theme ?? "light");

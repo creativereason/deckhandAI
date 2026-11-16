@@ -53,8 +53,8 @@ A self-hosted job search command center. Track prospects, scrape target company 
 Today, with the assistant docked
 </td>
 <td align="center" width="33%">
-<img src="docs/screenshots/inbox-triage--desktop.png" alt="Inbox triage, one job at a time with pass, skip and keep" width="260"><br>
-Inbox triage (P / S / K keys)
+<img src="docs/screenshots/inbox-triage--desktop.png" alt="Inbox triage, one job at a time with pass, skip and add to prospects" width="260"><br>
+Inbox triage (P / S / A keys)
 </td>
 <td align="center" width="33%">
 <img src="docs/screenshots/job-detail--desktop.png" alt="Job detail with AI summary, notes, generation and a role-specific chat" width="260"><br>
