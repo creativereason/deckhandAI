@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { ListGroup, ListRow } from "@/components/ui/list-row";
+import { EmptyState } from "@/components/ui/states";
+import { Code, SettingsLoading, SettingsSection, SettingsStack } from "@/components/settings/SettingsSection";
 import type { ScrapeTargetConfig } from "@/lib/scrape-targets";
-
-const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
-const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
-const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 type Group = "remote" | "local";
 
@@ -37,68 +40,48 @@ function TargetList({
   onStartAdd, onCancelAdd, onSaveNew, onRemove, onDraftChange,
 }: TargetListProps) {
   return (
-    <div className={SECTION}>
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">{label}</h2>
-        <Button onClick={() => onStartAdd(group)} variant="link" size="sm" className="text-xs">
-          + Add target
-        </Button>
-      </div>
-
+    <SettingsSection
+      title={label}
+      actions={<Button onClick={() => onStartAdd(group)} variant="outline" size="sm"><Plus aria-hidden />Add target</Button>}
+    >
       {list.length === 0 && adding !== group && (
-        <p className="text-sm text-muted-foreground">No targets yet. Add one to start scraping.</p>
+        <Card variant="muted" padding="none"><EmptyState compact title="No targets yet" description="Add a career page to start scraping it." /></Card>
       )}
 
-      {list.map((t) => {
-        const dk = `${group}|${t.company}`;
-        return (
-          <div key={t.company} className="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{t.company}</p>
-              <a href={t.url} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:underline truncate block max-w-xs">{t.url}</a>
-              {t.selector && <p className="text-xs text-muted-foreground mt-0.5">Selector: <code className="bg-muted px-1 rounded">{t.selector}</code></p>}
-            </div>
-            <button
-              onClick={() => onRemove(group, t.company)}
-              disabled={deleting === dk}
-              className="text-xs text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-40 transition-colors"
-            >
-              {deleting === dk ? "…" : "Remove"}
-            </button>
-          </div>
-        );
-      })}
+      {list.length > 0 && (
+        <ListGroup>
+          {list.map((t) => {
+            const dk = `${group}|${t.company}`;
+            return (
+              <ListRow
+                key={t.company}
+                title={t.company}
+                actions={<Button onClick={() => onRemove(group, t.company)} disabled={deleting === dk} loading={deleting === dk} variant="ghost" size="sm" aria-label={`Remove ${t.company}`}>Remove</Button>}
+              >
+                <a href={t.url} target="_blank" rel="noreferrer" className="block max-w-xs truncate text-xs text-muted-foreground underline-offset-4 hover:underline">{t.url}<span className="sr-only"> (opens in a new tab)</span></a>
+                {t.selector && <p className="text-xs text-muted-foreground">Selector: <Code>{t.selector}</Code></p>}
+              </ListRow>
+            );
+          })}
+        </ListGroup>
+      )}
 
       {adding === group && (
-        <div className="border border-border rounded-xl p-4 space-y-3 bg-muted">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">New target</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 sm:col-span-1">
-              <label className={LABEL}>Company <span className="text-destructive">*</span></label>
-              <input className={INPUT} placeholder="Acme Corp" value={draft.company} onChange={(e) => onDraftChange({ company: e.target.value })} />
-            </div>
-            <div className="col-span-2">
-              <label className={LABEL}>Career page URL <span className="text-destructive">*</span></label>
-              <input className={INPUT} placeholder="https://careers.acme.com/jobs?q=designer" value={draft.url} onChange={(e) => onDraftChange({ url: e.target.value })} />
-            </div>
-            <div>
-              <label className={LABEL}>CSS selector (optional)</label>
-              <input className={INPUT} placeholder=".job-title a" value={draft.selector ?? ""} onChange={(e) => onDraftChange({ selector: e.target.value })} />
-            </div>
-            <div>
-              <label className={LABEL}>Link base (optional)</label>
-              <input className={INPUT} placeholder="https://careers.acme.com" value={draft.linkBase ?? ""} onChange={(e) => onDraftChange({ linkBase: e.target.value })} />
-            </div>
+        <Card variant="muted" className="gap-4">
+          <h3 className="text-base font-semibold">New target</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Company" required className="sm:col-span-2">{(f) => <Input {...f} placeholder="Acme Corp" value={draft.company} onChange={(e) => onDraftChange({ company: e.target.value })} />}</Field>
+            <Field label="Career page URL" required className="sm:col-span-2">{(f) => <Input {...f} placeholder="https://careers.acme.com/jobs?q=designer" value={draft.url} onChange={(e) => onDraftChange({ url: e.target.value })} />}</Field>
+            <Field label="CSS selector" optional>{(f) => <Input {...f} placeholder=".job-title a" value={draft.selector ?? ""} onChange={(e) => onDraftChange({ selector: e.target.value })} />}</Field>
+            <Field label="Link base" optional>{(f) => <Input {...f} placeholder="https://careers.acme.com" value={draft.linkBase ?? ""} onChange={(e) => onDraftChange({ linkBase: e.target.value })} />}</Field>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button onClick={onCancelAdd} variant="outline" size="sm">Cancel</Button>
-            <Button onClick={onSaveNew} loading={saving} size="sm">
-              Add target
-            </Button>
+          <div className="flex justify-end gap-2">
+            <Button onClick={onCancelAdd} variant="ghost">Cancel</Button>
+            <Button onClick={onSaveNew} loading={saving}>Add target</Button>
           </div>
-        </div>
+        </Card>
       )}
-    </div>
+    </SettingsSection>
   );
 }
 
@@ -159,14 +142,14 @@ export default function ScrapeTargetsSettings() {
     }
   }
 
-  if (loading) return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
+  if (loading) return <SettingsLoading />;
 
   const shared = { adding, draft, saving, deleting, onStartAdd: startAdd, onCancelAdd: cancelAdd, onSaveNew: saveNew, onRemove: remove, onDraftChange: patchDraft };
 
   return (
-    <div className="space-y-6">
+    <SettingsStack>
       <TargetList group="remote" label="Remote / National" list={targets.remote} {...shared} />
       <TargetList group="local" label="Local / Hybrid" list={targets.local} {...shared} />
-    </div>
+    </SettingsStack>
   );
 }

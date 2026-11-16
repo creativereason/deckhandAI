@@ -1,6 +1,5 @@
 "use client";
 import { FormEvent, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   type JobsData,
@@ -13,18 +12,26 @@ import {
   type JobStatus,
   resolveJobType,
 } from "@/lib/jobs";
-import { getAppliedIcon, getProspectIcon } from "@/lib/job-signal";
-import { SignalIcon } from "@/components/SignalIcon";
-import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import AIGenerationCard from "@/components/AIGenerationCard";
-import AppHeader from "@/components/AppHeader";
-import AppFooter from "@/components/AppFooter";
+import AppShell from "@/components/shell/AppShell";
+import { AIInsight, AssistantPanel, PromptChip } from "@/components/ai/ai";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job-badges";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState, LoadingState } from "@/components/ui/states";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { typeBadgeVariant } from "@/lib/job-badges";
 import { findJobForDetail, jobDetailHref } from "@/lib/job-detail";
 import { fetchAiSummary, fetchSummarizerConfigured } from "@/lib/summarize-job-client";
+import { ChevronDown, ExternalLink, FileSearch, Pencil } from "lucide-react";
+import { JOBS_CHANGED_EVENT } from "@/components/shell/assistant-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,25 +46,6 @@ const SECTION_LABELS: Record<JobSection, string> = {
   passed: "Passed",
   pending: "Pending",
 };
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-function Chip({ label, variant }: { label: string; variant: Parameters<typeof Badge>[0]["variant"] }) {
-  return (
-    <Badge variant={variant} className="capitalize shrink-0 h-auto px-2.5 py-1">
-      {label}
-    </Badge>
-  );
-}
-
-// ─── Field components ─────────────────────────────────────────────────────────
-
-const inputCls = "w-full text-sm bg-muted rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-primary/30 transition";
-const labelCls = "block text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div><label className={labelCls}>{label}</label>{children}</div>;
-}
 
 // ─── Inline edit form ─────────────────────────────────────────────────────────
 
@@ -141,110 +129,78 @@ function InlineEditForm({ job, section, onCancel, onSaved }: EditFormProps) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Company">
-          <input value={company} onChange={(e) => setCompany(e.target.value)} required className={inputCls} />
-        </Field>
-        <Field label="Role">
-          <input value={role} onChange={(e) => setRole(e.target.value)} required className={inputCls} />
-        </Field>
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Company" required>{(p) => <Input {...p} value={company} onChange={(e) => setCompany(e.target.value)} />}</Field>
+        <Field label="Role" required>{(p) => <Input {...p} value={role} onChange={(e) => setRole(e.target.value)} />}</Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Salary">
-          <input value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. $180,000–$220,000" className={inputCls} />
-        </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Salary">{(p) => <Input {...p} value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="e.g. $180,000–$220,000" />}</Field>
         <Field label="Type">
-          <select value={jobType} onChange={(e) => setJobType(e.target.value as JobType)} className={inputCls}>
-            <option value="remote">Remote</option>
-            <option value="hybrid">Hybrid</option>
-            <option value="local">Local</option>
-            <option value="contract">Contract</option>
-          </select>
+          {(p) => (
+            <Select {...p} value={jobType} onChange={(e) => setJobType(e.target.value as JobType)}>
+              <option value="remote">Remote</option>
+              <option value="hybrid">Hybrid</option>
+              <option value="local">Local</option>
+              <option value="contract">Contract</option>
+            </Select>
+          )}
         </Field>
       </div>
 
       {isApplied && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Status">
-            <select value={status} onChange={(e) => setStatus(e.target.value as JobStatus)} className={inputCls}>
-              <option value="applied">Applied</option>
-              <option value="screening">Screening</option>
-              <option value="interview">Interview</option>
-              <option value="offer">Offer</option>
-              <option value="declined">Declined</option>
-            </select>
+            {(p) => (
+              <Select {...p} value={status} onChange={(e) => setStatus(e.target.value as JobStatus)}>
+                <option value="applied">Applied</option>
+                <option value="screening">Screening</option>
+                <option value="interview">Interview</option>
+                <option value="offer">Offer</option>
+                <option value="declined">Declined</option>
+              </Select>
+            )}
           </Field>
-          <Field label="Date applied">
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
-          </Field>
+          <Field label="Date applied">{(p) => <Input {...p} type="date" value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
         </div>
       )}
 
       {isProspect && (
         <Field label="Fit">
-          <select value={fit} onChange={(e) => setFit(e.target.value as JobFit)} className={inputCls}>
-            <option value="strong">Strong</option>
-            <option value="good">Good</option>
-            <option value="caution">Caution</option>
-            <option value="weak">Weak</option>
-          </select>
+          {(p) => (
+            <Select {...p} value={fit} onChange={(e) => setFit(e.target.value as JobFit)}>
+              <option value="strong">Strong</option>
+              <option value="good">Good</option>
+              <option value="caution">Caution</option>
+              <option value="weak">Weak</option>
+            </Select>
+          )}
         </Field>
       )}
 
-      <Field label="Job posting URL">
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" className={inputCls} />
-      </Field>
+      <Field label="Job posting URL">{(p) => <Input {...p} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />}</Field>
 
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className={cn(labelCls, "mb-0")}>At-a-glance summary</label>
-          {summarizerReady && (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              onClick={regenerateSummary}
-              disabled={!company || !role}
-              loading={summarizing}
-              className="text-xs"
-            >
-              {summarizing ? "Generating…" : "↻ Regenerate"}
+      <div className="flex flex-col gap-2">
+        <Field label="At-a-glance summary" hint={summaryHint || "Shown on the board card and in the header above."}>
+          {(p) => <Textarea {...p} value={aiSummary} onChange={(e) => setAiSummary(e.target.value)} rows={2} placeholder="1–2 sentence summary of the role and company" className="min-h-16" />}
+        </Field>
+        {summarizerReady && (
+          <div>
+            <Button type="button" variant="ai" size="sm" onClick={regenerateSummary} disabled={!company || !role} loading={summarizing}>
+              {summarizing ? "Generating…" : "Regenerate with AI"}
             </Button>
-          )}
-        </div>
-        <textarea
-          value={aiSummary}
-          onChange={(e) => setAiSummary(e.target.value)}
-          rows={2}
-          placeholder="1–2 sentence summary of the role and company"
-          className={cn(inputCls, "resize-none")}
-        />
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {summaryHint || "Shown on the board card and in the header above."}
-        </p>
+          </div>
+        )}
       </div>
 
-      <Field label="Notes">
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={5}
-          placeholder="Add notes, context, or paste the job description…"
-          className={cn(inputCls, "resize-none")}
-        />
-      </Field>
+      <Field label="Notes">{(p) => <Textarea {...p} value={notes} onChange={(e) => setNotes(e.target.value)} rows={5} placeholder="Add notes, context, or paste the job description…" />}</Field>
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p role="alert" className="text-sm font-medium text-destructive">{error}</p>}
 
-      <div className="flex items-center gap-2 pt-1">
-        <Button type="submit" loading={saving}>
-          Save changes
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+      <div className="flex items-center gap-2">
+        <Button type="submit" loading={saving}>Save changes</Button>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
       </div>
     </form>
   );
@@ -349,13 +305,15 @@ function JobChat({
   const [statusText, setStatusText] = useState("");
   const [error, setError] = useState("");
   const [notesRefresh, setNotesRefresh] = useState<PendingNotesRefresh | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const prompts = buildPrompts(section, status);
   const hasDraftOrThread = messages.length > 0 || input.trim().length > 0 || !!error;
 
+  // Scroll the chat body, never the page: scrollIntoView would drag every scroll ancestor along.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = bodyRef.current;
+    if (el && messages.length > 0) el.scrollTop = el.scrollHeight;
   }, [messages, statusText]);
 
   const readEvaluationStream = useCallback(async (body: ReadableStream<Uint8Array>): Promise<EvaluationPayload> => {
@@ -496,89 +454,50 @@ function JobChat({
     setTimeout(() => inputRef.current?.focus(), 50);
   }
 
+  const composer = (
+    <form onSubmit={(e: FormEvent) => { e.preventDefault(); send(input); }} className="flex gap-2">
+      <Input ref={inputRef} aria-label="Ask about this role" value={input} onChange={(e) => setInput(e.target.value)} disabled={pending} placeholder="Ask about this role…" />
+      <Button type="submit" disabled={!input.trim()} loading={pending} className="shrink-0">Send</Button>
+    </form>
+  );
+
   return (
-    <div className="flex flex-col gap-3 min-h-0">
-      {hasDraftOrThread && (
-        <div className="flex justify-end">
-          <Button type="button" variant="outline" size="xs" onClick={startOver} disabled={pending} className="text-[11px]">
-            Start over
-          </Button>
-        </div>
-      )}
-
-      {/* Prompt chips */}
+    <AssistantPanel
+      title="Discuss this role"
+      subtitle="Interview prep, offer analysis, fit questions"
+      footer={composer}
+      headerActions={hasDraftOrThread ? <Button type="button" variant="ghost" size="sm" onClick={startOver} disabled={pending}>Start over</Button> : undefined}
+      bodyRef={bodyRef}
+      className="max-h-[70dvh]"
+    >
       {messages.length === 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {prompts.map((p) => (
-            <button
-              key={p}
-              onClick={() => send(p)}
-              className="text-xs px-2.5 py-1.5 rounded-lg border border-border text-primary bg-muted/50 hover:bg-muted transition-colors text-left"
-            >
-              {p}
-            </button>
-          ))}
+        <div className="flex flex-col items-start gap-2">
+          {prompts.map((p) => <PromptChip key={p} onClick={() => send(p)}>{p}</PromptChip>)}
         </div>
       )}
 
-      {/* Messages */}
-      {messages.length > 0 && (
-        <div className="flex-1 overflow-y-auto space-y-3 pr-0.5 max-h-64">
-          {messages.map((m, i) => (
-            <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-              <div className={cn(
-                "max-w-[90%] rounded-2xl px-3 py-2 rounded-tl-sm",
-                m.role === "user"
-                  ? "bg-primary text-white rounded-tr-sm rounded-tl-2xl"
-                  : "bg-muted text-gray-900 dark:text-white"
-              )}>
-                {m.role === "user"
-                  ? <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
-                  : <MarkdownContent text={m.content} />
-                }
-              </div>
-            </div>
-          ))}
-          {pending && (
-            <div className="pl-1 space-y-1">
-              {statusText && <p className="text-[11px] text-muted-foreground italic">{statusText}</p>}
-              <div className="flex items-center gap-1">
-                {[0, 150, 300].map((d) => (
-                  <span key={d} className="w-1.5 h-1.5 rounded-full bg-stone-300 dark:bg-gray-500 animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                ))}
-              </div>
-            </div>
-          )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
-          {notesRefresh && !pending && (
-            <div className="flex items-center gap-2 pl-1">
-              <Button type="button" size="sm" onClick={applyNotesRefresh}>
-                Apply
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={cancelNotesRefresh}>
-                Cancel
-              </Button>
-            </div>
-          )}
-          <div ref={bottomRef} />
+      {messages.map((m, i) => (
+        <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+          <div className={m.role === "user" ? "min-w-0 max-w-[90%] rounded-lg bg-primary px-3 py-2 break-words text-primary-foreground" : "min-w-0 max-w-[90%] rounded-lg bg-muted px-3 py-2 break-words text-foreground"}>
+            {m.role === "user" ? <p className="text-sm whitespace-pre-wrap">{m.content}</p> : <MarkdownContent text={m.content} />}
+          </div>
+        </div>
+      ))}
+
+      {pending && (
+        <div role="status" aria-live="polite" className="flex flex-col gap-1">
+          {statusText && <p className="text-xs text-muted-foreground">{statusText}</p>}
+          <p className="text-xs text-muted-foreground">Working…</p>
         </div>
       )}
-
-      {/* Input */}
-      <form onSubmit={(e: FormEvent) => { e.preventDefault(); send(input); }} className="flex gap-2">
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={pending}
-          placeholder="Ask about this role…"
-          className="flex-1 text-sm bg-muted rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 transition"
-        />
-        <Button type="submit" disabled={!input.trim()} loading={pending} className="shrink-0">
-          Send
-        </Button>
-      </form>
-    </div>
+      {error && <p role="alert" className="text-xs font-medium text-destructive">{error}</p>}
+      {notesRefresh && !pending && (
+        <div className="flex items-center gap-2">
+          <Button type="button" size="sm" onClick={applyNotesRefresh}>Apply</Button>
+          <Button type="button" variant="outline" size="sm" onClick={cancelNotesRefresh}>Cancel</Button>
+        </div>
+      )}
+    </AssistantPanel>
   );
 }
 
@@ -597,7 +516,6 @@ function JobDetailContent() {
   const [jobs, setJobs] = useState<JobsData | null>(null);
   const [hasProfile, setHasProfile] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [moveOpen, setMoveOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [jobsRes, profileRes] = await Promise.all([
@@ -612,19 +530,16 @@ function JobDetailContent() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
-  if (!jobs) {
-    return <div className="flex items-center justify-center h-screen text-muted-foreground text-sm">Loading…</div>;
-  }
+  if (!jobs) return <LoadingState label="Loading job" />;
 
   const sectionData = (jobs[section] ?? []) as AnyJob[];
   const job = findJobForDetail(sectionData, target);
 
   if (!job) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4 text-muted-foreground">
-        <p className="text-sm">Job not found.</p>
-        <Button onClick={() => router.push("/")} variant="link">← Back to board</Button>
-      </div>
+      <Card padding="none">
+        <EmptyState icon={<FileSearch />} title="Job not found" description="It may have been moved, renamed or removed." action={<Button variant="outline" onClick={() => router.push("/")}>Back to board</Button>} />
+      </Card>
     );
   }
 
@@ -636,12 +551,6 @@ function JobDetailContent() {
   const appliedJob = isApplied ? (foundJob as AppliedJob) : null;
   const prospectJob = isProspect ? (foundJob as ProspectJob) : null;
   const effectiveType = resolveJobType(section, foundJob as ProspectJob | AppliedJob);
-
-  const icon = isApplied
-    ? getAppliedIcon(appliedJob!)
-    : isProspect
-    ? getProspectIcon(prospectJob!)
-    : "🔴";
 
   const DISPLAY_SECTIONS = [
     { value: "applied" as JobSection, label: "Applied" },
@@ -665,6 +574,7 @@ function JobDetailContent() {
     const res = await fetch("/api/jobs", { cache: "no-store" });
     const nextJobs = await res.json() as JobsData;
     setJobs(nextJobs);
+    window.dispatchEvent(new Event(JOBS_CHANGED_EVENT));
 
     const sameSection = (nextJobs[section] ?? []) as AnyJob[];
     if (findJobForDetail(sameSection, foundJob)) return;
@@ -689,188 +599,70 @@ function JobDetailContent() {
   ].filter(Boolean).join("\n");
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-
-        {/* Header */}
-        <AppHeader
-          breadcrumbs={
-            <>
-              <Link href="/" className="hover:text-foreground transition-colors">Board</Link>
-              <span className="opacity-60">/</span>
-              <span>{SECTION_LABELS[section]}</span>
-              <span className="opacity-60">/</span>
-              <span className="text-foreground font-medium truncate max-w-[16rem]">
-                {foundJob.company} — {foundJob.role}
-              </span>
-            </>
-          }
-        />
-
-        {/* Back nav */}
-        <Button
-          onClick={() => router.push("/")}
-          variant="link"
-          className="flex items-center gap-1.5 text-sm group mb-5"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="group-hover:-translate-x-0.5 transition-transform">
-            <path d="M19 12H5M12 5l-7 7 7 7" />
-          </svg>
-          Board
-        </Button>
-
-        {/* Header — full width */}
-        <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5 mb-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
-              <span className="leading-none mt-0.5 shrink-0 flex items-center"><SignalIcon icon={icon} size={28} /></span>
-              <div className="min-w-0 shrink-0 max-w-[24rem]">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{foundJob.company}</h1>
-                <p className="text-base text-muted-foreground mt-0.5">{foundJob.role}</p>
-              </div>
-              {foundJob.aiSummary && (
-                <p className="hidden sm:block flex-1 min-w-0 text-sm text-muted-foreground leading-relaxed border-l-2 border-border pl-4 mt-0.5">
-                  {foundJob.aiSummary}
-                </p>
-              )}
-            </div>
+    <>
+      <PageHeader
+        breadcrumbs={[{ label: "Board", href: "/" }, { label: SECTION_LABELS[section] }, { label: `${foundJob.company} — ${foundJob.role}` }]}
+        title={foundJob.company}
+        description={foundJob.role}
+        actions={
+          <>
             {foundJob.url && (
-              <a href={foundJob.url} target="_blank" rel="noreferrer"
-                className="shrink-0 text-sm text-primary hover:underline flex items-center gap-1"
-              >
-                View posting
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-              </a>
+              <Button variant="outline" nativeButton={false} render={<a href={foundJob.url} target="_blank" rel="noreferrer" />}>
+                View posting<ExternalLink aria-hidden /><span className="sr-only">(opens in a new tab)</span>
+              </Button>
             )}
+            {moveSections.length > 0 && (
+              <Menu>
+                <MenuTrigger render={<Button variant="outline" />}>Move to<ChevronDown aria-hidden /></MenuTrigger>
+                <MenuContent>{moveSections.map((s) => <MenuItem key={s.value} onClick={() => moveJob(s.value)}>{s.label}</MenuItem>)}</MenuContent>
+              </Menu>
+            )}
+            <Button onClick={() => setEditing((e) => !e)} variant={editing ? "secondary" : "default"}><Pencil aria-hidden />{editing ? "Cancel edit" : "Edit"}</Button>
+          </>
+        }
+        meta={
+          <div className="flex flex-wrap items-center gap-2">
+            {appliedJob?.status && <StatusBadge kind="status" value={appliedJob.status} />}
+            {prospectJob?.fit && <StatusBadge kind="fit" value={prospectJob.fit} />}
+            {effectiveType && <Badge variant={typeBadgeVariant(effectiveType)} className="capitalize">{effectiveType}</Badge>}
+            {foundJob.salary && <Badge variant="neutral">{foundJob.salary}</Badge>}
+            {appliedJob?.date && <Badge variant="neutral">Applied {appliedJob.date}</Badge>}
           </div>
-          {foundJob.aiSummary && (
-            <p className="sm:hidden text-sm text-muted-foreground leading-relaxed mt-3">
-              {foundJob.aiSummary}
-            </p>
+        }
+      />
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-5">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-3">
+          {foundJob.aiSummary && <AIInsight label="AI summary">{foundJob.aiSummary}</AIInsight>}
+
+          {editing ? (
+            <Card>
+              <CardHeader><CardTitle as="h2">Edit job</CardTitle></CardHeader>
+              <InlineEditForm job={foundJob} section={section} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); load(); }} />
+            </Card>
+          ) : (
+            <>
+              {foundJob.notes && (
+                <Card>
+                  <CardHeader><CardTitle as="h2">Notes</CardTitle></CardHeader>
+                  <CardContent><p className="text-sm whitespace-pre-wrap">{foundJob.notes}</p></CardContent>
+                </Card>
+              )}
+              {prospectJob?.scoreRationale && <AIInsight label="AI fit assessment">{prospectJob.scoreRationale}</AIInsight>}
+              {!foundJob.notes && !prospectJob?.scoreRationale && (
+                <Card padding="none"><EmptyState compact title="No notes yet" description="Edit this job to add context, or paste the job description." action={<Button variant="outline" onClick={() => setEditing(true)}>Add notes</Button>} /></Card>
+              )}
+            </>
           )}
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            {isApplied && appliedJob!.status && (
-              <Chip label={appliedJob!.status} variant={statusBadgeVariant(appliedJob!.status)} />
-            )}
-            {isProspect && prospectJob!.fit && (
-              <Chip label={prospectJob!.fit} variant={fitBadgeVariant(prospectJob!.fit)} />
-            )}
-            {effectiveType && <Chip label={effectiveType} variant={typeBadgeVariant(effectiveType)} />}
-            {foundJob.salary && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-gray-700 dark:text-gray-300 shrink-0">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="opacity-60"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                {foundJob.salary}
-              </span>
-            )}
-            {isApplied && appliedJob!.date && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-gray-700 dark:text-gray-300 shrink-0">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="opacity-60"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                {appliedJob!.date}
-              </span>
-            )}
-          </div>
+
+          <AIGenerationCard company={company} role={role} url={foundJob.url} hasProfile={hasProfile} />
         </div>
 
-        {/* Two-column body */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
-
-          {/* ── Left column ────────────────────────────────────────── */}
-          <div className="lg:col-span-3 space-y-5">
-            {editing ? (
-              <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-4">Edit</p>
-                <InlineEditForm
-                  job={foundJob}
-                  section={section}
-                  onCancel={() => setEditing(false)}
-                  onSaved={() => { setEditing(false); load(); }}
-                />
-              </div>
-            ) : (
-              <>
-                {foundJob.notes && (
-                  <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">Notes</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{foundJob.notes}</p>
-                  </div>
-                )}
-
-                {isProspect && prospectJob!.scoreRationale && (
-                  <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">AI Assessment</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 italic leading-relaxed">{prospectJob!.scoreRationale}</p>
-                  </div>
-                )}
-
-                {!foundJob.notes && !prospectJob?.scoreRationale && (
-                  <div className="bg-card rounded-2xl border border-border shadow-sm px-6 py-5">
-                    <p className="text-sm text-muted-foreground italic">No notes yet. Click Edit to add context or paste the job description.</p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* AI Generation card */}
-            <AIGenerationCard
-              company={company}
-              role={role}
-              url={foundJob.url}
-              hasProfile={hasProfile}
-            />
-          </div>
-
-          {/* ── Right column — sticky ──────────────────────────────── */}
-          <div className="lg:col-span-2 space-y-5 lg:sticky lg:top-6">
-
-            {/* Actions */}
-            <div className="bg-card rounded-2xl border border-border shadow-sm px-5 py-4">
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => setEditing((e) => !e)} variant={editing ? "secondary" : "default"}>
-                  {editing ? "Cancel edit" : "Edit"}
-                </Button>
-                {moveSections.length > 0 && (
-                  <div className="relative">
-                    <Button onClick={() => setMoveOpen((o) => !o)} variant="outline">
-                      Move to ▾
-                    </Button>
-                    {moveOpen && (
-                      <>
-                        <div className="fixed inset-0 z-[100]" onClick={() => setMoveOpen(false)} />
-                        <div className="absolute top-full left-0 mt-1 z-[101] bg-card border border-border rounded-xl shadow-xl min-w-[140px] py-1">
-                          {moveSections.map((s) => (
-                            <button key={s.value} onClick={() => { moveJob(s.value); setMoveOpen(false); }}
-                              className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-white hover:bg-muted"
-                            >
-                              → {s.label}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Chat */}
-            <div className="bg-card rounded-2xl border border-border shadow-sm px-5 py-4">
-              <div className="mb-3">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">Discuss this role</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Interview prep, offer analysis, fit questions</p>
-              </div>
-              <JobChat jobContext={jobContext} jobId={foundJob.id} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
-            </div>
-
-          </div>
+        <div className="min-w-0 lg:sticky lg:top-20 lg:col-span-2">
+          <JobChat jobContext={jobContext} jobId={foundJob.id} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
         </div>
-
-        {/* Footer */}
-        <AppFooter />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -878,8 +670,10 @@ function JobDetailContent() {
 
 export default function JobPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen text-muted-foreground text-sm">Loading…</div>}>
-      <JobDetailContent />
-    </Suspense>
+    <AppShell>
+      <Suspense fallback={<LoadingState label="Loading job" />}>
+        <JobDetailContent />
+      </Suspense>
+    </AppShell>
   );
 }

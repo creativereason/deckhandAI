@@ -85,41 +85,46 @@ describe("ChatDrawer evaluation without detected company/role", () => {
   });
 });
 
-describe("ChatDrawer collapse/expand", () => {
+describe("ChatDrawer as the shared assistant panel", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     Element.prototype.scrollIntoView = vi.fn();
-    localStorage.clear();
   });
 
-  // O — One: the simplest render shows the chat body without any interaction.
-  it("renders expanded by default", () => {
+  // O — One: the simplest render shows the composer and the starter prompts
+  it("renders the composer and starter prompts", () => {
     render(<ChatDrawer onJobsChanged={vi.fn()} />);
 
     expect(screen.getByPlaceholderText("Message…")).toBeInTheDocument();
-    expect(screen.getByLabelText("Collapse assistant")).toBeInTheDocument();
+    expect(screen.getByText("Scan for ghost jobs")).toBeInTheDocument();
   });
 
-  // B — Boundary: toggling collapse hides and restores the chat body.
-  it("hides the message input when collapsed, and restores it when expanded again", () => {
-    render(<ChatDrawer onJobsChanged={vi.fn()} />);
+  // I — Interface: closing is the host's decision, so the panel only offers it when asked
+  it("offers Close only when the host passes onClose, and calls it", () => {
+    const onClose = vi.fn();
+    const { rerender } = render(<ChatDrawer onJobsChanged={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText("Collapse assistant"));
-    expect(screen.queryByPlaceholderText("Message…")).not.toBeInTheDocument();
+    rerender(<ChatDrawer onJobsChanged={vi.fn()} onClose={onClose} />);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    fireEvent.click(screen.getByLabelText("Expand assistant"));
-    expect(screen.getByPlaceholderText("Message…")).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
   });
 
-  // E — Exception: collapsed state survives a remount instead of always resetting to expanded.
-  it("persists the collapsed state across remounts", () => {
-    const { unmount } = render(<ChatDrawer onJobsChanged={vi.fn()} />);
-    fireEvent.click(screen.getByLabelText("Collapse assistant"));
-    unmount();
+  // I — Interface: another screen can hand the assistant a prompt
+  it("puts a request from another screen in the composer when it should not auto-send", () => {
+    render(<ChatDrawer onJobsChanged={vi.fn()} request={{ id: 1, text: "Draft a follow-up", send: false }} />);
 
-    render(<ChatDrawer onJobsChanged={vi.fn()} />);
+    expect(screen.getByPlaceholderText("Message…")).toHaveValue("Draft a follow-up");
+  });
 
-    expect(screen.queryByPlaceholderText("Message…")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Expand assistant")).toBeInTheDocument();
+  it("sends a request from another screen straight away when asked to", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, body: new ReadableStream({ start(c) { c.close(); } }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ChatDrawer onJobsChanged={vi.fn()} request={{ id: 7, text: "What are the red flags?", send: true }} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/chat", expect.objectContaining({ method: "POST" })));
+    expect(screen.getByText("What are the red flags?")).toBeInTheDocument();
   });
 });

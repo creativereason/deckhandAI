@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Code, SaveBar, SettingsLoading, SettingsSection, SettingsStack } from "@/components/settings/SettingsSection";
 import type { AppConfig, ExportStyle } from "@/lib/config";
 import { DEFAULT_EXPORT_STYLE } from "@/lib/config";
-
-const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
-const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
-const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 export default function ExportSettings() {
   const [loading, setLoading] = useState(true);
@@ -48,159 +47,58 @@ export default function ExportSettings() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted-foreground py-8 text-center">Loading…</p>;
+  if (loading) return <SettingsLoading />;
+
+  const colorField = (key: "accentColor" | "bodyColor" | "metaColor", label: string, placeholder: string, hint?: string) => (
+    <Field label={label} hint={hint}>
+      {(f) => (
+        <div className="flex items-center gap-2">
+          <input type="color" aria-label={`${label} picker`} className="h-10 w-12 shrink-0 cursor-pointer rounded-md border border-input bg-card p-1" value={get(key) as string} onChange={(e) => updateExport(key, e.target.value)} />
+          <Input {...f} className="font-mono" value={get(key) as string} onChange={(e) => updateExport(key, e.target.value)} placeholder={placeholder} />
+        </div>
+      )}
+    </Field>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Document style</h2>
-        <p className="text-xs text-muted-foreground -mt-2">
-          Applied to all exported DOCX files. Defaults are ATS-safe.
-        </p>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={LABEL}>Font</label>
-            <input
-              className={INPUT}
-              value={get("font") as string}
-              onChange={(e) => updateExport("font", e.target.value)}
-              placeholder="Calibri"
-            />
-            <p className="text-xs text-muted-foreground mt-1">Use a font installed on your system. Calibri and Arial are safe defaults.</p>
-          </div>
-
-          <div>
-            <label className={LABEL}>Accent color</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="color"
-                className="h-9 w-12 rounded border border-border cursor-pointer bg-card p-0.5"
-                value={get("accentColor") as string}
-                onChange={(e) => updateExport("accentColor", e.target.value)}
-              />
-              <input
-                className={INPUT}
-                value={get("accentColor") as string}
-                onChange={(e) => updateExport("accentColor", e.target.value)}
-                placeholder="#1E3A8A"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Used for your name, section headers, and rules.</p>
-          </div>
-
-          <div>
-            <label className={LABEL}>Body text color</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="color"
-                className="h-9 w-12 rounded border border-border cursor-pointer bg-card p-0.5"
-                value={get("bodyColor") as string}
-                onChange={(e) => updateExport("bodyColor", e.target.value)}
-              />
-              <input
-                className={INPUT}
-                value={get("bodyColor") as string}
-                onChange={(e) => updateExport("bodyColor", e.target.value)}
-                placeholder="#374151"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className={LABEL}>Metadata color</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="color"
-                className="h-9 w-12 rounded border border-border cursor-pointer bg-card p-0.5"
-                value={get("metaColor") as string}
-                onChange={(e) => updateExport("metaColor", e.target.value)}
-              />
-              <input
-                className={INPUT}
-                value={get("metaColor") as string}
-                onChange={(e) => updateExport("metaColor", e.target.value)}
-                placeholder="#6B7280"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Dates, contact line, and location text.</p>
-          </div>
+    <SettingsStack>
+      <SettingsSection title="Document style" description="Applied to all exported DOCX files. Defaults are ATS-safe.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Font" hint="Use a font installed on your system. Calibri and Arial are safe defaults.">
+            {(f) => <Input {...f} value={get("font") as string} onChange={(e) => updateExport("font", e.target.value)} placeholder="Calibri" />}
+          </Field>
+          {colorField("accentColor", "Accent color", "#1E3A8A", "Used for your name, section headers, and rules.")}
+          {colorField("bodyColor", "Body text color", "#374151")}
+          {colorField("metaColor", "Metadata color", "#6B7280", "Dates, contact line, and location text.")}
         </div>
-      </div>
+      </SettingsSection>
 
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Page margins</h2>
-        <p className="text-xs text-muted-foreground -mt-2">Values in DXA twips (1 inch = 1440). Default: 0.75&quot; sides, 0.60&quot; top/bottom.</p>
-
-        <div className="grid grid-cols-2 gap-4">
-          {(
-            [
-              { key: "marginTopDxa", label: "Top" },
-              { key: "marginBottomDxa", label: "Bottom" },
-              { key: "marginLeftDxa", label: "Left" },
-              { key: "marginRightDxa", label: "Right" },
-            ] as { key: keyof ExportStyle; label: string }[]
-          ).map(({ key, label }) => (
-            <div key={key}>
-              <label className={LABEL}>{label}</label>
-              <input
-                type="number"
-                className={INPUT}
-                value={get(key) as number}
-                onChange={(e) => updateExport(key, Number(e.target.value))}
-                min={360}
-                max={2880}
-                step={72}
-              />
-            </div>
+      <SettingsSection title="Page margins" description='Values in DXA twips (1 inch = 1440). Default: 0.75" sides, 0.60" top/bottom.'>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {([
+            { key: "marginTopDxa", label: "Top" },
+            { key: "marginBottomDxa", label: "Bottom" },
+            { key: "marginLeftDxa", label: "Left" },
+            { key: "marginRightDxa", label: "Right" },
+          ] as { key: keyof ExportStyle; label: string }[]).map(({ key, label }) => (
+            <Field key={key} label={label}>
+              {(f) => <Input {...f} type="number" value={get(key) as number} onChange={(e) => updateExport(key, Number(e.target.value))} min={360} max={2880} step={72} />}
+            </Field>
           ))}
         </div>
-      </div>
+      </SettingsSection>
 
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Portfolio</h2>
-        <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
-          <input
-            type="checkbox"
-            className="w-4 h-4 accent-primary"
-            checked={(get("includePortfolioPassword") as boolean) ?? false}
-            onChange={(e) => updateExport("includePortfolioPassword", e.target.checked)}
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Include portfolio password in contact line
-          </span>
-        </label>
-        <p className="text-xs text-muted-foreground ml-6 -mt-2">
-          Appends <code className="bg-muted px-1 rounded">pw: [password]</code> next to your portfolio URL — useful if recipients may get locked out.
-          Password is read from <code className="bg-muted px-1 rounded">profile.json</code>.
-        </p>
-      </div>
+      <SettingsSection title="Portfolio">
+        <Checkbox label="Include portfolio password in contact line" checked={(get("includePortfolioPassword") as boolean) ?? false} onCheckedChange={(v) => updateExport("includePortfolioPassword", v)} />
+        <p className="text-xs text-muted-foreground">Appends <Code>pw: [password]</Code> next to your portfolio URL, useful if recipients may get locked out. The password is read from <Code>profile.json</Code>.</p>
+      </SettingsSection>
 
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-white">Styled PDF resume (beta)</h2>
-        <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
-          <input
-            type="checkbox"
-            className="w-4 h-4 accent-primary"
-            checked={(get("stylePdfEnabled") as boolean) ?? false}
-            onChange={(e) => updateExport("stylePdfEnabled", e.target.checked)}
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Enable styled PDF export
-          </span>
-        </label>
-        <p className="text-xs text-muted-foreground ml-6 -mt-2">
-          Renders a design-forward PDF resume (Inter, custom colors) alongside the DOCX export. Requires a
-          self-hosted deployment with <code className="bg-muted px-1 rounded">ENABLE_PLAYWRIGHT_FALLBACK=true</code> —
-          it will not work on Vercel or other serverless hosts.
-        </p>
-      </div>
+      <SettingsSection title="Styled PDF resume (beta)">
+        <Checkbox label="Enable styled PDF export" checked={(get("stylePdfEnabled") as boolean) ?? false} onCheckedChange={(v) => updateExport("stylePdfEnabled", v)} />
+        <p className="text-xs text-muted-foreground">Renders a design-forward PDF resume (Inter, custom colors) alongside the DOCX export. Requires a self-hosted deployment with <Code>ENABLE_PLAYWRIGHT_FALLBACK=true</Code>; it will not work on Vercel or other serverless hosts.</p>
+      </SettingsSection>
 
-      <div className="flex justify-end">
-        <Button onClick={save} loading={saving} size="lg" className="px-5">
-          Save export settings
-        </Button>
-      </div>
-    </div>
+      <SaveBar onSave={save} saving={saving}>Save export settings</SaveBar>
+    </SettingsStack>
   );
 }

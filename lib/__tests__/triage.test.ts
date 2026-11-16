@@ -67,7 +67,7 @@ describe("triageKeyAction", () => {
   // I — Interface
   it("maps the triage keys, in either case", () => {
     expect(press("p")).toBe("pass");
-    expect(press("K")).toBe("keep");
+    expect(press("A")).toBe("add");
     expect(press("s")).toBe("skip");
     expect(press("ArrowRight")).toBe("skip");
     expect(press("ArrowLeft")).toBe("back");

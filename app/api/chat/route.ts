@@ -109,6 +109,7 @@ async function runAnthropic(
   let finalText = "";
   let toolCalls = 0;
   let finished = false;
+  let truncated = false;
 
   for (let round = 0; round < 10; round++) {
     const res = await fetch(url, {
@@ -116,7 +117,7 @@ async function runAnthropic(
       headers,
       body: JSON.stringify({
         model,
-        max_tokens: 2048,
+        max_tokens: 4096,
         system,
         tools: ANTHROPIC_TOOLS,
         messages: thread,
@@ -134,6 +135,7 @@ async function runAnthropic(
       .join("");
     if (text) finalText = text;
     if (json.stop_reason !== "tool_use") {
+      truncated = json.stop_reason === "max_tokens";
       finished = true;
       break;
     }
@@ -152,7 +154,7 @@ async function runAnthropic(
     thread.push({ role: "user", content: results });
   }
 
-  return finalReply({ text: finalText, hitRoundLimit: !finished, toolCalls });
+  return finalReply({ text: finalText, hitRoundLimit: !finished, toolCalls, truncated });
 }
 
 // ─── OpenAI tool loop ─────────────────────────────────────────────────────────
@@ -183,12 +185,13 @@ async function runOpenAI(
   let finalText = "";
   let toolCalls = 0;
   let finished = false;
+  let truncated = false;
 
   for (let round = 0; round < 10; round++) {
     const res = await fetch(url, {
       method: "POST",
       headers,
-      body: JSON.stringify({ model, max_tokens: 2048, tools: OPENAI_TOOLS, messages: thread }),
+      body: JSON.stringify({ model, max_tokens: 4096, tools: OPENAI_TOOLS, messages: thread }),
     });
     if (!res.ok) throw new Error(`AI error ${res.status}: ${await res.text()}`);
 
@@ -208,6 +211,7 @@ async function runOpenAI(
     thread.push(msg);
     if (msg.content) finalText = msg.content;
     if (choice.finish_reason !== "tool_calls" || !msg.tool_calls?.length) {
+      truncated = choice.finish_reason === "length";
       finished = true;
       break;
     }
@@ -221,7 +225,7 @@ async function runOpenAI(
     }
   }
 
-  return finalReply({ text: finalText, hitRoundLimit: !finished, toolCalls });
+  return finalReply({ text: finalText, hitRoundLimit: !finished, toolCalls, truncated });
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────

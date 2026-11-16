@@ -56,3 +56,4 @@ npm-debug.log*
 # Deployment docs
 DEPLOY.md
 scripts/deploy.sh
+.next-redesign/

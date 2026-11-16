@@ -1,14 +1,19 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import AssistantSlot from "@/components/AssistantSlot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AIInsight, AskAIButton } from "@/components/ai/ai";
+import { EmptyState } from "@/components/ui/states";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Card } from "@/components/ui/card";
+import { useAssistant } from "@/components/shell/assistant-context";
+import { Inbox, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useScorePending } from "@/components/use-score-pending";
-import { fitBadgeVariant, groupBadgeVariant } from "@/lib/job-badges";
+import { groupBadgeVariant } from "@/lib/job-badges";
 import type { PendingJob } from "@/lib/jobs";
 import { submitReview } from "@/lib/review-client";
-import { cn } from "@/lib/utils";
 import { rotateQueue, settleOffset, stepOffset, triageKeyAction, type TriageAction } from "@/lib/triage";
 
 const keyOf = (j: PendingJob) => j.id ?? `${j.company}|${j.role}`;
@@ -42,7 +47,7 @@ function useTriage(pending: PendingJob[], onUpdate: () => void) {
     const result = await submitReview({ job: current, action, fit: current.fit ?? "good", scoreRationale: current.scoreRationale });
     saving.current = false;
     if (!result.ok) return void (result.demo ? toast.info("Demo mode — changes are read-only") : toast.error(`Failed: ${result.message}`));
-    toast.success(action === "approve" ? `Kept ${current.company}` : `Passed on ${current.company}`);
+    toast.success(action === "approve" ? `Added ${current.company} to Prospects` : `Passed on ${current.company}`);
     setOffset(settleOffset(offset, queue.length));
     setGone((prev) => new Set(prev).add(keyOf(current)));
     onUpdate();
@@ -50,7 +55,7 @@ function useTriage(pending: PendingJob[], onUpdate: () => void) {
 
   function act(action: TriageAction) {
     flash(action);
-    if (action === "keep") void review("approve");
+    if (action === "add") void review("approve");
     else if (action === "pass") void review("reject");
     else setOffset(stepOffset(offset, action === "skip" ? 1 : -1, queue.length));
   }
@@ -73,75 +78,79 @@ function useTriageKeys(act: (action: TriageAction) => void) {
 }
 
 function Kbd({ children }: { children: string }) {
-  return <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">{children}</kbd>;
+  return <kbd className="rounded-sm border border-border bg-muted px-1 font-mono text-xs text-muted-foreground">{children}</kbd>;
 }
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</h3>
+    <div className="flex flex-col gap-2">
+      <h3 className="text-xs font-medium text-muted-foreground">{label}</h3>
       {children}
     </div>
   );
 }
 
 function Verdict({ job, scoring }: { job: PendingJob; scoring: boolean }) {
-  if (!job.fit) return <p className="text-sm text-muted-foreground italic">{scoring ? "Scoring…" : "Not scored yet"}</p>;
+  if (!job.fit) return <p className="text-sm text-muted-foreground">{scoring ? "Scoring…" : "Not scored yet"}</p>;
   return (
-    <div className="space-y-2">
-      <Badge variant={fitBadgeVariant(job.fit)} className="capitalize">{job.fit} fit</Badge>
-      {job.scoreRationale && <p className="text-sm leading-relaxed text-foreground/90">{job.scoreRationale}</p>}
+    <div className="flex flex-col gap-2">
+      <div><StatusBadge kind="fit" value={job.fit} /></div>
+      {job.scoreRationale && <AIInsight label="AI fit assessment">{job.scoreRationale}</AIInsight>}
     </div>
   );
 }
 
 function JobCard({ job, scoring }: { job: PendingJob; scoring: boolean }) {
+  const assistant = useAssistant();
   return (
-    <div className="space-y-5">
-      <div className="space-y-1.5">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
         <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           {job.company}
-          <Badge variant={groupBadgeVariant(job.scrapeGroup)} className="rounded font-medium">{job.scrapeGroup}</Badge>
+          <Badge variant={groupBadgeVariant(job.scrapeGroup)}>{job.scrapeGroup}</Badge>
         </p>
-        <h2 className="text-3xl font-semibold leading-tight tracking-tight">{job.role}</h2>
+        <h2 className="text-xl font-semibold text-balance">{job.role}</h2>
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {job.salary && <span>{job.salary}</span>}
           <span>Found {job.scrapeDate}</span>
-          {job.url && <a href={job.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">View posting ↗</a>}
+          {job.url && <a href={job.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline underline-offset-4 hover:no-underline">View posting<ExternalLink className="size-4" aria-hidden /><span className="sr-only">(opens in a new tab)</span></a>}
         </p>
       </div>
-      <div className="grid gap-5 md:grid-cols-2">
-        <Section label="At a glance"><p className="text-sm leading-relaxed">{job.aiSummary ?? "No summary yet."}</p></Section>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Section label="At a glance"><p className="text-sm">{job.aiSummary ?? "No summary yet."}</p></Section>
         <Section label="Fit"><Verdict job={job} scoring={scoring} /></Section>
       </div>
       {job.notes && (
         <Section label="From the posting">
-          <p className="max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/50 p-3 text-sm leading-relaxed">{job.notes}</p>
+          <p tabIndex={0} role="region" aria-label="Posting text" className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{job.notes}</p>
         </Section>
       )}
+      <div>
+        <AskAIButton onClick={() => assistant.ask(`Should I pursue the ${job.role} role at ${job.company}? Give me the strongest reasons for and against.`, { send: true })}>Ask about this job</AskAIButton>
+      </div>
     </div>
   );
 }
 
 function ActionBar({ act, pressed }: { act: (action: TriageAction) => void; pressed: TriageAction | null }) {
-  const mark = (action: TriageAction) => ({
+  const mark = (action: TriageAction, extra?: string) => ({
     "data-pressed": pressed === action ? "true" : undefined,
-    className: "transition-transform duration-150 data-[pressed=true]:scale-95 data-[pressed=true]:ring-2 data-[pressed=true]:ring-primary data-[pressed=true]:ring-offset-2",
+    className: cn("data-[pressed=true]:scale-95 data-[pressed=true]:border-primary transition-transform duration-(--duration-fast)", extra),
   });
   return (
-    <div className="sticky bottom-0 -mx-6 -mb-6 grid grid-cols-3 gap-3 rounded-b-2xl border-t border-border bg-card px-6 py-4 sm:-mx-8 sm:-mb-8 sm:px-8">
+    <div className="sticky bottom-16 -mx-4 -mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 rounded-b-lg border-t border-border bg-card p-4 md:bottom-0">
       <Button variant="outline" size="lg" onClick={() => act("pass")} {...mark("pass")}>Pass <Kbd>P</Kbd></Button>
       <Button variant="outline" size="lg" onClick={() => act("skip")} {...mark("skip")}>Skip <Kbd>S</Kbd></Button>
-      <Button size="lg" onClick={() => act("keep")} {...mark("keep")}>Keep <Kbd>K</Kbd></Button>
+      <Button size="lg" onClick={() => act("add")} {...mark("add", "order-first col-span-2 sm:order-last sm:col-span-1")}>Add to Prospects <Kbd>A</Kbd></Button>
     </div>
   );
 }
 
 function UpNext({ jobs }: { jobs: PendingJob[] }) {
   return (
-    <aside className="min-h-0 space-y-2 lg:flex-1 lg:overflow-y-auto">
-      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Up next</h3>
-      <ul aria-label="Up next" className="space-y-2">
+    <aside className="flex flex-col gap-2">
+      <h3 className="text-xs font-medium text-muted-foreground">Up next</h3>
+      <ul aria-label="Up next" className="flex flex-col gap-2">
         {jobs.map((j) => (
           <li key={keyOf(j)} className="rounded-lg border border-border bg-card px-3 py-2">
             <p className="text-sm font-medium">{j.company}</p>
@@ -153,55 +162,41 @@ function UpNext({ jobs }: { jobs: PendingJob[] }) {
   );
 }
 
-function SidePane({ upNext, assistant }: { upNext: PendingJob[]; assistant?: ReactNode }) {
-  return (
-    <div data-testid="triage-side-pane" className={cn("flex flex-col gap-4", assistant && "lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]")}>
-      <UpNext jobs={upNext} />
-      {assistant && <AssistantSlot>{assistant}</AssistantSlot>}
-    </div>
-  );
-}
-
 function Progress({ reviewed, total }: { reviewed: number; total: number }) {
   return (
     <div className="flex items-center gap-3 text-sm text-muted-foreground">
       <span>Reviewed {reviewed} of {total}</span>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={reviewed}>
+      <div className="h-2 flex-1 overflow-hidden rounded-sm bg-muted" role="progressbar" aria-label="Triage progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={reviewed}>
         <div className="h-full bg-primary" style={{ width: `${total ? (reviewed / total) * 100 : 0}%` }} />
       </div>
-      <span className="hidden sm:inline">P pass · K keep · S or → skip · ← back</span>
+      <span className="hidden sm:inline">P pass · A add · S or → skip · ← back</span>
     </div>
   );
 }
 
-type TriageViewProps = { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void; assistant?: ReactNode };
+type TriageViewProps = { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void };
 
-export default function TriageView({ pending, onUpdate, onBackToBoard, assistant }: TriageViewProps) {
+export default function TriageView({ pending, onUpdate, onBackToBoard }: TriageViewProps) {
   const { current, upNext, reviewed, total, act, pressed } = useTriage(pending, onUpdate);
   const scoring = useScorePending(pending, onUpdate);
   useTriageKeys(act);
 
   if (!current) {
     return (
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-3 rounded-xl border border-border bg-card px-6 py-10 text-center shadow-sm">
-          <p className="text-sm font-medium">All caught up</p>
-          <p className="text-xs text-muted-foreground">New finds from scrapes and agents show up here.</p>
-          <Button onClick={onBackToBoard} variant="outline" size="sm">Back to board</Button>
-        </div>
-        {assistant && <SidePane upNext={[]} assistant={assistant} />}
-      </div>
+      <Card padding="none">
+        <EmptyState icon={<Inbox />} title="All caught up" description="New finds from scrapes and agents show up here." action={<Button onClick={onBackToBoard} variant="outline">Back to board</Button>} />
+      </Card>
     );
   }
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <Progress reviewed={reviewed} total={total} />
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
+        <Card variant="raised" padding="lg" className="gap-6">
           <JobCard job={current} scoring={scoring} />
           <ActionBar act={act} pressed={pressed} />
-        </section>
-        <SidePane upNext={upNext} assistant={assistant} />
+        </Card>
+        <UpNext jobs={upNext} />
       </div>
     </div>
   );

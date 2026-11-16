@@ -15,6 +15,8 @@ pnpm install       # install dependencies
 pnpm dev           # dev server at http://localhost:3000
 pnpm build         # production build
 pnpm lint          # ESLint
+pnpm check:tokens  # no hard-coded colors, sizes, spacing, emoji or inline styles in app/ and components/
+pnpm check:contrast # every text/control color token pair meets WCAG AA, light and dark
 node scripts/scrape-careers.mjs   # run career page scraper
 ```
 
@@ -370,6 +372,12 @@ These are not preferences — they are gates.
 
 ---
 
+## UI rules
+
+Screens are built from `components/ui` and `components/ai` only; add a component to `/styleguide` first if one is missing. Colors are roles (`bg-card`, `text-muted-foreground`, `bg-success-subtle`), never raw palette classes or hex; type, spacing, radius, shadow, motion and z-index come from the tokens in `app/globals.css` (see `redesign/DESIGN_SYSTEM.md`). Teal (`primary`) means an action; coral (`ai`) with the Sparkles glyph means the assistant. Status and fit always show an icon and a word. `pnpm check:tokens` and `pnpm check:contrast` must stay green; justified exceptions live in `redesign/tools/check-tokens.mjs`.
+
+---
+
 ## Security Invariants
 
 Block any proposed change that violates these. Open an issue if the fix is out of scope for the current slice.
@@ -429,10 +437,10 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 25 | Job link check — verify a job's URL is valid and still open, on any board section or the inbox, with a visible status | **Ready** — reuses `lib/job-fetcher.ts` |
 | 26 | Agent-assisted link repair — find the right posting for a bad URL and propose a fix for the user to confirm | **Ready** — blocked on #25, #22 |
 | 28 | Applied status filter — hide chosen statuses in the Applied view, `declined` hidden by default | **Done** — `lib/applied-status-filter.ts`, `components/AppliedStatusFilter.tsx`; choice saved in the browser with the other board filters (display only, no data changes) |
-| 27 | UI overhaul — three parts, chosen from five explored directions: 27a Triage, 27b Pipeline board, 27c Home | **In progress** — see below |
+| 27 | UI overhaul — three parts, chosen from five explored directions: 27a Triage, 27b Pipeline board, 27c Home | **Done in code** on `redesign/ui-system`: one design system (`app/globals.css`, `components/ui`, `components/ai`, `/styleguide`, `redesign/DESIGN_SYSTEM.md`) and every screen rebuilt on it. Triage's keep button is now "Add to Prospects" (key A) |
 | 27a | Triage view — the inbox one job at a time (`components/TriageView.tsx`, `lib/triage.ts`) | **Done** — default Inbox mode, with the old list one click away (choice saved in the browser). Keys: P pass, K keep, S or right arrow skip, left arrow back. Full width, with Up next on top and Your Deckhand in the bottom half of the right pane (`components/AssistantSlot.tsx`); the list mode keeps the assistant as a right rail. No API or data change |
-| 27b | Pipeline board — kanban columns as a second board layout (Prospects, Applied, Screening, Interview, Offer), declined still hidden by default | **Ready** |
-| 27c | Home ("Today") — needs-you list, pipeline funnel, bots panel, activity feed from `job_events` | **Ready** — needs one read-only activity route (Supabase only); interview and offer dates do not exist in the data yet, so "needs you" starts from derivable items (new strong fits, applications with no change in 14 days, open offers) |
+| 27b | Pipeline board — kanban columns as a second board layout (Prospects, Applied, Screening, Interview, Offer), declined still hidden by default | **Done** — `lib/pipeline.ts` (columns, `moveAction`), `lib/pipeline-client.ts` (`applyMove`), `components/PipelineBoard.tsx`; List / Pipeline switch saved in `board-filters`. Full width; Your Deckhand becomes an Ask Deckhand button and panel (`components/AssistantOverlay.tsx`). Cards move by drag or a Move to menu; moving only changes `status` or section, nothing is deleted |
+| 27c | Home ("Today") — needs-you list, pipeline funnel, AI briefing, activity feed from `job_events` | **Mostly done** — `components/TodayView.tsx` + `lib/today.ts` (needs-you from offers, interviews, new strong fits, 14-day-stale applications and the inbox count; funnel; assistant prompts), reached at `/?view=today`. Remaining: the activity feed, which needs one read-only `job_events` route (Supabase only) |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 

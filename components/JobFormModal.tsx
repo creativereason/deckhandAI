@@ -12,8 +12,13 @@ import {
   resolveJobType,
 } from "@/lib/jobs";
 import { getAppliedIcon, getProspectIcon, getSignalLabel } from "@/lib/job-signal";
-import { SignalIcon } from "@/components/SignalIcon";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalContent } from "@/components/ui/modal";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { fetchAiSummary, fetchSummarizerConfigured } from "@/lib/summarize-job-client";
 
 type JobRecord = AppliedJob | ProspectJob | PassedJob;
@@ -245,237 +250,113 @@ export default function JobFormModal({
     }
   }
 
+  const isProspect = board === "prospects";
+  const signal = board === "applied"
+    ? getAppliedIcon({ status: form.status, date: form.date, notes: form.notes })
+    : isProspect ? getProspectIcon({ fit: form.fit }) : "";
+  const signalLabel = signal ? getSignalLabel(signal, isProspect ? "prospect" : "applied") : "";
+  const formId = "job-form";
+
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={submit}
-        className="bg-card rounded-xl shadow-2xl p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto"
+    <Modal open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <ModalContent
+        title={mode === "add" ? "Add job" : "Edit job"}
+        description={signalLabel || undefined}
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="submit" form={formId} loading={saving}>{saving ? "Saving…" : mode === "add" ? "Add Job" : "Save Changes"}</Button>
+          </>
+        }
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {mode === "add" ? "Add Job" : "Edit Job"}
-          </h2>
-          {(() => {
-            const isProspect = board === "prospects";
-            const icon = board === "applied"
-              ? getAppliedIcon({ status: form.status, date: form.date, notes: form.notes })
-              : isProspect
-              ? getProspectIcon({ fit: form.fit })
-              : "🔴";
-            return (
-              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span className="leading-none flex items-center"><SignalIcon icon={icon} size={18} /></span>
-                <span>{getSignalLabel(icon, isProspect ? "prospect" : "applied")}</span>
-              </span>
-            );
-          })()}
-        </div>
-
-        {secondaryAction && (
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            onClick={secondaryAction.onClick}
-            className="text-xs -mt-2"
-          >
-            {secondaryAction.label}
-          </Button>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className={board === "passed" ? "col-span-2" : "col-span-1"}>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Board</label>
-            <select
-              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-              value={board}
-              onChange={(e) => onBoardChange(e.target.value as Board)}
-            >
-              <option value="applied">Applied</option>
-              <option value="prospects">Prospects</option>
-              <option value="passed">Passed</option>
-            </select>
-          </div>
-
-          {board !== "passed" && (
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Type</label>
-              <select
-                className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-                value={jobType}
-                onChange={(e) => setJobType(e.target.value as JobType)}
-              >
-                {JOB_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
+        <form id={formId} onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+          {secondaryAction && (
+            <div className="sm:col-span-2">
+              <Button type="button" variant="link" size="sm" onClick={secondaryAction.onClick}>{secondaryAction.label}</Button>
             </div>
           )}
 
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Company</label>
-            <input
-              required
-              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-              value={form.company}
-              onChange={(e) => set("company", e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Role</label>
-            <input
-              required
-              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-              value={form.role}
-              onChange={(e) => set("role", e.target.value)}
-            />
-          </div>
+          <Field label="Board" className={board === "passed" ? "sm:col-span-2" : undefined}>
+            {(p) => (
+              <Select {...p} value={board} onChange={(e) => onBoardChange(e.target.value as Board)}>
+                <option value="applied">Applied</option>
+                <option value="prospects">Prospects</option>
+                <option value="passed">Passed</option>
+              </Select>
+            )}
+          </Field>
+
+          {board !== "passed" && (
+            <Field label="Type">
+              {(p) => (
+                <Select {...p} value={jobType} onChange={(e) => setJobType(e.target.value as JobType)}>
+                  {JOB_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </Select>
+              )}
+            </Field>
+          )}
+
+          <Field label="Company" required>{(p) => <Input {...p} value={form.company} onChange={(e) => set("company", e.target.value)} />}</Field>
+          <Field label="Role" required>{(p) => <Input {...p} value={form.role} onChange={(e) => set("role", e.target.value)} />}</Field>
 
           {board === "prospects" && (
-            <div className="col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Fit</label>
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  onClick={scoreFit}
-                  disabled={!form.company || !form.role}
-                  loading={scoring}
-                  className="text-xs"
-                >
-                  {scoring ? "Scoring…" : "AI score"}
-                </Button>
-              </div>
-              <select
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-                value={form.fit}
-                onChange={(e) => set("fit", e.target.value)}
-              >
-                <option value="strong">Strong</option>
-                <option value="good">Good</option>
-                <option value="caution">Caution</option>
-                <option value="weak">Weak</option>
-              </select>
-              {scoreRationale && (
-                <p className="mt-1.5 text-xs text-muted-foreground italic">{scoreRationale}</p>
-              )}
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Field label="Fit" hint={scoreRationale || undefined}>
+                {(p) => (
+                  <Select {...p} value={form.fit} onChange={(e) => set("fit", e.target.value)}>
+                    <option value="strong">Strong</option>
+                    <option value="good">Good</option>
+                    <option value="caution">Caution</option>
+                    <option value="weak">Weak</option>
+                  </Select>
+                )}
+              </Field>
+              <div><Button type="button" variant="ai" size="sm" onClick={scoreFit} disabled={!form.company || !form.role} loading={scoring}>{scoring ? "Scoring…" : "Score fit with AI"}</Button></div>
             </div>
           )}
 
           {board === "applied" && (
             <>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Status</label>
-                <select
-                  className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-                  value={form.status}
-                  onChange={(e) => set("status", e.target.value)}
-                >
-                  <option value="applied">Applied</option>
-                  <option value="screening">Screening</option>
-                  <option value="interview">Interview</option>
-                  <option value="offer">Offer</option>
-                  <option value="declined">Declined</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Date Applied</label>
-                <input
-                  type="date"
-                  className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-                  value={form.date}
-                  onChange={(e) => set("date", e.target.value)}
+              <Field label="Status">
+                {(p) => (
+                  <Select {...p} value={form.status} onChange={(e) => set("status", e.target.value)}>
+                    <option value="applied">Applied</option>
+                    <option value="screening">Screening</option>
+                    <option value="interview">Interview</option>
+                    <option value="offer">Offer</option>
+                    <option value="declined">Declined</option>
+                  </Select>
+                )}
+              </Field>
+              <Field label="Date applied">{(p) => <Input {...p} type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />}</Field>
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <Checkbox
+                  label="Ghost job risk"
+                  checked={(form as { isGhost?: boolean }).isGhost ?? false}
+                  onCheckedChange={(checked) => setForm((f) => ({ ...f, isGhost: checked }))}
                 />
-              </div>
-              <div className="col-span-2">
-                <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 accent-primary"
-                    checked={(form as { isGhost?: boolean }).isGhost ?? false}
-                    onChange={(e) => setForm((f) => ({ ...f, isGhost: e.target.checked }))}
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Ghost job risk
-                  </span>
-                </label>
-                <p className="mt-0.5 ml-6 text-xs text-muted-foreground">Flag if this posting looks like a ghost job or has been reposted repeatedly.</p>
+                <p className="text-xs text-muted-foreground">Flag if this posting looks like a ghost job or has been reposted repeatedly.</p>
               </div>
             </>
           )}
 
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Salary</label>
-            <input
-              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-              placeholder="$150k–$200k"
-              value={form.salary}
-              onChange={(e) => set("salary", e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">URL</label>
-            <input
-              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-              placeholder="https://..."
-              value={form.url}
-              onChange={(e) => set("url", e.target.value)}
-            />
+          <Field label="Salary">{(p) => <Input {...p} placeholder="$150k–$200k" value={form.salary} onChange={(e) => set("salary", e.target.value)} />}</Field>
+          <Field label="URL">{(p) => <Input {...p} placeholder="https://…" value={form.url} onChange={(e) => set("url", e.target.value)} />}</Field>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Field label="At-a-glance summary" hint={summaryHint || "Shown on the board card and job detail header."}>
+              {(p) => <Textarea {...p} rows={2} className="min-h-16" placeholder="1–2 sentence summary of the role and company" value={form.aiSummary} onChange={(e) => set("aiSummary", e.target.value)} />}
+            </Field>
+            {summarizerReady && (
+              <div><Button type="button" variant="ai" size="sm" onClick={regenerateSummary} disabled={!form.company || !form.role} loading={summarizing}>{summarizing ? "Generating…" : "Regenerate with AI"}</Button></div>
+            )}
           </div>
 
-          <div className="col-span-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">At-a-glance summary</label>
-              {summarizerReady && (
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  onClick={regenerateSummary}
-                  disabled={!form.company || !form.role}
-                  loading={summarizing}
-                  className="text-xs"
-                >
-                  {summarizing ? "Generating…" : "↻ Regenerate"}
-                </Button>
-              )}
-            </div>
-            <textarea
-              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-              rows={2}
-              placeholder="1–2 sentence summary of the role and company"
-              value={form.aiSummary}
-              onChange={(e) => set("aiSummary", e.target.value)}
-            />
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {summaryHint || "Shown on the board card and job detail header."}
-            </p>
-          </div>
+          <Field label="Notes" className="sm:col-span-2">{(p) => <Textarea {...p} rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} />}</Field>
 
-          <div className="col-span-2">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Notes</label>
-            <textarea
-              className="mt-1 w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white"
-              rows={3}
-              value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
-            />
-          </div>
-        </div>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <div className="flex gap-3 pt-2">
-          <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-            Cancel
-          </Button>
-          <Button type="submit" loading={saving} className="flex-1">
-            {saving ? "Saving..." : mode === "add" ? "Add Job" : "Save Changes"}
-          </Button>
-        </div>
-      </form>
-    </div>
+          {error && <p role="alert" className="text-sm font-medium text-destructive sm:col-span-2">{error}</p>}
+        </form>
+      </ModalContent>
+    </Modal>
   );
 }

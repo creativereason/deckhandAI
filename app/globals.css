@@ -4,182 +4,225 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ==========================================================================
+   Design tokens — the single source of truth. Documented in redesign/DESIGN_SYSTEM.md.
+   Screen code uses roles (bg-card, text-muted-foreground, bg-success-subtle) and the scales
+   below. Raw palette colors, hex values and off-scale sizes are rejected by `pnpm check:tokens`.
+   ========================================================================== */
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);
     --font-mono: var(--font-mono);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive-foreground: var(--destructive-foreground);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
+
+    /* ---- Color roles ---------------------------------------------------- */
     --color-background: var(--background);
-    /* Semantic status/fit/type tones — one ink color each, composed with
-       Tailwind opacity modifiers (bg-tone-x/10 text-tone-x), same pattern
-       already used for --destructive in components/ui/badge.tsx */
-    --color-tone-success: var(--tone-success);
-    --color-tone-warning: var(--tone-warning);
-    --color-tone-purple: var(--tone-purple);
-    --color-tone-teal: var(--tone-teal);
-    --color-tone-orange: var(--tone-orange);
-    --color-tone-highlight: var(--tone-highlight);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
-    --radius-button: 9999px; /* scoped to the Button component only — not the shared card/container radius scale */
-    --shadow-2xs: var(--shadow-2xs);
-    --shadow-xs: var(--shadow-xs);
-    --shadow-sm: var(--shadow-sm);
-    --shadow: var(--shadow);
-    --shadow-md: var(--shadow-md);
-    --shadow-lg: var(--shadow-lg);
-    --shadow-xl: var(--shadow-xl);
-    --shadow-2xl: var(--shadow-2xl);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-subtle: var(--primary-subtle);
+    --color-primary-subtle-foreground: var(--primary-subtle-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-ai: var(--ai);
+    --color-ai-foreground: var(--ai-foreground);
+    --color-ai-subtle: var(--ai-subtle);
+    --color-ai-subtle-foreground: var(--ai-subtle-foreground);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-success-subtle: var(--success-subtle);
+    --color-success-subtle-foreground: var(--success-subtle-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-warning-subtle: var(--warning-subtle);
+    --color-warning-subtle-foreground: var(--warning-subtle-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-destructive-subtle: var(--destructive-subtle);
+    --color-destructive-subtle-foreground: var(--destructive-subtle-foreground);
+    --color-overlay: var(--overlay);
+
+    /* LEGACY aliases so screens not yet rebuilt keep rendering. Removed in Phase 3. */
+    --color-tone-success: var(--success);
+    --color-tone-warning: var(--warning);
+    --color-tone-purple: var(--ai);
+    --color-tone-teal: var(--primary);
+    --color-tone-orange: var(--warning);
+    --color-tone-highlight: var(--ai);
+
+    /* ---- Type scale (UI is 14px; nothing below 12px) --------------------- */
+    --text-xs: 0.75rem;
+    --text-xs--line-height: 1rem;
+    --text-sm: 0.875rem;
+    --text-sm--line-height: 1.25rem;
+    --text-base: 1rem;
+    --text-base--line-height: 1.5rem;
+    --text-lg: 1.125rem;
+    --text-lg--line-height: 1.625rem;
+    --text-xl: 1.375rem;
+    --text-xl--line-height: 1.75rem;
+    --text-2xl: 1.75rem;
+    --text-2xl--line-height: 2.25rem;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+
+    /* ---- Radii: control < card < sheet ---------------------------------- */
+    --radius-sm: 0.25rem;   /* chips inside dense rows, kbd */
+    --radius-md: 0.5rem;    /* controls: buttons, inputs, menu items */
+    --radius-lg: 0.75rem;   /* surfaces: cards, panels, popovers */
+    --radius-xl: 1rem;      /* sheets and modals */
+
+    /* ---- Shadows: flat by default, three lifts --------------------------- */
+    --shadow-sm: 0 1px 2px 0 oklch(0.2 0.02 250 / 0.06);
+    --shadow-md: 0 4px 12px -2px oklch(0.2 0.02 250 / 0.12), 0 2px 4px -2px oklch(0.2 0.02 250 / 0.08);
+    --shadow-lg: 0 16px 40px -8px oklch(0.2 0.02 250 / 0.22), 0 4px 12px -4px oklch(0.2 0.02 250 / 0.10);
+
+    /* ---- Motion ---------------------------------------------------------- */
+    --duration-fast: 120ms;
+    --duration-base: 200ms;
+    --duration-slow: 320ms;
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+    /* ---- Layout ---------------------------------------------------------- */
+    --spacing-rail: 4.5rem;        /* collapsed nav rail */
+    --spacing-panel: 24rem;        /* assistant side panel */
+    --spacing-touch: 2.75rem;      /* minimum touch target */
+    --container-content: 80rem;    /* max page width */
+    --container-prose: 44rem;      /* forms, settings, reading width */
 }
 
 :root {
-    /* Blue primary + warm secondary — shadcn compatible light mode */
-    --background: oklch(0.984 0.003 247.858);   /* slate-50 */
-    --foreground: oklch(0.129 0.042 264.695);   /* slate-950 */
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.129 0.042 264.695);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.129 0.042 264.695);
-    --primary: oklch(0.546 0.245 262.881);      /* blue-600 — brand primary */
-    --primary-foreground: oklch(0.984 0.003 247.858);
-    --secondary: oklch(0.642 0.169 38.582);     /* warm terracotta — brand secondary */
-    --secondary-foreground: oklch(1 0 0);
-    --muted: oklch(0.968 0.007 247.896);        /* slate-100 */
-    --muted-foreground: oklch(0.554 0.046 264.364); /* slate-500 */
-    --accent: oklch(0.929 0.013 255.508);       /* slate-200 — soft hover/highlight surface */
-    --accent-foreground: oklch(0.279 0.041 260.031);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.984 0.003 247.858);
-    --border: oklch(0.929 0.013 255.508);       /* slate-200 */
-    --input: oklch(0.929 0.013 255.508);
-    --ring: oklch(0.546 0.245 262.881);         /* blue-600 */
-    --tone-success: oklch(0.6 0.15 145);
-    --tone-warning: oklch(0.7 0.16 75);
-    --tone-purple: oklch(0.55 0.18 300);
-    --tone-teal: oklch(0.55 0.11 195);
-    --tone-orange: oklch(0.65 0.16 55);
-    --tone-highlight: oklch(0.62 0.22 350); /* "new" / attention marker — distinct from tone-orange (type: contract) */
-    --chart-1: oklch(0.546 0.245 262.881);
-    --chart-2: oklch(0.642 0.169 38.582);
-    --chart-3: oklch(0.707 0.165 254.624);
-    --chart-4: oklch(0.869 0.022 252.894);
-    --chart-5: oklch(0.929 0.013 255.508);
-    --radius: 0.5rem;
-    --sidebar: oklch(0.968 0.007 247.896);
-    --sidebar-foreground: oklch(0.129 0.042 264.695);
-    --sidebar-primary: oklch(0.546 0.245 262.881);
-    --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-    --sidebar-accent: oklch(0.929 0.013 255.508);
-    --sidebar-accent-foreground: oklch(0.279 0.041 260.031);
-    --sidebar-border: oklch(0.929 0.013 255.508);
-    --sidebar-ring: oklch(0.546 0.245 262.881);
-    --shadow-color: #1a1a1a;
-    --shadow-opacity: 0.1;
-    --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05);
-    --shadow-xs: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.05);
-    --shadow-sm: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.10), 0px 1px 2px -1px hsl(0 0% 10.1961% / 0.10);
-    --shadow: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.10), 0px 1px 2px -1px hsl(0 0% 10.1961% / 0.10);
-    --shadow-md: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.10), 0px 2px 4px -1px hsl(0 0% 10.1961% / 0.10);
-    --shadow-lg: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.10), 0px 4px 6px -1px hsl(0 0% 10.1961% / 0.10);
-    --shadow-xl: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.10), 0px 8px 10px -1px hsl(0 0% 10.1961% / 0.10);
-    --shadow-2xl: 0px 1px 3px 0px hsl(0 0% 10.1961% / 0.25);
+    /* Warm paper canvas, ink text, one teal for action, one coral reserved for AI. */
+    --background: oklch(0.975 0.005 85);
+    --foreground: oklch(0.22 0.015 250);
+    --card: oklch(0.995 0.002 85);
+    --card-foreground: oklch(0.22 0.015 250);
+    --popover: oklch(0.995 0.002 85);
+    --popover-foreground: oklch(0.22 0.015 250);
+    --muted: oklch(0.945 0.007 85);
+    --muted-foreground: oklch(0.45 0.015 250);
+    --accent: oklch(0.93 0.01 200);
+    --accent-foreground: oklch(0.25 0.04 220);
+    --border: oklch(0.9 0.006 85);
+    --input: oklch(0.6 0.012 250);          /* control outlines need 3:1 against the card */
+    --ring: oklch(0.55 0.11 200);
+    --overlay: oklch(0.2 0.02 250 / 0.5);
+
+    --primary: oklch(0.45 0.09 205);
+    --primary-foreground: oklch(0.99 0.005 200);
+    --primary-subtle: oklch(0.945 0.03 200);
+    --primary-subtle-foreground: oklch(0.36 0.08 215);
+    --secondary: oklch(0.925 0.01 85);
+    --secondary-foreground: oklch(0.25 0.015 250);
+
+    --ai: oklch(0.52 0.15 35);
+    --ai-foreground: oklch(0.99 0.005 40);
+    --ai-subtle: oklch(0.96 0.025 45);
+    --ai-subtle-foreground: oklch(0.42 0.13 33);
+
+    --success: oklch(0.48 0.11 150);
+    --success-foreground: oklch(0.99 0.005 150);
+    --success-subtle: oklch(0.95 0.04 150);
+    --success-subtle-foreground: oklch(0.37 0.09 152);
+    --warning: oklch(0.5 0.1 70);
+    --warning-foreground: oklch(0.99 0.005 80);
+    --warning-subtle: oklch(0.95 0.05 85);
+    --warning-subtle-foreground: oklch(0.4 0.09 65);
+    --destructive: oklch(0.5 0.19 27);
+    --destructive-foreground: oklch(0.99 0.005 27);
+    --destructive-subtle: oklch(0.95 0.03 25);
+    --destructive-subtle-foreground: oklch(0.42 0.17 27);
 }
 
 .dark {
-    /* Blue primary + warm secondary — shadcn compatible dark mode */
-    --background: oklch(0.129 0.042 264.695);   /* slate-950 */
-    --foreground: oklch(0.984 0.003 247.858);   /* slate-50 */
-    --card: oklch(0.208 0.042 265.755);         /* slate-900 */
-    --card-foreground: oklch(0.984 0.003 247.858);
-    --popover: oklch(0.208 0.042 265.755);
-    --popover-foreground: oklch(0.984 0.003 247.858);
-    --primary: oklch(0.707 0.165 254.624);      /* blue-400 — brand primary */
-    --primary-foreground: oklch(0.208 0.042 265.755);
-    --secondary: oklch(0.642 0.169 38.582);     /* warm terracotta — brand secondary */
-    --secondary-foreground: oklch(1 0 0);
-    --muted: oklch(0.279 0.041 260.031);        /* slate-800 */
-    --muted-foreground: oklch(0.704 0.04 256.788);  /* slate-400 */
-    --accent: oklch(0.279 0.041 260.031);
-    --accent-foreground: oklch(0.984 0.003 247.858);
-    --destructive: oklch(0.704 0.191 22.216);
-    --destructive-foreground: oklch(0.984 0.003 247.858);
-    --border: oklch(0.279 0.041 260.031);       /* slate-800 */
-    --input: oklch(0.279 0.041 260.031);
-    --ring: oklch(0.707 0.165 254.624);         /* blue-400 */
-    --tone-success: oklch(0.72 0.17 145);
-    --tone-warning: oklch(0.8 0.16 85);
-    --tone-purple: oklch(0.75 0.14 295);
-    --tone-teal: oklch(0.75 0.13 195);
-    --tone-orange: oklch(0.78 0.15 60);
-    --tone-highlight: oklch(0.72 0.19 350);
-    --chart-1: oklch(0.707 0.165 254.624);
-    --chart-2: oklch(0.642 0.169 38.582);
-    --chart-3: oklch(0.546 0.245 262.881);
-    --chart-4: oklch(0.372 0.044 257.287);
-    --chart-5: oklch(0.279 0.041 260.031);
-    --sidebar: oklch(0.208 0.042 265.755);
-    --sidebar-foreground: oklch(0.984 0.003 247.858);
-    --sidebar-primary: oklch(0.707 0.165 254.624);
-    --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-    --sidebar-accent: oklch(0.279 0.041 260.031);
-    --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-    --sidebar-border: oklch(0.279 0.041 260.031);
-    --sidebar-ring: oklch(0.707 0.165 254.624);
-    --shadow-color: #000000;
-    --shadow-opacity: 0.3;
-    --shadow-2xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.20);
-    --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.20);
-    --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.30), 0px 1px 2px -1px hsl(0 0% 0% / 0.30);
-    --shadow: 0px 1px 3px 0px hsl(0 0% 0% / 0.30), 0px 1px 2px -1px hsl(0 0% 0% / 0.30);
-    --shadow-md: 0px 1px 3px 0px hsl(0 0% 0% / 0.30), 0px 2px 4px -1px hsl(0 0% 0% / 0.30);
-    --shadow-lg: 0px 1px 3px 0px hsl(0 0% 0% / 0.30), 0px 4px 6px -1px hsl(0 0% 0% / 0.30);
-    --shadow-xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.30), 0px 8px 10px -1px hsl(0 0% 0% / 0.30);
-    --shadow-2xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.45);
+    --background: oklch(0.17 0.01 250);
+    --foreground: oklch(0.96 0.005 85);
+    --card: oklch(0.21 0.012 250);
+    --card-foreground: oklch(0.96 0.005 85);
+    --popover: oklch(0.24 0.013 250);
+    --popover-foreground: oklch(0.96 0.005 85);
+    --muted: oklch(0.26 0.012 250);
+    --muted-foreground: oklch(0.74 0.012 250);
+    --accent: oklch(0.3 0.03 205);
+    --accent-foreground: oklch(0.95 0.01 200);
+    --border: oklch(0.3 0.012 250);
+    --input: oklch(0.6 0.014 250);
+    --ring: oklch(0.75 0.11 195);
+    --overlay: oklch(0.08 0.01 250 / 0.65);
+
+    --primary: oklch(0.78 0.11 195);
+    --primary-foreground: oklch(0.18 0.03 220);
+    --primary-subtle: oklch(0.3 0.04 205);
+    --primary-subtle-foreground: oklch(0.88 0.07 195);
+    --secondary: oklch(0.3 0.012 250);
+    --secondary-foreground: oklch(0.95 0.005 85);
+
+    --ai: oklch(0.76 0.12 40);
+    --ai-foreground: oklch(0.2 0.03 40);
+    --ai-subtle: oklch(0.3 0.04 40);
+    --ai-subtle-foreground: oklch(0.88 0.07 45);
+
+    --success: oklch(0.76 0.14 150);
+    --success-foreground: oklch(0.2 0.03 150);
+    --success-subtle: oklch(0.3 0.05 150);
+    --success-subtle-foreground: oklch(0.88 0.09 150);
+    --warning: oklch(0.8 0.13 80);
+    --warning-foreground: oklch(0.22 0.03 80);
+    --warning-subtle: oklch(0.32 0.05 80);
+    --warning-subtle-foreground: oklch(0.9 0.09 85);
+    --destructive: oklch(0.72 0.17 25);
+    --destructive-foreground: oklch(0.2 0.03 25);
+    --destructive-subtle: oklch(0.31 0.06 25);
+    --destructive-subtle-foreground: oklch(0.89 0.07 25);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-    }
+    @apply border-border outline-ring;
+  }
+  html { @apply font-sans; }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-sm;
+  }
+  /* One focus treatment for everything keyboard-reachable. */
+  :where(a, button, input, select, textarea, summary, [role="tab"], [role="radio"], [role="checkbox"], [role="switch"], [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
     }
-  html {
-    @apply font-sans;
-    }
+  }
 }
+
+/* z-index layers (use these names via z-[var(--z-modal)] only through the Layer helpers in components/ui). */
+:root {
+    --z-base: 0;
+    --z-sticky: 10;
+    --z-nav: 20;
+    --z-panel: 30;
+    --z-overlay: 40;
+    --z-popover: 50;
+    --z-toast: 60;
+}
+
+/* Sonner owns its container; give it the toast layer instead of inline styles. */
+[data-sonner-toaster] { z-index: var(--z-toast); }
+
+/* Styleguide only: shows the keyboard focus treatment without needing keyboard focus. */
+.force-focus { outline: 2px solid var(--ring); outline-offset: 2px; }

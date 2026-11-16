@@ -24,7 +24,7 @@ function parseInline(text: string): React.ReactNode[] {
         </a>
       );
     } else if (tok.startsWith("`")) {
-      out.push(<code key={m.index} className="px-1 py-0.5 rounded bg-stone-100 dark:bg-white/10 font-mono text-[0.85em]">{tok.slice(1, -1)}</code>);
+      out.push(<code key={m.index} className="rounded-sm bg-muted px-1 font-mono text-xs">{tok.slice(1, -1)}</code>);
     } else if (tok.startsWith("***")) {
       out.push(<strong key={m.index}><em>{tok.slice(3, -3)}</em></strong>);
     } else if (tok.startsWith("**")) {
@@ -92,7 +92,7 @@ export function MarkdownContent({ text, className }: Props) {
       }
       i++; // closing ```
       nodes.push(
-        <pre key={key++} className="my-2 p-3 rounded-lg bg-stone-100 dark:bg-white/10 overflow-x-auto text-xs font-mono leading-relaxed">
+        <pre key={key++} className="my-2 overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs">
           <code>{codeLines.join("\n")}</code>
         </pre>
       );
@@ -101,7 +101,7 @@ export function MarkdownContent({ text, className }: Props) {
 
     // Horizontal rule
     if (/^---+$/.test(line.trim())) {
-      nodes.push(<hr key={key++} className="my-2 border-stone-200 dark:border-white/20" />);
+      nodes.push(<hr key={key++} className="my-2 border-border" />);
       i++;
       continue;
     }
@@ -111,11 +111,11 @@ export function MarkdownContent({ text, className }: Props) {
     if (hMatch) {
       const level = hMatch[1].length;
       const cls = level === 1
-        ? "text-base font-bold mt-3 mb-1 text-gray-900 dark:text-white"
+        ? "mt-3 mb-1 text-base font-semibold text-foreground"
         : level === 2
-        ? "text-sm font-bold mt-2.5 mb-1 text-gray-800 dark:text-gray-100"
-        : "text-sm font-semibold mt-2 mb-0.5 text-gray-700 dark:text-gray-200";
-      const Tag = (`h${level}`) as "h1" | "h2" | "h3";
+        ? "mt-2 mb-1 text-sm font-semibold text-foreground"
+        : "mt-2 mb-1 text-sm font-medium text-foreground";
+      const Tag = (`h${level + 2}`) as "h3" | "h4" | "h5";
       nodes.push(<Tag key={key++} className={cls}><InlineParsed text={hMatch[2]} /></Tag>);
       i++;
       continue;
@@ -140,7 +140,7 @@ export function MarkdownContent({ text, className }: Props) {
             <thead>
               <tr>
                 {headerCells.map((cell, idx) => (
-                  <th key={idx} className="text-left font-semibold px-2 py-1 border-b border-stone-300 dark:border-white/20 whitespace-nowrap">
+                  <th key={idx} className="text-left font-semibold px-2 py-1 border-b border-border whitespace-nowrap">
                     <InlineParsed text={cell} />
                   </th>
                 ))}
@@ -150,7 +150,7 @@ export function MarkdownContent({ text, className }: Props) {
               {bodyRows.map((row, rIdx) => (
                 <tr key={rIdx}>
                   {row.map((cell, cIdx) => (
-                    <td key={cIdx} className="px-2 py-1 border-b border-stone-100 dark:border-white/10 align-top">
+                    <td key={cIdx} className="px-2 py-1 border-b border-border align-top">
                       <InlineParsed text={cell} />
                     </td>
                   ))}
@@ -168,7 +168,7 @@ export function MarkdownContent({ text, className }: Props) {
       const { items, nextIndex } = collectListItems(lines, i, /^[-*]\s/, /^[-*]\s+/);
       i = nextIndex;
       nodes.push(
-        <ul key={key++} className="my-1.5 ml-4 space-y-0.5 list-disc list-outside">
+        <ul key={key++} className="my-2 ml-4 flex list-disc flex-col gap-1">
           {items.map((it, idx) => (
             <li key={idx} className="text-sm leading-relaxed">
               <InlineParsed text={it} />
@@ -184,7 +184,7 @@ export function MarkdownContent({ text, className }: Props) {
       const { items, nextIndex } = collectListItems(lines, i, /^\d+\.\s/, /^\d+\.\s+/);
       i = nextIndex;
       nodes.push(
-        <ol key={key++} className="my-1.5 ml-4 space-y-0.5 list-decimal list-outside">
+        <ol key={key++} className="my-2 ml-4 flex list-decimal flex-col gap-1">
           {items.map((it, idx) => (
             <li key={idx} className="text-sm leading-relaxed">
               <InlineParsed text={it} />
@@ -207,7 +207,7 @@ export function MarkdownContent({ text, className }: Props) {
 
     // Paragraph / plain text
     nodes.push(
-      <p key={key++} className="text-sm leading-relaxed">
+      <p key={key++} className="text-sm leading-relaxed break-words">
         <InlineParsed text={line} />
       </p>
     );

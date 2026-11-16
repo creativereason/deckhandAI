@@ -1,7 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioItem } from "@/components/ui/radio-group";
+import { Code, Notice, SaveBar, SettingsLoading, SettingsSection, SettingsStack } from "@/components/settings/SettingsSection";
+import { CheckCircle2, CircleAlert } from "lucide-react";
 import type { AppConfig, AiConfig } from "@/lib/config";
 import type { AiSettingsView } from "@/lib/ai-settings";
 
@@ -10,30 +14,18 @@ const NO_LOCKS: AiSettingsView["envLocked"] = { provider: false, model: false, b
 
 function EnvLockNotice({ names }: { names: string[] }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground space-y-1">
-      <p>
-        Set by environment variable ({names.map((n, i) => (
-          <span key={n}>{i > 0 && ", "}<code className="bg-muted px-1 rounded">{n}</code></span>
-        ))}), so it can&apos;t be changed here. The value shown is what the app is using.
-      </p>
-      <p>
-        To manage it in Settings instead, remove {names.length > 1 ? "those lines" : "that line"} from{" "}
-        <code className="bg-muted px-1 rounded">.env.local</code> (or from your Vercel project&apos;s Environment Variables),
-        then restart the dev server or redeploy.
-      </p>
-    </div>
+    <Notice>
+      <p>Set by environment variable ({names.map((n, i) => <span key={n}>{i > 0 && ", "}<Code>{n}</Code></span>)}), so it can&apos;t be changed here. The value shown is what the app is using.</p>
+      <p>To manage it in Settings instead, remove {names.length > 1 ? "those lines" : "that line"} from <Code>.env.local</Code> (or from your Vercel project&apos;s Environment Variables), then restart the dev server or redeploy.</p>
+    </Notice>
   );
 }
-
-const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
-const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
-const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 const PROVIDERS: { value: AiConfig["provider"]; label: string; defaultModel: string; baseUrl?: string }[] = [
   { value: "anthropic", label: "Anthropic (Claude)", defaultModel: "claude-sonnet-4-6" },
   { value: "openai", label: "OpenAI", defaultModel: "gpt-4o" },
   { value: "gemini", label: "Google Gemini (free tier available)", defaultModel: "gemini-2.0-flash", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" },
-  { value: "grok", label: "Grok (xAI) ✓ tested", defaultModel: "grok-4.3", baseUrl: "https://api.x.ai/v1" },
+  { value: "grok", label: "Grok (xAI), tested", defaultModel: "grok-4.3", baseUrl: "https://api.x.ai/v1" },
   { value: "ollama", label: "Ollama (local, free)", defaultModel: "llama3", baseUrl: "http://localhost:11434/v1" },
   { value: "custom", label: "Custom OpenAI-compatible endpoint", defaultModel: "" },
 ];
@@ -105,9 +97,7 @@ export default function ModelSettings() {
     }
   }
 
-  if (loading) {
-    return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
-  }
+  if (loading) return <SettingsLoading />;
 
   const showBaseUrl = NEEDS_BASE_URL.includes(ai.provider);
 
@@ -142,120 +132,51 @@ export default function ModelSettings() {
   const currentProviderDocs = providerDocs[activeProvider];
 
   return (
-    <div className="space-y-6">
+    <SettingsStack>
       {!aiKeyConfigured && ai.provider !== "ollama" && (
-        <div className="rounded-xl border border-tone-warning/30 bg-tone-warning/10 px-5 py-4 space-y-2">
-          <p className="text-sm font-semibold text-tone-warning">
-            AI generation isn&apos;t configured yet
-          </p>
-          <p className="text-sm text-tone-warning">
-            To enable cover letter and resume generation, add your API key as{" "}
-            <code className="text-xs bg-tone-warning/15 px-1.5 py-0.5 rounded">AI_API_KEY</code>{" "}
-            in your environment variables.
-          </p>
-          <ul className="text-sm text-tone-warning space-y-1 list-disc list-inside">
-            <li>
-              <strong>Local:</strong> add <code className="text-xs bg-tone-warning/15 px-1.5 py-0.5 rounded">AI_API_KEY=your-key</code> to{" "}
-              <code className="text-xs bg-tone-warning/15 px-1.5 py-0.5 rounded">.env.local</code>, then restart the dev server
-            </li>
-            <li>
-              <strong>Vercel:</strong> add <code className="text-xs bg-tone-warning/15 px-1.5 py-0.5 rounded">AI_API_KEY</code> in your project&apos;s Environment Variables settings, then redeploy
-            </li>
+        <Notice tone="warning" title="AI generation isn't configured yet">
+          <p>To enable cover letter and resume generation, add your API key as <Code>AI_API_KEY</Code> in your environment variables.</p>
+          <ul className="flex list-disc flex-col gap-1 pl-4">
+            <li><strong className="font-semibold">Local:</strong> add <Code>AI_API_KEY=your-key</Code> to <Code>.env.local</Code>, then restart the dev server</li>
+            <li><strong className="font-semibold">Vercel:</strong> add <Code>AI_API_KEY</Code> in your project&apos;s Environment Variables settings, then redeploy</li>
           </ul>
           {currentProviderDocs && (
-            <p className="text-xs text-tone-warning">
-              {currentProviderDocs.url ? (
-                <>Get your key at <a href={currentProviderDocs.url} target="_blank" rel="noreferrer" className="underline">{currentProviderDocs.label}</a>.</>
-              ) : (
-                currentProviderDocs.note
-              )}
-              {currentProviderDocs.url && currentProviderDocs.note && (
-                <> {currentProviderDocs.note}</>
-              )}
+            <p>
+              {currentProviderDocs.url ? <>Get your key at <a href={currentProviderDocs.url} target="_blank" rel="noreferrer" className="underline">{currentProviderDocs.label}<span className="sr-only"> (opens in a new tab)</span></a>.</> : currentProviderDocs.note}
+              {currentProviderDocs.url && currentProviderDocs.note && <> {currentProviderDocs.note}</>}
             </p>
           )}
-        </div>
+        </Notice>
       )}
 
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
-          AI provider
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Used for cover letter and resume generation. Bring your own model and API key.
-        </p>
+      <SettingsSection title="AI provider" description="Used for cover letter and resume generation. Bring your own model and API key.">
         {locked.provider && <EnvLockNotice names={lockedNames(["provider"])} />}
-        <div className="space-y-3">
-          {PROVIDERS.map((p) => (
-            <label key={p.value} className={`flex items-start gap-3 ${locked.provider ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-              <input
-                type="radio"
-                name="provider"
-                value={p.value}
-                checked={ai.provider === p.value}
-                disabled={locked.provider}
-                onChange={() => handleProviderChange(p.value)}
-                className="mt-0.5 accent-primary"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">{p.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+        <RadioGroup aria-label="AI provider" value={ai.provider ?? ""} onValueChange={(v) => handleProviderChange(v as AiConfig["provider"])} disabled={locked.provider}>
+          {PROVIDERS.map((p) => <RadioItem key={p.value} value={p.value} label={p.label} disabled={locked.provider} />)}
+        </RadioGroup>
+      </SettingsSection>
 
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
-          Model
-        </h2>
+      <SettingsSection title="Model">
         {(locked.model || locked.base_url) && <EnvLockNotice names={lockedNames(["model", "base_url"])} />}
-        <div>
-          <label className={LABEL}>Model name</label>
-          <input
-            className={`${INPUT} disabled:opacity-60 disabled:cursor-not-allowed`}
-            disabled={locked.model}
-            placeholder={PROVIDERS.find((p) => p.value === ai.provider)?.defaultModel ?? ""}
-            value={ai.model ?? ""}
-            onChange={(e) => updateAi({ model: e.target.value })}
-          />
-        </div>
+        <Field label="Model name">
+          {(f) => <Input {...f} disabled={locked.model} placeholder={PROVIDERS.find((p) => p.value === ai.provider)?.defaultModel ?? ""} value={ai.model ?? ""} onChange={(e) => updateAi({ model: e.target.value })} />}
+        </Field>
         {showBaseUrl && (
-          <div>
-            <label className={LABEL}>Base URL</label>
-            <input
-              className={`${INPUT} disabled:opacity-60 disabled:cursor-not-allowed`}
-              disabled={locked.base_url}
-              placeholder={PROVIDERS.find((p) => p.value === ai.provider)?.baseUrl ?? "https://your-endpoint.example.com/v1"}
-              value={ai.base_url ?? ""}
-              onChange={(e) => updateAi({ base_url: e.target.value })}
-            />
-          </div>
+          <Field label="Base URL">
+            {(f) => <Input {...f} disabled={locked.base_url} placeholder={PROVIDERS.find((p) => p.value === ai.provider)?.baseUrl ?? "https://your-endpoint.example.com/v1"} value={ai.base_url ?? ""} onChange={(e) => updateAi({ base_url: e.target.value })} />}
+          </Field>
         )}
-      </div>
+      </SettingsSection>
 
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
-          API key
-        </h2>
-        <div className="flex items-center gap-2">
-          <span className={`inline-block w-2 h-2 rounded-full ${aiKeyConfigured || ai.provider === "ollama" ? "bg-tone-success" : "bg-tone-warning"}`} />
-          <span className="text-sm text-gray-600 dark:text-gray-300">
-            {ai.provider === "ollama"
-              ? "Ollama does not require an API key."
-              : aiKeyConfigured
-              ? "API key is configured."
-              : "API key is not set."}
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Keys are set via environment variable (<code className="bg-muted px-1 rounded">AI_API_KEY</code>) and never stored in config — they stay server-side only.
+      <SettingsSection title="API key">
+        <p className="flex items-center gap-2 text-sm">
+          {aiKeyConfigured || ai.provider === "ollama" ? <CheckCircle2 className="size-4 text-success" aria-hidden /> : <CircleAlert className="size-4 text-warning" aria-hidden />}
+          {ai.provider === "ollama" ? "Ollama does not require an API key." : aiKeyConfigured ? "API key is configured." : "API key is not set."}
         </p>
-      </div>
+        <p className="text-xs text-muted-foreground">Keys are set via environment variable (<Code>AI_API_KEY</Code>) and never stored in config. They stay server-side only.</p>
+      </SettingsSection>
 
-      <div className="flex justify-end">
-        <Button onClick={save} loading={saving} size="lg" className="px-6">
-          Save model settings
-        </Button>
-      </div>
-    </div>
+      <SaveBar onSave={save} saving={saving}>Save model settings</SaveBar>
+    </SettingsStack>
   );
 }

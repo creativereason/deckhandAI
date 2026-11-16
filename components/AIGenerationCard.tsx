@@ -2,6 +2,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Field } from "@/components/ui/field";
+import { RadioGroup, RadioItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles } from "lucide-react";
 import type { GenerationType } from "@/lib/prompts";
 import type { TailoredResume } from "@/app/api/tailor-resume/route";
 import { resumeFilenameSlug } from "@/lib/resume-format";
@@ -33,27 +38,21 @@ const TYPE_OPTIONS: { value: ModalTab; label: string; description: string }[] = 
 ];
 
 function DiffSection({ label, original, tailored, bullets }: { label: string; original: string[]; tailored: string[]; bullets?: boolean }) {
-  const listCls = bullets ? "space-y-1 list-disc pl-4" : "space-y-1";
+  const listCls = bullets ? "flex list-disc flex-col gap-1 pl-4" : "flex flex-col gap-1";
   return (
-    <div className="rounded-xl border border-border overflow-hidden">
-      <div className="px-3 py-1.5 bg-muted">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{label}</span>
-      </div>
-      <div className="grid grid-cols-2 divide-x divide-border">
-        <div className="p-3 bg-destructive/5">
-          <p className="text-[10px] font-semibold text-destructive uppercase tracking-widest mb-1.5">Before</p>
+    <div className="overflow-hidden rounded-lg border border-border">
+      <h4 className="bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">{label}</h4>
+      <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        <div className="bg-destructive-subtle p-3">
+          <p className="mb-2 text-xs font-semibold text-destructive-subtle-foreground">Before</p>
           <ul className={listCls}>
-            {original.length ? original.map((b, i) => (
-              <li key={i} className="text-xs text-muted-foreground leading-relaxed">{b}</li>
-            )) : <li className="text-xs text-muted-foreground italic list-none">—</li>}
+            {original.length ? original.map((b, i) => <li key={i} className="text-sm text-destructive-subtle-foreground">{b}</li>) : <li className="list-none text-sm text-muted-foreground">—</li>}
           </ul>
         </div>
-        <div className="p-3 bg-tone-success/5">
-          <p className="text-[10px] font-semibold text-tone-success uppercase tracking-widest mb-1.5">After</p>
+        <div className="bg-success-subtle p-3">
+          <p className="mb-2 text-xs font-semibold text-success-subtle-foreground">After</p>
           <ul className={listCls}>
-            {tailored.length ? tailored.map((b, i) => (
-              <li key={i} className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{b}</li>
-            )) : <li className="text-xs text-muted-foreground italic list-none">—</li>}
+            {tailored.length ? tailored.map((b, i) => <li key={i} className="text-sm text-success-subtle-foreground">{b}</li>) : <li className="list-none text-sm text-muted-foreground">—</li>}
           </ul>
         </div>
       </div>
@@ -302,238 +301,102 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
 
   if (!hasProfile) return null;
 
+  const choose = (value: ModalTab) => { setType(value); setOutput(""); setDone(false); setTailored(null); setError(""); };
+  const errorBox = <p role="alert" className="rounded-md bg-destructive-subtle p-3 text-sm font-medium text-destructive-subtle-foreground">{error}</p>;
+
   return (
-    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-      {/* Card header */}
-      <div className="px-6 py-4 border-b border-border">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">AI Generation</p>
+    <Card padding="none" className="gap-0 overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-border p-4">
+        <span className="flex size-8 items-center justify-center rounded-md bg-ai-subtle text-ai-subtle-foreground"><Sparkles className="size-4" aria-hidden /></span>
+        <CardTitle as="h2">Generate with AI</CardTitle>
       </div>
 
-      {/* Type selector */}
-      <div className="px-6 pt-4 pb-3">
-        <div className="flex gap-3">
-          {TYPE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => { setType(opt.value); setOutput(""); setDone(false); setTailored(null); setError(""); }}
-              disabled={streaming}
-              className={`flex-1 rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-50 ${
-                type === opt.value
-                  ? "border-primary bg-muted"
-                  : "border-border hover:border-ring/50"
-              }`}
-            >
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{opt.label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{opt.description}</p>
-            </button>
-          ))}
-        </div>
-      </div>
+      <CardContent className="gap-4 p-4">
+        <RadioGroup aria-label="What to generate" value={type} onValueChange={(v) => choose(v as ModalTab)} className="grid gap-3 sm:grid-cols-3">
+          {TYPE_OPTIONS.map((opt) => <RadioItem key={opt.value} value={opt.value} label={opt.label} description={opt.description} disabled={streaming} />)}
+        </RadioGroup>
 
-      {/* Angle field */}
-      {type !== "tailor-resume" && (
-        <div className="px-6 pb-3">
-          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
-            Angle or emphasis <span className="font-normal normal-case tracking-normal">(optional)</span>
-          </label>
-          <textarea
-            rows={2}
-            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-            placeholder="e.g. Emphasize design systems leadership and the Copilot agent work"
-            value={angle}
-            onChange={(e) => setAngle(e.target.value)}
-            disabled={streaming}
-          />
-        </div>
-      )}
+        {type !== "tailor-resume" && (
+          <Field label="Angle or emphasis" optional>
+            {(p) => <Textarea {...p} rows={2} className="min-h-16" placeholder="e.g. Emphasize design systems leadership and the Copilot agent work" value={angle} onChange={(e) => setAngle(e.target.value)} disabled={streaming} />}
+          </Field>
+        )}
 
-      {/* Job URL note */}
-      {url && (
-        <p className="px-6 pb-3 flex gap-1 min-w-0 text-xs text-muted-foreground">
-          <span className="shrink-0">JD:</span>
-          <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-foreground truncate min-w-0">{url}</a>
-        </p>
-      )}
+        {url && (
+          <p className="flex min-w-0 gap-1 text-xs text-muted-foreground">
+            <span className="shrink-0">Job description:</span>
+            <a href={url} target="_blank" rel="noreferrer" className="min-w-0 truncate underline hover:text-foreground">{url}</a>
+          </p>
+        )}
 
-      {/* Output — tailor-resume diff view */}
-      {type === "tailor-resume" && (tailoring || tailored || error) && (
-        <div className="px-6 pb-4 space-y-3">
-          {error ? (
-            <p className="text-sm text-destructive p-3 bg-destructive/10 rounded-xl">{error}</p>
-          ) : tailoring ? (
-            <div className="flex items-center justify-center py-8 gap-3 text-sm text-muted-foreground">
-              <span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin" />
-              Tailoring resume for {company}…
-            </div>
-          ) : tailored && (
-            <div className="space-y-3">
-              {(originalProfile?.title || tailored.title) && (
-                <DiffSection
-                  label="Title"
-                  original={originalProfile?.title ? [originalProfile.title] : []}
-                  tailored={[tailored.title]}
-                />
-              )}
-              {(originalProfile?.profileBullets?.length || tailored.profileBullets?.length) ? (
-                <DiffSection
-                  label="Profile"
-                  original={originalProfile?.profileBullets ?? []}
-                  tailored={tailored.profileBullets ?? []}
-                  bullets
-                />
-              ) : null}
-              {tailored.experience.map((exp) => {
-                const orig = originalProfile?.experience?.find(
-                  (e) => e.company === exp.company && e.role === exp.role
-                );
-                return (
-                  <DiffSection
-                    key={`${exp.company}::${exp.role}`}
-                    label={`${exp.role} · ${exp.company}`}
-                    original={orig?.bullets ?? []}
-                    tailored={exp.bullets}
-                    bullets
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+        {type === "tailor-resume" && (tailoring || tailored || error) && (
+          <div className="flex flex-col gap-3">
+            {error ? errorBox : tailoring ? (
+              <div role="status" className="flex items-center justify-center gap-3 py-8 text-sm text-muted-foreground">
+                <Sparkles className="size-4 animate-pulse text-ai" aria-hidden />Tailoring resume for {company}…
+              </div>
+            ) : tailored && (
+              <div className="flex flex-col gap-3">
+                {(originalProfile?.title || tailored.title) && <DiffSection label="Title" original={originalProfile?.title ? [originalProfile.title] : []} tailored={[tailored.title]} />}
+                {(originalProfile?.profileBullets?.length || tailored.profileBullets?.length) ? <DiffSection label="Profile" original={originalProfile?.profileBullets ?? []} tailored={tailored.profileBullets ?? []} bullets /> : null}
+                {tailored.experience.map((exp) => {
+                  const orig = originalProfile?.experience?.find((e) => e.company === exp.company && e.role === exp.role);
+                  return <DiffSection key={`${exp.company}::${exp.role}`} label={`${exp.role} · ${exp.company}`} original={orig?.bullets ?? []} tailored={exp.bullets} bullets />;
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* Output — standard textarea */}
-      {type !== "tailor-resume" && (hasOutput || (error && !tailoring)) && (
-        <div className="px-6 pb-4">
-          {error ? (
-            <p className="text-sm text-destructive p-3 bg-destructive/10 rounded-xl">{error}</p>
-          ) : (
-            <textarea
-              ref={outputRef}
-              className="w-full min-h-[220px] border border-border rounded-xl px-4 py-3 text-sm bg-muted dark:text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono leading-relaxed"
-              value={output}
-              onChange={(e) => setOutput(e.target.value)}
-              spellCheck
-            />
-          )}
-        </div>
-      )}
+        {type !== "tailor-resume" && (hasOutput || (error && !tailoring)) && (
+          error ? errorBox : (
+            <Field label="Draft">
+              {(p) => <Textarea {...p} ref={outputRef} className="min-h-56 bg-muted font-mono" value={output} onChange={(e) => setOutput(e.target.value)} spellCheck />}
+            </Field>
+          )
+        )}
+      </CardContent>
 
-      {/* Footer actions */}
-      <div className="px-6 py-3 border-t border-border flex flex-wrap items-center justify-between gap-2">
-        {/* Left: export actions */}
-        <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border p-4">
+        <div className="flex flex-wrap gap-2">
           {type === "tailor-resume" ? (
             tailored && (
               <>
-                <Button
-                  onClick={exportTailoredResume}
-                  disabled={!!exporting}
-                  loading={exporting === "tailored-resume"}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                >
-                  Download tailored resume .docx
-                </Button>
-                {stylePdfEnabled && (
-                  <Button
-                    onClick={exportTailoredResumePdf}
-                    disabled={!!exporting}
-                    loading={exporting === "tailored-resume-pdf"}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                  >
-                    Download tailored resume .pdf
-                  </Button>
-                )}
+                <Button onClick={exportTailoredResume} disabled={!!exporting} loading={exporting === "tailored-resume"} variant="outline" size="sm">Download tailored resume .docx</Button>
+                {stylePdfEnabled && <Button onClick={exportTailoredResumePdf} disabled={!!exporting} loading={exporting === "tailored-resume-pdf"} variant="outline" size="sm">Download tailored resume .pdf</Button>}
               </>
             )
           ) : (
             <>
               {hasOutput && done && (
                 <>
-                  <Button onClick={copyToClipboard} variant="outline" size="sm" className="text-xs">
-                    Copy
-                  </Button>
-                  <Button onClick={downloadTxt} variant="outline" size="sm" className="text-xs">
-                    .txt
-                  </Button>
-                  <Button onClick={printPdf} variant="outline" size="sm" className="text-xs">
-                    Print / PDF
-                  </Button>
-                  {type === "cover-letter" && (
-                    <Button
-                      onClick={exportCoverLetterDocx}
-                      disabled={!!exporting}
-                      loading={exporting === "cover-letter-docx"}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      Cover letter .docx
-                    </Button>
-                  )}
+                  <Button onClick={copyToClipboard} variant="outline" size="sm">Copy</Button>
+                  <Button onClick={downloadTxt} variant="outline" size="sm">.txt</Button>
+                  <Button onClick={printPdf} variant="outline" size="sm">Print / PDF</Button>
+                  {type === "cover-letter" && <Button onClick={exportCoverLetterDocx} disabled={!!exporting} loading={exporting === "cover-letter-docx"} variant="outline" size="sm">Cover letter .docx</Button>}
                 </>
               )}
-              <Button
-                onClick={exportResumeDocx}
-                disabled={!!exporting}
-                loading={exporting === "resume-docx"}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-              >
-                Resume .docx
-              </Button>
-              {stylePdfEnabled && (
-                <Button
-                  onClick={exportResumePdf}
-                  disabled={!!exporting}
-                  loading={exporting === "resume-pdf"}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                >
-                  Resume .pdf
-                </Button>
-              )}
+              <Button onClick={exportResumeDocx} disabled={!!exporting} loading={exporting === "resume-docx"} variant="outline" size="sm">Resume .docx</Button>
+              {stylePdfEnabled && <Button onClick={exportResumePdf} disabled={!!exporting} loading={exporting === "resume-pdf"} variant="outline" size="sm">Resume .pdf</Button>}
             </>
           )}
         </div>
 
-        {/* Right: generate button */}
         <div className="flex gap-2">
           {type === "tailor-resume" ? (
             <>
-              {tailored && !tailoring && (
-                <Button onClick={() => { setTailored(null); tailorResume(); }} variant="outline">
-                  Re-tailor
-                </Button>
-              )}
-              <Button onClick={tailorResume} disabled={!!tailored} loading={tailoring} size="lg" className="px-5">
-                {tailoring ? "Tailoring…" : tailored ? "Tailored ✓" : "Tailor"}
-              </Button>
+              {tailored && !tailoring && <Button onClick={() => { setTailored(null); tailorResume(); }} variant="outline">Re-tailor</Button>}
+              <Button onClick={tailorResume} disabled={!!tailored} loading={tailoring} variant="ai">{tailoring ? "Tailoring…" : tailored ? "Tailored" : "Tailor"}</Button>
             </>
           ) : (
             <>
-              {streaming && (
-                <Button onClick={stop} variant="ghost" className="hover:text-destructive">
-                  Stop
-                </Button>
-              )}
-              {!streaming && hasOutput && (
-                <Button onClick={() => { setOutput(""); setDone(false); generate(); }} variant="outline">
-                  Regenerate
-                </Button>
-              )}
-              <Button onClick={generate} loading={streaming} size="lg" className="px-5">
-                {streaming ? "Generating…" : hasOutput ? "Generate again" : "Generate"}
-              </Button>
+              {streaming && <Button onClick={stop} variant="ghost">Stop</Button>}
+              {!streaming && hasOutput && <Button onClick={() => { setOutput(""); setDone(false); generate(); }} variant="outline">Regenerate</Button>}
+              <Button onClick={generate} loading={streaming} variant="ai">{streaming ? "Generating…" : hasOutput ? "Generate again" : "Generate"}</Button>
             </>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
