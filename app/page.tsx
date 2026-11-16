@@ -39,6 +39,12 @@ import ChatDrawer from "@/components/ChatDrawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import AppliedStatusFilter from "@/components/AppliedStatusFilter";
+import AssistantOverlay from "@/components/AssistantOverlay";
+import BoardLayoutSwitch from "@/components/BoardLayoutSwitch";
+import PipelineBoard from "@/components/PipelineBoard";
+import { parseBoardLayout, type BoardLayout } from "@/lib/board-layout";
+import { buildPipeline, moveAction, type MoveTarget, type PipelineCard } from "@/lib/pipeline";
+import { applyMove } from "@/lib/pipeline-client";
 import { DEFAULT_HIDDEN_STATUSES, filterByStatus, parseHiddenStatuses, statusCounts, toggleStatus } from "@/lib/applied-status-filter";
 import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job-badges";
 
@@ -603,6 +609,7 @@ export default function Home() {
   const [generating, setGenerating] = useState<{ company: string; role: string; url?: string } | null>(null);
   const [modelLabel, setModelLabel] = useState<string>("");
   const [hasProfile, setHasProfile] = useState(false);
+  const [layout, setLayout] = useState<BoardLayout>("list");
   const [openSections, setOpenSections] = useState<string[]>(["applied", "prospect", "passed"]);
   const [visibleSections, setVisibleSections] = useState<Set<ToggleableSection>>(
     new Set(["applied", "prospect", "passed"])
@@ -623,10 +630,11 @@ export default function Home() {
     const raw = localStorage.getItem(BOARD_FILTERS_STORAGE_KEY);
     if (raw) {
       try {
-        const saved = JSON.parse(raw) as { fitFilter?: FitFilter; visibleSections?: ToggleableSection[]; hiddenStatuses?: unknown };
+        const saved = JSON.parse(raw) as { fitFilter?: FitFilter; visibleSections?: ToggleableSection[]; hiddenStatuses?: unknown; layout?: unknown };
         // eslint-disable-next-line react-hooks/set-state-in-effect
         if (saved.fitFilter) setFitFilter(saved.fitFilter);
         if (saved.visibleSections) setVisibleSections(new Set(saved.visibleSections));
+        setLayout(parseBoardLayout(saved.layout));
         if (saved.hiddenStatuses !== undefined) setHiddenStatuses(new Set(parseHiddenStatuses(saved.hiddenStatuses)));
       } catch {
         // ignore malformed storage from a prior schema
@@ -639,9 +647,9 @@ export default function Home() {
     if (!filtersHydrated) return;
     localStorage.setItem(
       BOARD_FILTERS_STORAGE_KEY,
-      JSON.stringify({ fitFilter, visibleSections: Array.from(visibleSections), hiddenStatuses: Array.from(hiddenStatuses) })
+      JSON.stringify({ fitFilter, visibleSections: Array.from(visibleSections), hiddenStatuses: Array.from(hiddenStatuses), layout })
     );
-  }, [filtersHydrated, fitFilter, visibleSections, hiddenStatuses]);
+  }, [filtersHydrated, fitFilter, visibleSections, hiddenStatuses, layout]);
 
   const load = useCallback(async () => {
     const [jobsRes, configRes, profileRes] = await Promise.all([
@@ -671,6 +679,12 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: job.id, section: fromSection, company: job.company, role: job.role, targetSection: toSection }),
     });
+    load();
+  }
+
+  async function moveCard(card: PipelineCard, to: MoveTarget) {
+    const result = await applyMove(card, moveAction(card, to));
+    if (!result.ok) toast.error(`Move failed: ${result.message}`);
     load();
   }
 
@@ -768,6 +782,12 @@ export default function Home() {
   const filteredApplied = filterByStatus(jobs.applied, hiddenStatuses).filter(matchesSearch);
   const filteredPassed = jobs.passed.filter(matchesSearch);
 
+  const fullWidth = view === "inbox" || layout === "pipeline";
+  const pipelineColumns = buildPipeline(
+    { prospects: filteredProspects, applied: jobs.applied.filter(matchesSearch) },
+    hiddenStatuses,
+  );
+
   const totalNew = allProspects.filter((j) => j.isNew).length;
   const totalProspects = allProspects.length;
 
@@ -829,17 +849,17 @@ export default function Home() {
         />
 
         {/* Board (2/3) + Deckhand assistant (1/3); the inbox is full width and places the assistant itself */}
-        <div className={view === "inbox" ? "space-y-4" : "grid grid-cols-1 md:grid-cols-3 gap-4 items-start"}>
+        <div className={fullWidth ? "space-y-4" : "grid grid-cols-1 md:grid-cols-3 gap-4 items-start"}>
 
           {/* Deckhand assistant — stacked on top on mobile, right rail (sticky) from md up */}
-          {view !== "inbox" && (
+          {!fullWidth && (
             <div className="order-1 md:order-2 md:col-span-1 md:sticky md:top-4 min-w-0">
               <ChatDrawer onJobsChanged={load} />
             </div>
           )}
 
           {/* Board */}
-          <div className={view === "inbox" ? "space-y-4" : "order-2 md:order-1 md:col-span-2 space-y-4"}>
+          <div className={fullWidth ? "space-y-4" : "order-2 md:order-1 md:col-span-2 space-y-4"}>
 
             <BoardViewSwitch view={view} pendingCount={(jobs.pending ?? []).length} onChange={setView} />
 
@@ -858,7 +878,8 @@ export default function Home() {
               <>
             {/* Filter bar */}
             <div className="bg-card rounded-xl border border-border shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
-              <SectionVisibilityBar visible={visibleSections} onToggle={toggleSectionVisibility} />
+              <BoardLayoutSwitch layout={layout} onChange={setLayout} />
+              {layout === "list" && <SectionVisibilityBar visible={visibleSections} onToggle={toggleSectionVisibility} />}
               <div className="ml-auto shrink-0 relative">
                 <input
                   type="text"
@@ -884,8 +905,24 @@ export default function Home() {
               </div>
             </div>
 
+            {layout === "pipeline" && (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <FitFilterBar active={fitFilter} onChange={setFitFilter} />
+                  <AppliedStatusFilter counts={statusCounts(jobs.applied)} hidden={hiddenStatuses}
+                    onToggle={(status) => setHiddenStatuses((current) => toggleStatus(current, status))} />
+                </div>
+                <PipelineBoard
+                  columns={pipelineColumns}
+                  passedCount={jobs.passed.length}
+                  onMove={moveCard}
+                  onOpen={(card) => router.push(jobDetailHref({ id: card.id, company: card.company, role: card.role, section: card.section }))}
+                />
+              </>
+            )}
+
             {/* Accordion sections */}
-        <Accordion
+        {layout === "list" && <Accordion
           multiple
           value={openSections}
           onValueChange={(v) => setOpenSections(v as string[])}
@@ -963,12 +1000,13 @@ export default function Home() {
             </AccordionItem>
           )}
 
-        </Accordion>
+        </Accordion>}
               </>
             )}
 
           </div>
         </div>
+        {view === "board" && layout === "pipeline" && <AssistantOverlay><ChatDrawer onJobsChanged={load} /></AssistantOverlay>}
 
         {/* Footer */}
         <AppFooter />
