@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/states";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import type { PendingJob } from "@/lib/jobs";
+import type { JobsData, PendingJob } from "@/lib/jobs";
 import { inboxModeFromStorage, type InboxMode } from "@/lib/triage";
 
 const MODE_STORAGE_KEY = "inbox-mode";
 
-export default function InboxView({ pending, onUpdate, onBackToBoard }: { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void }) {
+export default function InboxView({ pending, onUpdate, onBackToBoard, board }: { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void; board?: JobsData }) {
   const [mode, setMode] = useState<InboxMode>("triage");
   const [startAt, setStartAt] = useState<PendingJob | undefined>();
 
@@ -51,7 +51,7 @@ export default function InboxView({ pending, onUpdate, onBackToBoard }: { pendin
     <div className="flex flex-col gap-4">
       <SegmentedControl<InboxMode> label="Inbox mode" value={mode} onChange={choose} options={[{ value: "triage", label: "Triage" }, { value: "list", label: "List" }]} className="self-start" />
       {mode === "triage"
-        ? <TriageView key={startAt ? `${startAt.id ?? startAt.company}|${startAt.role}` : "queue"} pending={pending} onUpdate={onUpdate} onBackToBoard={onBackToBoard} startAt={startAt} />
+        ? <TriageView key={startAt ? `${startAt.id ?? startAt.company}|${startAt.role}` : "queue"} pending={pending} onUpdate={onUpdate} onBackToBoard={onBackToBoard} startAt={startAt} board={board} />
         : <ScrapeReviewQueue pending={pending} onUpdate={onUpdate} onOpen={(job) => { setStartAt(job); setMode("triage"); }} />}
     </div>
   );

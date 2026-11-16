@@ -206,7 +206,7 @@ function BoardContent() {
       )}
 
       {view === "today" && <TodayView jobs={jobs} onOpenInbox={() => setView("inbox")} />}
-      {view === "inbox" && <InboxView pending={jobs.pending ?? []} onUpdate={announceJobsChanged} onBackToBoard={() => setView("board")} />}
+      {view === "inbox" && <InboxView pending={jobs.pending ?? []} onUpdate={announceJobsChanged} onBackToBoard={() => setView("board")} board={jobs} />}
 
       {view === "board" && (
         <div className="flex flex-col gap-4">
