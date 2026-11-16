@@ -21,7 +21,7 @@ Branch `redesign/ui-system`. Presentation layer only: no API routes, data models
 | `pnpm check:contrast` | all pairs pass, light and dark |
 | axe (`redesign/tools/axe.mjs`, 16 routes × 5 theme/width runs) | no serious or critical violations (one found and fixed: keyboard access to scrollable posting text) |
 | Workflow click-through (`redesign/tools/workflows.mjs`) | board, search, nav, triage, job detail, assistant, ask-from-card, settings routes pass; one real bug found (job page horizontal overflow at 390px) and fixed |
-| Screenshots | `redesign/before/` and `redesign/after/`, three widths plus 1280 dark |
+| Screenshots | `redesign/before/` (commit `d183a70`, pre-redesign) and `redesign/after/`, at 390 / 768 / 1440 plus 1440 dark |
 
 ## Decisions I made for you
 

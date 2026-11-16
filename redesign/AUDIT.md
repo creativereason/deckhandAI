@@ -1,7 +1,7 @@
 # Phase 0 audit
 
-Captured 2026-11-16 from the `feat/pipeline-board` code (plus the uncommitted logo work) in demo mode,
-persona "design". Screenshots: `redesign/before/` (every screen at 390 / 768 / 1280 light, 1280 dark).
+Captured 2026-11-16 from commit `d183a70` (the last commit before the redesign and the new logo, built in a separate worktree) in demo mode,
+persona "design". Screenshots: `redesign/before/` (every screen at 390 / 768 / 1440 light, 1440 dark). The Today and Styleguide screens did not exist then.
 Counts come from `redesign/tools/metrics.sh` and are re-run in Phase 3.
 
 ## Headline
@@ -90,7 +90,7 @@ Text sizes in use: `text-xs` 185, `text-sm` 169, `text-base` 12, `text-xl` 6, `t
 - A shared command or ask-AI entry point (the assistant is four things).
 - Tabs, tooltip, dropdown menu, popover, skeleton, progress, and avatar components.
 - Deleted-jobs view (Slice 19), link-health badge (Slice 25), activity feed (27c).
-- Dark-mode check for every screen: dark shots exist at 1280 only.
+- Dark-mode check for every screen: the "before" dark shots exist at 1440 only.
 
 ## Direction this points to
 
