@@ -41,8 +41,9 @@ function AIInsight({ label = "AI summary", children, className, action }: { labe
 }
 
 /** Frame for the assistant: header, scrolling body, composer. The chat logic lives in the screen that mounts it. */
-function AssistantPanel({ title = "Deckhand", subtitle, onClose, children, footer, className }: {
-  title?: string; subtitle?: string; onClose?: () => void; children: React.ReactNode; footer?: React.ReactNode; className?: string
+function AssistantPanel({ title = "Deckhand", subtitle, onClose, headerActions, bodyRef, children, footer, className }: {
+  title?: string; subtitle?: string; onClose?: () => void; headerActions?: React.ReactNode; bodyRef?: React.Ref<HTMLDivElement>
+  children: React.ReactNode; footer?: React.ReactNode; className?: string
 }) {
   return (
     <section aria-label={title} className={cn("flex h-full min-h-0 flex-col rounded-lg border border-border bg-card", className)}>
@@ -51,9 +52,12 @@ function AssistantPanel({ title = "Deckhand", subtitle, onClose, children, foote
           <span className="flex size-8 items-center justify-center rounded-md bg-ai-subtle text-ai-subtle-foreground"><Sparkles className="size-4" aria-hidden /></span>
           <div><h2 className="text-sm font-semibold">{title}</h2>{subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}</div>
         </div>
-        {onClose && <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>}
+        <div className="flex items-center gap-1">
+          {headerActions}
+          {onClose && <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>}
+        </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">{children}</div>
+      <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">{children}</div>
       {footer && <footer className="border-t border-border p-3">{footer}</footer>}
     </section>
   )

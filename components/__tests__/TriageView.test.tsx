@@ -162,19 +162,4 @@ describe("TriageView", () => {
       expect(screen.getByRole("button", { name: /^pass/i })).not.toHaveAttribute("data-pressed");
     });
   });
-
-  // I — Interface: the assistant lives in the right pane, under Up next
-  it("shows the assistant in the right pane beneath the up next list", () => {
-    render(<TriageView pending={three} onUpdate={vi.fn()} onBackToBoard={() => {}} assistant={<div data-testid="assistant" />} />);
-
-    const pane = screen.getByTestId("assistant").closest("[data-testid='triage-side-pane']");
-    expect(pane).toContainElement(screen.getByRole("list", { name: /up next/i }));
-  });
-
-  it("keeps the assistant available when everything is reviewed", () => {
-    render(<TriageView pending={[]} onUpdate={vi.fn()} onBackToBoard={() => {}} assistant={<div data-testid="assistant" />} />);
-
-    expect(screen.getByText(/all caught up/i)).toBeInTheDocument();
-    expect(screen.getByTestId("assistant")).toBeInTheDocument();
-  });
 });

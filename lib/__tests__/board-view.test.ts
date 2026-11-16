@@ -39,4 +39,9 @@ describe("boardViewSearch", () => {
     expect(boardViewSearch("inbox", "?q=design")).toBe("?q=design&view=inbox");
     expect(boardViewSearch("board", "?q=design&view=inbox")).toBe("?q=design");
   });
+
+  it("recognises the today view and keeps other parameters when switching to it", () => {
+    expect(parseBoardView("?view=today")).toBe("today");
+    expect(boardViewSearch("today", "?a=1")).toBe("?a=1&view=today");
+  });
 });

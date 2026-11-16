@@ -30,7 +30,7 @@ describe("PipelineBoard", () => {
     setup();
 
     const prospects = screen.getByRole("region", { name: "Prospects" });
-    for (const text of ["Acme", "Design Lead", "Leads a team.", "strong", "$150k"]) expect(within(prospects).getByText(text)).toBeInTheDocument();
+    for (const text of ["Acme", "Design Lead", "Leads a team.", "Strong fit", "$150k"]) expect(within(prospects).getByText(text)).toBeInTheDocument();
   });
 
   // M

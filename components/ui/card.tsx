@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
  * The one surface. `raised` lifts it, `interactive` is for whole-card links/buttons (hover + focus),
  * `ai` marks content the assistant wrote, `muted` is a quiet well inside another card.
  */
-const cardVariants = cva("flex flex-col rounded-lg border text-card-foreground", {
+const cardVariants = cva("flex flex-col gap-4 rounded-lg border text-card-foreground", {
   variants: {
     variant: {
       default: "border-border bg-card",
