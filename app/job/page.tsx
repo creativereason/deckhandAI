@@ -631,8 +631,8 @@ function JobDetailContent() {
         }
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-5">
-        <div className="flex flex-col gap-6 lg:col-span-3">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-5">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-3">
           {foundJob.aiSummary && <AIInsight label="AI summary">{foundJob.aiSummary}</AIInsight>}
 
           {editing ? (
@@ -658,7 +658,7 @@ function JobDetailContent() {
           <AIGenerationCard company={company} role={role} url={foundJob.url} hasProfile={hasProfile} />
         </div>
 
-        <div className="lg:sticky lg:top-20 lg:col-span-2">
+        <div className="min-w-0 lg:sticky lg:top-20 lg:col-span-2">
           <JobChat jobContext={jobContext} jobId={foundJob.id} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
         </div>
       </div>

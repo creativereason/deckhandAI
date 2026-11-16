@@ -121,7 +121,7 @@ function JobCard({ job, scoring }: { job: PendingJob; scoring: boolean }) {
       </div>
       {job.notes && (
         <Section label="From the posting">
-          <p className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{job.notes}</p>
+          <p tabIndex={0} role="region" aria-label="Posting text" className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{job.notes}</p>
         </Section>
       )}
       <div>
