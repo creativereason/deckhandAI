@@ -42,19 +42,33 @@ A self-hosted job search command center. Track prospects, scrape target company 
 
 ## Screenshots
 
-<img src="docs/screenshots/board-prospects-filtered--desktop.png" alt="Job tracker board, filtered to strong-fit prospects" width="820">
+<img src="docs/screenshots/board-pipeline--desktop.png" alt="Pipeline board with Prospects, Applied, Screening, Interview and Offer columns" width="820">
 
-*Prospects filtered to strong-fit roles — one board for everything from first look to final decision.*
+*The pipeline board — every role from first look to offer, with an Ask Deckhand button on each card.*
 
 <table>
 <tr>
 <td align="center" width="33%">
-<img src="docs/screenshots/job-detail-applied--desktop.png" alt="Job detail page" width="260"><br>
-Job detail
+<img src="docs/screenshots/today--desktop.png" alt="Today view with a briefing, a needs-you list, the pipeline funnel and the assistant panel" width="260"><br>
+Today, with the assistant docked
 </td>
 <td align="center" width="33%">
-<img src="docs/screenshots/chat-open--desktop.png" alt="AI chat assistant" width="260"><br>
-AI chat assistant
+<img src="docs/screenshots/inbox-triage--desktop.png" alt="Inbox triage, one job at a time with pass, skip and keep" width="260"><br>
+Inbox triage (P / S / K keys)
+</td>
+<td align="center" width="33%">
+<img src="docs/screenshots/job-detail--desktop.png" alt="Job detail with AI summary, notes, generation and a role-specific chat" width="260"><br>
+Job detail and AI generation
+</td>
+</tr>
+<tr>
+<td align="center" width="33%">
+<img src="docs/screenshots/board-pipeline-dark--desktop.png" alt="Pipeline board in dark mode" width="260"><br>
+Dark mode
+</td>
+<td align="center" width="33%">
+<img src="docs/screenshots/board-pipeline--mobile.png" alt="Pipeline board on a phone, one stage at a time" width="130"><br>
+On a phone
 </td>
 <td align="center" width="33%">
 <img src="docs/screenshots/onboarding-step1-filled--desktop.png" alt="Onboarding wizard" width="260"><br>
