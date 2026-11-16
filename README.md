@@ -1,10 +1,31 @@
 # deckhandAI
 
-A self-hosted job search command center. Track prospects, scrape target company career pages, and generate ATS-safe resumes and cover letters with any AI model — no vendor lock-in, no database, no monthly fee.
+A self-hosted job search command center. Track prospects, scrape target company career pages, and generate ATS-safe resumes and cover letters with any AI model — no vendor lock-in and no monthly fee. Your data lives in a private GitHub repo by default, or in your own Supabase project if you want a database and bot access.
 
 **[→ Product overview](https://creativereason.com/deckhandai/)** — features, screenshots, and context on why it exists.
 
 **[→ View live demo](https://deckhand-ai.vercel.app)** — interactive, no login required. It's a shared board seeded with sample data that resets nightly; scraping is disabled, everything else works.
+
+---
+
+## Contents
+
+- [What it does](#what-it-does)
+- [Screenshots](#screenshots)
+- [Quick start](#quick-start)
+- [Deploy to Vercel](#deploy-to-vercel)
+- [Sample data repo](#sample-data-repo)
+- [Configuration](#configuration)
+- [Profile (for AI generation)](#profile-for-ai-generation)
+- [Scraping](#scraping)
+- [Scheduled job searching](#scheduled-job-searching)
+- [AI features](#ai-features)
+- [Using Supabase instead of the GitHub data repo](#using-supabase-instead-of-the-github-data-repo)
+- [Bots and agents (Agent API and MCP)](#bots-and-agents-agent-api-and-mcp)
+- [Data privacy](#data-privacy)
+- [What's next](#whats-next)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -13,7 +34,9 @@ A self-hosted job search command center. Track prospects, scrape target company 
 - **Personal job tracker** — manage everything from first look to final decision; track prospects you're watching, applications in flight, and roles you've passed on, all in one private board
 - **Automated scraping** — Playwright-based scraper hits target career pages on a schedule via GitHub Actions
 - **AI throughout** — chat assistant, job fit scoring, ATS-safe resume tailoring, and cover letter generation; bring your own model (Anthropic, OpenAI, Ollama, or any OpenAI-compatible endpoint)
-- **Zero infrastructure** — data lives in flat JSON files in your own private GitHub repo; deploy the UI to Vercel for free
+- **Low infrastructure** — by default data lives in flat JSON files in your own private GitHub repo and the UI deploys to Vercel for free; optionally store it in Supabase (Postgres) instead
+- **Inbox and applied filters** — new finds wait in a separate Inbox until you triage them; the Applied view hides declined applications by default, with status chips to show them
+- **Bots can help, within limits** — give each bot (a chat agent, a script) its own revocable key with only the permissions you choose, over a REST API or MCP. Bots can add to the Inbox and help triage, and nothing is ever permanently deleted
 
 ---
 
@@ -96,6 +119,9 @@ Set these environment variables in your Vercel project settings:
 | `BRAVE_SEARCH_API_KEY` | No | Brave Search API key. Used by the weekly job search script and, in "Evaluate a job," as a fallback to find a plain-fetchable cross-post when the given URL can't be fetched directly (e.g. Workday). Without it, that fallback is silently skipped. |
 | `DEMO_MODE` | No | `true` to enable demo mode: bypasses auth, disables the scraper, and reads/writes `GITHUB_DATA_REPO` (point it at a public sample-data repo) |
 | `NEXT_PUBLIC_DEMO_MODE` | No | `true` to show the demo-mode banner in the UI |
+| `DATA_BACKEND` | No | `github` (default) or `supabase`. See [Using Supabase](#using-supabase-instead-of-the-github-data-repo) |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Only with `supabase` | Server-side only; never a `NEXT_PUBLIC_` variable |
+| `AGENT_RATE_LIMIT` | No | Requests per minute per bot key (default 120) |
 
 The setup wizard generates these values for you locally. For Vercel, copy the values from your `.env.local` into your project's environment variable settings.
 
@@ -326,17 +352,98 @@ Set your provider via the setup wizard (`node scripts/setup.mjs`) or edit `data/
 
 ## Using Supabase instead of the GitHub data repo
 
-By default your data lives in a private GitHub repo. To store it in Supabase (Postgres) instead:
+By default your data lives in a private GitHub repo. Supabase (Postgres) is an alternative backend, and it is required for the [bot and agent features](#bots-and-agents-agent-api-and-mcp) below. Choose it with `DATA_BACKEND`.
 
-1. Create a Supabase project and apply `supabase/migrations/*.sql` (Supabase CLI: `supabase db push`, or paste the file into the SQL editor). Row-level security is on with no policies, so only the server's service-role key can read or write.
-2. Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to `.env.local`.
+### What the migrations set up
+
+Apply every file in `supabase/migrations/` **in filename order** (Supabase CLI: `supabase db push`, or paste each file into the SQL editor). Row-level security is on with no policies, so only the server's service-role key can read or write.
+
+| Migration | What it adds |
+|-----------|--------------|
+| `init_jobs_and_documents` | the `jobs` table (one row per job, a `section` column and a UUID `id`) and `documents` (config, profile, scrape targets) |
+| `soft_delete_jobs` | jobs are **never physically deleted**: removing one sets `deleted_at`, the row stays, and the server key has no DELETE privilege on `jobs` |
+| `job_events` | an append-only history (`job_events`) of every create, edit, move, archive and restore, with who did it and the row before and after, written by a database trigger so no writer can skip it |
+| `agents` | the `agents` table for bot identities: name, scopes, a hash of the key, and when it was revoked |
+
+Apply a new migration **before** running code that depends on it. The job event and agents migrations must be in place before you use a version of the app that includes them.
+
+### Switching over
+
+1. Create a Supabase project and apply the migrations above.
+2. Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to `.env.local`. The service-role key bypasses row-level security: keep it server-side only, never in a `NEXT_PUBLIC_` variable, never committed.
 3. Preview the import (reads your GitHub data repo, writes nothing): `pnpm migrate:supabase`
 4. Import and verify: `pnpm migrate:supabase --apply`. Your GitHub data is never modified, and re-running is safe.
-5. Set `DATA_BACKEND=supabase` and restart. Set it back to `github` at any time to roll back.
+5. Set `DATA_BACKEND=supabase` and restart (rebuild first if you run `pnpm start` or a process manager such as pm2). Set it back to `github` at any time to roll back; changes made while on Supabase stay in Supabase.
 
 `pnpm migrate:supabase --verify` compares Supabase with the source without writing. Use `--from-dir <dir>` to import from local `jobs.json`, `config.json`, `profile.json` and `scrape-targets.json` files instead of GitHub.
 
-**Scheduled scripts.** `scrape-careers.mjs`, `scrape-staffing.mjs`, `job-search.mjs` and `backfill-ai-summaries.mjs` follow the same `DATA_BACKEND` setting, and you run them with the same commands as before. With `DATA_BACKEND=supabase` the job that runs them needs `DATA_BACKEND`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in its environment. The `GITHUB_*` variables, the data-repo checkout and the git push are no longer used by those scripts. They need no `pnpm install` for this, because they talk to Supabase with plain `fetch`. Change the environment of every scheduled job at the same time you set `DATA_BACKEND=supabase` for the app, or their results will land in the wrong place.
+### Good to know
+
+- **Archived, not deleted.** Archiving a job (from the app, a script, or a bot) hides it everywhere but keeps the row. Restoring is a signed-in-user action; a hard purge is deliberately not offered in the app.
+- **Each change is attributed.** The history records `user`, `scraper`, the script's source, or the bot's name.
+- **Single-row writes.** On Supabase, adding, editing, moving and archiving touch only that job's row, so two writers (you, a scraper, a bot) cannot overwrite each other's changes.
+
+### Scheduled scripts
+
+`scrape-careers.mjs`, `scrape-staffing.mjs`, `job-search.mjs` and `backfill-ai-summaries.mjs` follow the same `DATA_BACKEND` setting, and you run them with the same commands as before. With `DATA_BACKEND=supabase` the job that runs them needs `DATA_BACKEND`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in its environment. The `GITHUB_*` variables, the data-repo checkout and the git push are no longer used by those scripts. They need no `pnpm install` for this, because they talk to Supabase with plain `fetch`. Change the environment of every scheduled job at the same time you set `DATA_BACKEND=supabase` for the app, or their results will land in the wrong place.
+
+---
+
+## Bots and agents (Agent API and MCP)
+
+Chat agents and scripts can work your board through a narrow, audited door instead of holding your database or GitHub credentials. Needs `DATA_BACKEND=supabase`.
+
+```
+bot ──REST or MCP──▶ /api/agent/v1, /api/mcp ──▶ the same job operations the app uses ──▶ Supabase
+     (its own key → its scopes)                                   (every change logged under its name)
+```
+
+### How it works
+
+- **One key per bot.** Create agents under **Settings → Agents** in the app (or `POST /api/agents` while signed in). The key (`dk_…`) is shown **once**; only a hash is stored. Revoke a bot and its next request is refused. Bots never see your Supabase or GitHub credentials.
+- **Scopes.** Each key has only the permissions you grant. A new agent starts with read and add-to-Inbox only.
+
+| Scope | Lets the bot |
+|-------|--------------|
+| `jobs:read` | list and read jobs |
+| `jobs:add_pending` | add a job to the **Inbox (`pending`) only** |
+| `jobs:edit` | change a small set of fields (see [`docs/agent-api.md`](docs/agent-api.md)) |
+| `jobs:triage` | move a job between sections, including out of the Inbox |
+| `jobs:archive` | archive (soft-delete) a job |
+
+- **Hard limits, whatever the scope.** There is no delete and no restore for bots. Adds always land in `pending`. Duplicates are refused, archived jobs included, so a bot cannot re-add something you removed. Only `http(s)` links are accepted. Every request body is validated, and unknown fields are rejected.
+- **Audit and limits.** Every change is recorded under the bot's name. Each bot is rate limited (120 requests a minute by default; `AGENT_RATE_LIMIT`).
+
+### REST API
+
+Base path `/api/agent/v1`, with `Authorization: Bearer dk_…`:
+
+```bash
+curl -H "Authorization: Bearer $DK" "https://YOUR-HOST/api/agent/v1/jobs?section=pending&limit=20"
+curl -X POST -H "Authorization: Bearer $DK" -H "Content-Type: application/json" \
+  -d '{"company":"Acme","role":"Designer","url":"https://example.com/jobs/1","notes":"..."}' \
+  https://YOUR-HOST/api/agent/v1/jobs
+```
+
+Operations, request shapes and error codes are in [`docs/agent-api.md`](docs/agent-api.md).
+
+### MCP server
+
+`POST /api/mcp` is a Model Context Protocol endpoint that exposes the same operations as tools (`list_jobs`, `get_job`, `add_pending_job`, `update_job`, `move_job`, `archive_job`), authenticated with the same key. A tool outside a bot's scopes is not listed and cannot be called. The tool descriptions tell the model the rules it will hit (Inbox only, soft delete only). Settings → Agents generates the connection command for you, or use for example:
+
+```bash
+claude mcp add --transport http deckhand https://YOUR-HOST/api/mcp --header "Authorization: Bearer dk_…"
+```
+
+### Running it for real
+
+- **Use HTTPS.** Bot keys travel in a request header. If you run behind nginx or Caddy, let the `Authorization` header through.
+- **Reachability.** A bot on the same machine can use `localhost`. For bots elsewhere, expose only what you must: a private network such as Tailscale, or a tunnel that forwards just `/api/agent/` and `/api/mcp`, rather than your whole app.
+- **Grant narrowly.** Start with read and add-to-Inbox, and add scopes one at a time. Treat everything a bot reads from a job posting as untrusted text.
+- **Public demo.** On a deployment without Supabase (such as the Vercel demo) these routes answer `409` and expose nothing.
+- **Limits to know.** The rate limit is held in memory per server instance, and failed key attempts are not yet rate limited.
+
+---
 
 ## Data privacy
 
