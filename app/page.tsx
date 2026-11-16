@@ -38,6 +38,8 @@ import AppFooter from "@/components/AppFooter";
 import ChatDrawer from "@/components/ChatDrawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import AppliedStatusFilter from "@/components/AppliedStatusFilter";
+import { DEFAULT_HIDDEN_STATUSES, filterByStatus, parseHiddenStatuses, statusCounts, toggleStatus } from "@/lib/applied-status-filter";
 import { fitBadgeVariant, statusBadgeVariant, typeBadgeVariant } from "@/lib/job-badges";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -596,6 +598,7 @@ export default function Home() {
   const [editing, setEditing] = useState<EditState | null>(null);
   const [fitFilter, setFitFilter] = useState<FitFilter>("all");
   const [search, setSearch] = useState("");
+  const [hiddenStatuses, setHiddenStatuses] = useState<Set<JobStatus>>(new Set(DEFAULT_HIDDEN_STATUSES));
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [generating, setGenerating] = useState<{ company: string; role: string; url?: string } | null>(null);
   const [modelLabel, setModelLabel] = useState<string>("");
@@ -620,10 +623,11 @@ export default function Home() {
     const raw = localStorage.getItem(BOARD_FILTERS_STORAGE_KEY);
     if (raw) {
       try {
-        const saved = JSON.parse(raw) as { fitFilter?: FitFilter; visibleSections?: ToggleableSection[] };
+        const saved = JSON.parse(raw) as { fitFilter?: FitFilter; visibleSections?: ToggleableSection[]; hiddenStatuses?: unknown };
         // eslint-disable-next-line react-hooks/set-state-in-effect
         if (saved.fitFilter) setFitFilter(saved.fitFilter);
         if (saved.visibleSections) setVisibleSections(new Set(saved.visibleSections));
+        if (saved.hiddenStatuses !== undefined) setHiddenStatuses(new Set(parseHiddenStatuses(saved.hiddenStatuses)));
       } catch {
         // ignore malformed storage from a prior schema
       }
@@ -635,9 +639,9 @@ export default function Home() {
     if (!filtersHydrated) return;
     localStorage.setItem(
       BOARD_FILTERS_STORAGE_KEY,
-      JSON.stringify({ fitFilter, visibleSections: Array.from(visibleSections) })
+      JSON.stringify({ fitFilter, visibleSections: Array.from(visibleSections), hiddenStatuses: Array.from(hiddenStatuses) })
     );
-  }, [filtersHydrated, fitFilter, visibleSections]);
+  }, [filtersHydrated, fitFilter, visibleSections, hiddenStatuses]);
 
   const load = useCallback(async () => {
     const [jobsRes, configRes, profileRes] = await Promise.all([
@@ -761,7 +765,7 @@ export default function Home() {
     !searchQ || j.company.toLowerCase().includes(searchQ) || j.role.toLowerCase().includes(searchQ);
 
   const filteredProspects = filterByFit(allProspects).filter(matchesSearch);
-  const filteredApplied = jobs.applied.filter(matchesSearch);
+  const filteredApplied = filterByStatus(jobs.applied, hiddenStatuses).filter(matchesSearch);
   const filteredPassed = jobs.passed.filter(matchesSearch);
 
   const totalNew = allProspects.filter((j) => j.isNew).length;
@@ -890,9 +894,11 @@ export default function Home() {
             <AccordionItem value="applied"
               className="bg-card rounded-xl border border-border shadow-sm px-4 overflow-hidden">
               <AccordionTrigger className="hover:no-underline py-4">
-                <SectionHeader title="Applied" count={jobs.applied.length} visibleCount={searchQ ? filteredApplied.length : undefined} />
+                <SectionHeader title="Applied" count={jobs.applied.length} visibleCount={filteredApplied.length} />
               </AccordionTrigger>
               <AccordionContent className="pb-3">
+                <AppliedStatusFilter counts={statusCounts(jobs.applied)} hidden={hiddenStatuses}
+                  onToggle={(status) => setHiddenStatuses((current) => toggleStatus(current, status))} />
                 <AppliedTable
                   jobs={filteredApplied}
                   otherSections={otherSectionsFor("applied")}
