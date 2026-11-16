@@ -245,8 +245,8 @@ export default function AIGenerationCard({ company, role, url, hasProfile }: Pro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company, role, url }),
       });
-      const data = await res.json() as TailoredResume & { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Tailoring failed");
+      const data = await res.json().catch(() => null) as (TailoredResume & { error?: string }) | null;
+      if (!res.ok || !data) throw new Error(data?.error ?? (res.ok ? "The server sent an unreadable reply. Try again." : `Tailoring failed (${res.status}). It may have timed out; try again.`));
       setTailored(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Tailoring failed");
