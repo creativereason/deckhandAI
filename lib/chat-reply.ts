@@ -4,6 +4,8 @@ interface ReplyInput {
   /** True when the tool loop ran out of steps instead of the model finishing. */
   hitRoundLimit: boolean;
   toolCalls: number;
+  /** True when the model stopped because it ran out of output tokens, so the text ends mid-thought. */
+  truncated?: boolean;
 }
 
 const plural = (n: number) => `${n} action${n === 1 ? "" : "s"}`;
@@ -12,7 +14,8 @@ const plural = (n: number) => `${n} action${n === 1 ? "" : "s"}`;
  * The chat panel shows whatever this returns, so it must never be blank: an empty reply
  * after a half-finished batch looked like the bot had ignored the request.
  */
-export function finalReply({ text, hitRoundLimit, toolCalls }: ReplyInput): string {
+export function finalReply({ text, hitRoundLimit, toolCalls, truncated }: ReplyInput): string {
+  if (truncated && text) return `${text}\n\n_This reply was cut off because it hit the length limit. Ask me to continue and I'll pick up where it stopped._`;
   if (hitRoundLimit) {
     const note = `I stopped early after ${plural(toolCalls)} because I hit my step limit. Some changes may already be saved. Ask me to continue and I'll pick up the rest.`;
     return text ? `${text}\n\n${note}` : note;

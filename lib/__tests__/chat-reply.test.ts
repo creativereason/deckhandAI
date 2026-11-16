@@ -31,4 +31,17 @@ describe("finalReply", () => {
   it("still gives a message when the step limit was hit with no text at all", () => {
     expect(finalReply({ text: "", hitRoundLimit: true, toolCalls: 10 })).toMatch(/step limit/i);
   });
+
+  // B — Boundary: a reply the model ran out of room for must say so instead of ending mid-sentence
+  it("tells the user the reply was cut off and how to get the rest", () => {
+    const reply = finalReply({ text: "| Stripe | [Role](/job?a=1&", hitRoundLimit: false, toolCalls: 0, truncated: true });
+
+    expect(reply).toContain("| Stripe |");
+    expect(reply).toMatch(/cut off/i);
+    expect(reply).toMatch(/continue/i);
+  });
+
+  it("leaves a normal reply untouched when truncated is false", () => {
+    expect(finalReply({ text: "Done.", hitRoundLimit: false, toolCalls: 0, truncated: false })).toBe("Done.");
+  });
 });
