@@ -828,16 +828,18 @@ export default function Home() {
           }
         />
 
-        {/* Board (2/3) + Deckhand assistant (1/3) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        {/* Board (2/3) + Deckhand assistant (1/3); the inbox is full width and places the assistant itself */}
+        <div className={view === "inbox" ? "space-y-4" : "grid grid-cols-1 md:grid-cols-3 gap-4 items-start"}>
 
           {/* Deckhand assistant — stacked on top on mobile, right rail (sticky) from md up */}
-          <div className="order-1 md:order-2 md:col-span-1 md:sticky md:top-4 min-w-0">
-            <ChatDrawer onJobsChanged={load} />
-          </div>
+          {view !== "inbox" && (
+            <div className="order-1 md:order-2 md:col-span-1 md:sticky md:top-4 min-w-0">
+              <ChatDrawer onJobsChanged={load} />
+            </div>
+          )}
 
           {/* Board */}
-          <div className="order-2 md:order-1 md:col-span-2 space-y-4">
+          <div className={view === "inbox" ? "space-y-4" : "order-2 md:order-1 md:col-span-2 space-y-4"}>
 
             <BoardViewSwitch view={view} pendingCount={(jobs.pending ?? []).length} onChange={setView} />
 
@@ -849,7 +851,7 @@ export default function Home() {
             )}
 
             {view === "inbox" && (
-              <InboxView pending={jobs.pending ?? []} onUpdate={load} onBackToBoard={() => setView("board")} />
+              <InboxView pending={jobs.pending ?? []} onUpdate={load} onBackToBoard={() => setView("board")} assistant={<ChatDrawer onJobsChanged={load} />} />
             )}
 
             {view === "board" && (
