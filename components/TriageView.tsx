@@ -11,10 +11,25 @@ import { rotateQueue, settleOffset, stepOffset, triageKeyAction, type TriageActi
 
 const keyOf = (j: PendingJob) => j.id ?? `${j.company}|${j.role}`;
 
+const PRESS_FLASH_MS = 300;
+
+function usePressed() {
+  const [pressed, setPressed] = useState<TriageAction | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  function flash(action: TriageAction) {
+    clearTimeout(timer.current);
+    setPressed(action);
+    timer.current = setTimeout(() => setPressed(null), PRESS_FLASH_MS);
+  }
+  return { pressed, flash };
+}
+
 function useTriage(pending: PendingJob[], onUpdate: () => void) {
   const [offset, setOffset] = useState(0);
   const [gone, setGone] = useState<Set<string>>(new Set());
   const saving = useRef(false);
+  const { pressed, flash } = usePressed();
   const queue = pending.filter((j) => !gone.has(keyOf(j)));
   const ordered = rotateQueue(queue, offset);
 
@@ -32,12 +47,13 @@ function useTriage(pending: PendingJob[], onUpdate: () => void) {
   }
 
   function act(action: TriageAction) {
+    flash(action);
     if (action === "keep") void review("approve");
     else if (action === "pass") void review("reject");
     else setOffset(stepOffset(offset, action === "skip" ? 1 : -1, queue.length));
   }
 
-  return { current: ordered[0], upNext: ordered.slice(1, 6), reviewed: gone.size, total: gone.size + queue.length, act };
+  return { current: ordered[0], upNext: ordered.slice(1, 6), reviewed: gone.size, total: gone.size + queue.length, act, pressed };
 }
 
 function useTriageKeys(act: (action: TriageAction) => void) {
@@ -105,12 +121,16 @@ function JobCard({ job, scoring }: { job: PendingJob; scoring: boolean }) {
   );
 }
 
-function ActionBar({ act }: { act: (action: TriageAction) => void }) {
+function ActionBar({ act, pressed }: { act: (action: TriageAction) => void; pressed: TriageAction | null }) {
+  const mark = (action: TriageAction) => ({
+    "data-pressed": pressed === action ? "true" : undefined,
+    className: "transition-transform duration-150 data-[pressed=true]:scale-95 data-[pressed=true]:ring-2 data-[pressed=true]:ring-primary data-[pressed=true]:ring-offset-2",
+  });
   return (
     <div className="grid grid-cols-3 gap-3">
-      <Button variant="outline" size="lg" onClick={() => act("pass")}>Pass <Kbd>P</Kbd></Button>
-      <Button variant="outline" size="lg" onClick={() => act("skip")}>Skip <Kbd>S</Kbd></Button>
-      <Button size="lg" onClick={() => act("keep")}>Keep <Kbd>K</Kbd></Button>
+      <Button variant="outline" size="lg" onClick={() => act("pass")} {...mark("pass")}>Pass <Kbd>P</Kbd></Button>
+      <Button variant="outline" size="lg" onClick={() => act("skip")} {...mark("skip")}>Skip <Kbd>S</Kbd></Button>
+      <Button size="lg" onClick={() => act("keep")} {...mark("keep")}>Keep <Kbd>K</Kbd></Button>
     </div>
   );
 }
@@ -144,7 +164,7 @@ function Progress({ reviewed, total }: { reviewed: number; total: number }) {
 }
 
 export default function TriageView({ pending, onUpdate, onBackToBoard }: { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void }) {
-  const { current, upNext, reviewed, total, act } = useTriage(pending, onUpdate);
+  const { current, upNext, reviewed, total, act, pressed } = useTriage(pending, onUpdate);
   const scoring = useScorePending(pending, onUpdate);
   useTriageKeys(act);
 
@@ -163,7 +183,7 @@ export default function TriageView({ pending, onUpdate, onBackToBoard }: { pendi
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         <section className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <JobCard job={current} scoring={scoring} />
-          <ActionBar act={act} />
+          <ActionBar act={act} pressed={pressed} />
         </section>
         <UpNext jobs={upNext} />
       </div>
