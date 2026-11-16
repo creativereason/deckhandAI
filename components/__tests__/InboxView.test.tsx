@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import InboxView from "@/components/InboxView";
 import type { PendingJob } from "@/lib/jobs";
@@ -7,6 +8,12 @@ import type { PendingJob } from "@/lib/jobs";
 vi.mock("@/components/ScrapeReviewQueue", () => ({
   default: ({ pending }: { pending: PendingJob[] }) => <div data-testid="queue">{pending.length} in queue</div>,
 }));
+
+vi.mock("@/components/TriageView", () => ({
+  default: ({ pending }: { pending: PendingJob[] }) => <div data-testid="triage">{pending.length} to triage</div>,
+}));
+
+beforeEach(() => localStorage.clear());
 
 const job = (role: string): PendingJob => ({
   company: "Acme", role, url: "", salary: "", notes: "", scrapeGroup: "remote", scrapeDate: "2026-01-01",
@@ -21,11 +28,42 @@ describe("InboxView", () => {
     expect(screen.queryByTestId("queue")).not.toBeInTheDocument();
   });
 
+  // O — One: the triage view is the default
+  it("opens in triage mode by default", () => {
+    render(<InboxView pending={[job("A")]} onUpdate={() => {}} onBackToBoard={() => {}} />);
+
+    expect(screen.getByTestId("triage")).toHaveTextContent("1 to triage");
+    expect(screen.queryByTestId("queue")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Triage" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   // M — Many
-  it("renders every pending job in the review queue", () => {
+  it("renders every pending job in the review queue when the list is chosen", () => {
     render(<InboxView pending={[job("A"), job("B"), job("C")]} onUpdate={() => {}} onBackToBoard={() => {}} />);
 
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+
     expect(screen.getByTestId("queue")).toHaveTextContent("3 in queue");
+    expect(screen.queryByTestId("triage")).not.toBeInTheDocument();
+  });
+
+  // B — Boundary: the choice is remembered, and a bad saved value is ignored
+  it("remembers the chosen mode for next time", () => {
+    const { unmount } = render(<InboxView pending={[job("A")]} onUpdate={() => {}} onBackToBoard={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+    unmount();
+
+    render(<InboxView pending={[job("A")]} onUpdate={() => {}} onBackToBoard={() => {}} />);
+
+    expect(screen.getByTestId("queue")).toBeInTheDocument();
+  });
+
+  it("falls back to triage when the saved mode is not one it knows", () => {
+    localStorage.setItem("inbox-mode", "banana");
+
+    render(<InboxView pending={[job("A")]} onUpdate={() => {}} onBackToBoard={() => {}} />);
+
+    expect(screen.getByTestId("triage")).toBeInTheDocument();
   });
 
   // S — Simple: the empty state offers a way out
