@@ -428,6 +428,7 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 24 | Route scrapers through `pending` via the Agent API — fix the invariant gap | **Ready** — blocked on #22 |
 | 25 | Job link check — verify a job's URL is valid and still open, on any board section or the inbox, with a visible status | **Ready** — reuses `lib/job-fetcher.ts` |
 | 26 | Agent-assisted link repair — find the right posting for a bad URL and propose a fix for the user to confirm | **Ready** — blocked on #25, #22 |
+| 28 | Applied status filter — hide chosen statuses in the Applied view, `declined` hidden by default | **Done** — `lib/applied-status-filter.ts`, `components/AppliedStatusFilter.tsx`; choice saved in the browser with the other board filters (display only, no data changes) |
 | 27 | UI overhaul — visual and layout redesign of the board, inbox and detail views | **Deferred** — scope after Slices 18 and 22; no spec yet |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
