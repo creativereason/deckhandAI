@@ -29,6 +29,7 @@ import { EmptyState, LoadingState } from "@/components/ui/states";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { typeBadgeVariant } from "@/lib/job-badges";
 import { findJobForDetail, jobDetailHref } from "@/lib/job-detail";
+import { jobContext } from "@/lib/job-context";
 import { fetchAiSummary, fetchSummarizerConfigured } from "@/lib/summarize-job-client";
 import { ChevronDown, ExternalLink, FileSearch, Pencil } from "lucide-react";
 import { JOBS_CHANGED_EVENT } from "@/components/shell/assistant-context";
@@ -585,18 +586,10 @@ function JobDetailContent() {
     router.replace(jobDetailHref({ ...updated, section }));
   }
 
-  const jobContext = [
-    `Company: ${company}`, `Role: ${role}`, `Section: ${section}`,
-    appliedJob?.status ? `Status: ${appliedJob.status}` : null,
-    appliedJob?.date ? `Applied: ${appliedJob.date}` : null,
-    prospectJob?.fit ? `Fit: ${prospectJob.fit}` : null,
-    effectiveType ? `Type: ${effectiveType}` : null,
-    foundJob.salary ? `Salary: ${foundJob.salary}` : null,
-    foundJob.url ? `URL: ${foundJob.url}` : null,
-    foundJob.aiSummary ? `Role summary: ${foundJob.aiSummary}` : null,
-    foundJob.notes ? `Notes: ${foundJob.notes}` : null,
-    prospectJob?.scoreRationale ? `AI Assessment: ${prospectJob.scoreRationale}` : null,
-  ].filter(Boolean).join("\n");
+  const jobContextText = jobContext({
+    company, role, section, status: appliedJob?.status, applied: appliedJob?.date, fit: prospectJob?.fit, type: effectiveType,
+    salary: foundJob.salary, url: foundJob.url, aiSummary: foundJob.aiSummary, notes: foundJob.notes, scoreRationale: prospectJob?.scoreRationale,
+  });
 
   return (
     <>
@@ -659,7 +652,7 @@ function JobDetailContent() {
         </div>
 
         <div className="min-w-0 lg:sticky lg:top-20 lg:col-span-2">
-          <JobChat jobContext={jobContext} jobId={foundJob.id} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
+          <JobChat jobContext={jobContextText} jobId={foundJob.id} section={section} status={appliedJob?.status} onJobsChanged={refreshAfterChatChange} />
         </div>
       </div>
     </>

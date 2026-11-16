@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { useAssistant } from "@/components/shell/assistant-context";
 import { Inbox, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { jobContext, jobContextLabel } from "@/lib/job-context";
 import { useScorePending } from "@/components/use-score-pending";
 import { groupBadgeVariant } from "@/lib/job-badges";
 import type { PendingJob } from "@/lib/jobs";
@@ -126,7 +127,7 @@ function JobCard({ job, scoring }: { job: PendingJob; scoring: boolean }) {
         </Section>
       )}
       <div>
-        <AskAIButton onClick={() => assistant.ask(`Should I pursue the ${job.role} role at ${job.company}? Give me the strongest reasons for and against.`, { send: true })}>Ask about this job</AskAIButton>
+        <AskAIButton onClick={() => assistant.ask(`Should I pursue the ${job.role} role at ${job.company}? Give me the strongest reasons for and against.`, { send: true, context: { label: jobContextLabel(job), text: jobContext({ company: job.company, role: job.role, section: "pending (inbox, not yet on the board)", fit: job.fit, type: job.scrapeGroup, salary: job.salary, url: job.url, aiSummary: job.aiSummary, notes: job.notes, scoreRationale: job.scoreRationale }) } })}>Ask about this job</AskAIButton>
       </div>
     </div>
   );

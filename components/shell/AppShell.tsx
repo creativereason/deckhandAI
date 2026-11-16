@@ -85,7 +85,7 @@ export default function AppShell({ children, width = "content" }: { children: Re
     close: () => setOpenPersisted(false),
     ask: (text, options) => {
       setOpenPersisted(true);
-      if (text) setRequest({ id: Date.now(), text, send: !!options?.send });
+      if (text) setRequest({ id: Date.now(), text, send: !!options?.send, context: options?.context });
     },
   }), [open, setOpenPersisted]);
 

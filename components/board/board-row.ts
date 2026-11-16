@@ -1,5 +1,6 @@
 import type { AppliedJob, JobFit, JobSection, JobStatus, JobType, PassedJob, ProspectJob } from "@/lib/jobs";
 import { resolveJobType } from "@/lib/jobs";
+import { jobContext, jobContextLabel } from "@/lib/job-context";
 import { getAppliedIcon, getProspectIcon, getSignalLabel, iconSortKey } from "@/lib/job-signal";
 
 export type BoardSection = "applied" | "prospect" | "local" | "staffing" | "passed";
@@ -49,6 +50,18 @@ export function prospectRow(job: ProspectJob, section: "prospect" | "local" | "s
 
 export function passedRow(job: PassedJob): BoardRow {
   return { key: rowKey(job, "passed"), id: job.id, section: "passed", company: job.company, role: job.role, url: job.url, salary: job.salary, summary: job.aiSummary || job.notes, signalSort: "4", job };
+}
+
+export function rowContext(row: BoardRow): { text: string; label: string } {
+  const job = row.job as { notes?: string };
+  return {
+    label: jobContextLabel(row),
+    text: jobContext({
+      company: row.company, role: row.role, section: row.section, status: row.status, fit: row.fit, type: row.type,
+      salary: row.salary, url: row.url, applied: row.date, aiSummary: row.summary && row.summary !== job.notes ? row.summary : undefined,
+      notes: job.notes, scoreRationale: row.rationale,
+    }),
+  };
 }
 
 export const asJobSection = (section: BoardSection): JobSection => section;

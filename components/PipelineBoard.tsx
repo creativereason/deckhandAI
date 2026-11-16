@@ -10,12 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { useAssistant } from "@/components/shell/assistant-context";
 import type { ColumnId, MoveTarget, PipelineCard, PipelineColumn } from "@/lib/pipeline";
 import { cn } from "@/lib/utils";
+import { jobContext } from "@/lib/job-context";
 
 interface PipelineBoardProps {
   columns: PipelineColumn[];
   passedCount: number;
   onMove: (card: PipelineCard, to: MoveTarget) => void;
   onOpen: (card: PipelineCard) => void;
+  /** The full job for a card, so "Ask Deckhand" can send its details along. */
+  contextFor?: (card: PipelineCard) => { text: string; label: string } | undefined;
 }
 
 const DRAG_TYPE = "text/plain";
@@ -35,9 +38,9 @@ function MoveMenu({ card, columns, onMove }: { card: PipelineCard; columns: Pipe
   );
 }
 
-function JobCard({ card, columns, onMove, onOpen }: { card: PipelineCard; columns: PipelineColumn[] } & Pick<PipelineBoardProps, "onMove" | "onOpen">) {
+function JobCard({ card, columns, onMove, onOpen, contextFor }: { card: PipelineCard; columns: PipelineColumn[] } & Pick<PipelineBoardProps, "onMove" | "onOpen" | "contextFor">) {
   const assistant = useAssistant();
-  const ask = () => assistant.ask(`Tell me about the ${card.role} role at ${card.company}: fit, red flags, and what to do next.`, { send: true });
+  const ask = () => assistant.ask(`Tell me about the ${card.role} role at ${card.company}: fit, red flags, and what to do next.`, { send: true, context: contextFor?.(card) ?? { label: `${card.company} · ${card.role}`, text: jobContext({ company: card.company, role: card.role, fit: card.fit, salary: card.salary, aiSummary: card.summary }) } });
   return (
     <article
       draggable
@@ -86,7 +89,7 @@ function Column({ column, over, hiddenOnPhone, handlers, children }: { column: P
  * Kanban of stages. Wide screens show every stage and accept drag and drop; every card also has a
  * "Move to" menu so nothing needs a mouse. Phones show one stage at a time behind a stage picker.
  */
-export default function PipelineBoard({ columns, passedCount, onMove, onOpen }: PipelineBoardProps) {
+export default function PipelineBoard({ columns, passedCount, onMove, onOpen, contextFor }: PipelineBoardProps) {
   const [over, setOver] = useState<ColumnId | null>(null);
   const [phoneStage, setPhoneStage] = useState<ColumnId>(columns[0]?.id ?? "prospect");
   const cards = new Map(columns.flatMap((c) => c.cards).map((card) => [card.key, card]));
@@ -122,7 +125,7 @@ export default function PipelineBoard({ columns, passedCount, onMove, onOpen }: 
         {columns.map((column) => (
           <Column key={column.id} column={column} over={over === column.id} hiddenOnPhone={column.id !== activeStage} handlers={handlers(column)}>
             {column.cards.length === 0 && <EmptyState compact title="Nothing here" description="Drop a card, or use Move to." />}
-            {column.cards.map((card) => <JobCard key={card.key} card={card} columns={columns} onMove={onMove} onOpen={onOpen} />)}
+            {column.cards.map((card) => <JobCard key={card.key} card={card} columns={columns} onMove={onMove} onOpen={onOpen} contextFor={contextFor} />)}
           </Column>
         ))}
       </div>
