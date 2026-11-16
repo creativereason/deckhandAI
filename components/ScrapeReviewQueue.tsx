@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useScorePending } from "@/components/use-score-pending";
 import { groupBadgeVariant } from "@/lib/job-badges";
+import { submitReview } from "@/lib/review-client";
 import type { PendingJob, JobFit } from "@/lib/jobs";
 
 const FIT_OPTIONS: { value: JobFit; label: string }[] = [
@@ -73,22 +75,7 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
   const [scores, setScores] = useState<Record<string, ScoreState>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [batchScoring, setBatchScoring] = useState(false);
-  const batchFiredRef = useRef(false);
-
-  useEffect(() => {
-    const hasUnscored = pending.some((j) => !j.scoreRationale);
-    if (!hasUnscored || batchFiredRef.current) return;
-
-    batchFiredRef.current = true;
-    setBatchScoring(true);
-
-    fetch("/api/scrape/score-pending", { method: "POST" })
-      .then(() => onUpdate())
-      .catch(() => { /* soft-fail — jobs show without scores */ })
-      .finally(() => setBatchScoring(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending]);
+  const batchScoring = useScorePending(pending, onUpdate);
 
   const visible = pending.filter((j) => !dismissed.has(jobKey(j)));
   if (visible.length === 0) return null;
@@ -113,24 +100,15 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
     setBusy((b) => ({ ...b, [k]: true }));
     try {
       const score = getScore(j);
-      const res = await fetch("/api/scrape/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: j.id,
-          company: j.company,
-          role: j.role,
-          action,
-          fit: score.fit,
-          notes: score.notes || undefined,
-          scoreRationale: score.rationale || undefined,
-        }),
+      const result = await submitReview({
+        job: j,
+        action,
+        fit: score.fit,
+        notes: score.notes || undefined,
+        scoreRationale: score.rationale || undefined,
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string };
-        if (res.status === 403) { toast.info("Demo mode — changes are read-only"); return; }
-        throw new Error(body.error ?? `Error ${res.status}`);
-      }
+      if (!result.ok && result.demo) { toast.info("Demo mode — changes are read-only"); return; }
+      if (!result.ok) throw new Error(result.message);
       toast.success(action === "approve" ? `Added ${j.company} to tracker` : `Dismissed ${j.company}`);
       setDismissed((prev) => new Set([...prev, k]));
       onUpdate();

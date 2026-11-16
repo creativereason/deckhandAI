@@ -429,7 +429,10 @@ Do not suppress warnings. Do not add `// eslint-disable` unless the finding is a
 | 25 | Job link check — verify a job's URL is valid and still open, on any board section or the inbox, with a visible status | **Ready** — reuses `lib/job-fetcher.ts` |
 | 26 | Agent-assisted link repair — find the right posting for a bad URL and propose a fix for the user to confirm | **Ready** — blocked on #25, #22 |
 | 28 | Applied status filter — hide chosen statuses in the Applied view, `declined` hidden by default | **Done** — `lib/applied-status-filter.ts`, `components/AppliedStatusFilter.tsx`; choice saved in the browser with the other board filters (display only, no data changes) |
-| 27 | UI overhaul — visual and layout redesign of the board, inbox and detail views | **Deferred** — scope after Slices 18 and 22; no spec yet |
+| 27 | UI overhaul — three parts, chosen from five explored directions: 27a Triage, 27b Pipeline board, 27c Home | **In progress** — see below |
+| 27a | Triage view — the inbox one job at a time (`components/TriageView.tsx`, `lib/triage.ts`) | **Done** — default Inbox mode, with the old list one click away (choice saved in the browser). Keys: P pass, K keep, S or right arrow skip, left arrow back. No API or data change |
+| 27b | Pipeline board — kanban columns as a second board layout (Prospects, Applied, Screening, Interview, Offer), declined still hidden by default | **Ready** |
+| 27c | Home ("Today") — needs-you list, pipeline funnel, bots panel, activity feed from `job_events` | **Ready** — needs one read-only activity route (Supabase only); interview and offer dates do not exist in the data yet, so "needs you" starts from derivable items (new strong fits, applications with no change in 14 days, open offers) |
 
 **Starting a slice:** Load only the files listed in the Token Routing table for this task type. Write the Z test. Run it. Confirm it fails. Then proceed.
 
