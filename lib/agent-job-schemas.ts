@@ -36,6 +36,7 @@ export const AgentCreateJob = z.strictObject({
 /** The fields the jobs:edit scope covers, and only those. */
 export const AgentEditJob = z
   .strictObject({
+    url: WebUrl,
     notes: Text(20_000),
     aiSummary: Text(2_000),
     scoreRationale: Text(5_000),

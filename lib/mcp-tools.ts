@@ -55,7 +55,7 @@ export const MCP_TOOLS: readonly McpTool[] = [
   },
   {
     name: "update_job",
-    description: "Change a job's notes, aiSummary, scoreRationale or fit. No other field can be changed.",
+    description: "Change a job's url, notes, aiSummary, scoreRationale or fit. A url must be http(s) and not already used by another job, archived ones included. No other field can be changed.",
     scope: "jobs:edit",
     inputSchema: withId(AgentEditJob),
     run: (repo, args) => editJobOp(repo, splitId(args).id, splitId(args).rest),

@@ -233,7 +233,7 @@ describe("PATCH /api/agent/v1/jobs/[id]", () => {
   });
 
   // E — Exception: scope is enforced by the body shape too
-  it.each([["company", "Hijack"], ["url", "https://evil.test"], ["status", "offer"], ["section", "passed"]])(
+  it.each([["company", "Hijack"], ["url", "javascript:alert(1)"], ["status", "offer"], ["section", "passed"]])(
     "rejects a change to %s with 400 and leaves the job alone",
     async (field, value) => {
       seed({ prospect: [prospect("A")] as never });
@@ -245,6 +245,42 @@ describe("PATCH /api/agent/v1/jobs/[id]", () => {
       expect([...jobs.rows.values()][0].notes).toBe("");
     },
   );
+
+  it("changes a job's url and leaves the rest alone", async () => {
+    seed({ prospect: [prospect("A", { url: "https://old.test/1", notes: "keep" })] as never });
+    const auth = await agentWith("Muse", ["jobs:edit"]);
+
+    const response = await jobRoute.PATCH(req("PATCH", auth, { url: "https://new.test/2" }), ctx(idOf("A")));
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).job).toMatchObject({ url: "https://new.test/2", notes: "keep" });
+  });
+
+  it("accepts the job's own current url again (no false duplicate)", async () => {
+    seed({ prospect: [prospect("A", { url: "https://same.test/1" })] as never });
+    const auth = await agentWith("Muse", ["jobs:edit"]);
+
+    expect((await jobRoute.PATCH(req("PATCH", auth, { url: "https://same.test/1", notes: "n" }), ctx(idOf("A")))).status).toBe(200);
+  });
+
+  it("refuses a url another job already has, archived jobs included, and changes nothing", async () => {
+    seed({ prospect: [prospect("A", { url: "https://a.test/1" }), prospect("B", { url: "https://b.test/1" })] as never });
+    const auth = await agentWith("Muse", ["jobs:edit"]);
+    jobs.deleted.add(idOf("B"));
+
+    const response = await jobRoute.PATCH(req("PATCH", auth, { url: "https://b.test/1" }), ctx(idOf("A")));
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).existing).toMatchObject({ id: idOf("B"), deleted: true });
+    expect(jobs.rows.get(idOf("A"))!.url).toBe("https://a.test/1");
+  });
+
+  it("allows clearing the url", async () => {
+    seed({ prospect: [prospect("A", { url: "https://a.test/1" })] as never });
+    const auth = await agentWith("Muse", ["jobs:edit"]);
+
+    expect((await jobRoute.PATCH(req("PATCH", auth, { url: "" }), ctx(idOf("A")))).status).toBe(200);
+  });
 
   it("returns 404 for an unknown job", async () => {
     const auth = await agentWith("Muse", ["jobs:edit"]);
