@@ -10,7 +10,9 @@ vi.mock("@/components/ScrapeReviewQueue", () => ({
 }));
 
 vi.mock("@/components/TriageView", () => ({
-  default: ({ pending }: { pending: PendingJob[] }) => <div data-testid="triage">{pending.length} to triage</div>,
+  default: ({ pending, assistant }: { pending: PendingJob[]; assistant?: React.ReactNode }) => (
+    <div data-testid="triage">{pending.length} to triage{assistant}</div>
+  ),
 }));
 
 beforeEach(() => localStorage.clear());
@@ -74,5 +76,19 @@ describe("InboxView", () => {
     screen.getByRole("button", { name: /back to board/i }).click();
 
     expect(onBackToBoard).toHaveBeenCalled();
+  });
+
+  it("passes the assistant to the triage view", () => {
+    render(<InboxView pending={[job("A")]} onUpdate={() => {}} onBackToBoard={() => {}} assistant={<div data-testid="assistant" />} />);
+
+    expect(screen.getByTestId("assistant")).toBeInTheDocument();
+  });
+
+  it("shows the assistant beside the list in list mode", () => {
+    render(<InboxView pending={[job("A")]} onUpdate={() => {}} onBackToBoard={() => {}} assistant={<div data-testid="assistant" />} />);
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+
+    expect(screen.getByTestId("queue")).toBeInTheDocument();
+    expect(screen.getByTestId("assistant")).toBeInTheDocument();
   });
 });
