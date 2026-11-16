@@ -20,6 +20,7 @@ import { LoadingState } from "@/components/ui/states";
 import { exportCoverLetter, exportResume } from "@/lib/job-export-client";
 import type { AppliedJob, JobIdentity, JobsData, JobSection, JobStatus, JobType, PassedJob, ProspectJob } from "@/lib/jobs";
 import { jobDetailHref } from "@/lib/job-detail";
+import { aboutJobPrompt } from "@/lib/assistant-prompts";
 import { parseBoardLayout, type BoardLayout } from "@/lib/board-layout";
 import { buildPipeline, moveAction, type MoveTarget, type PipelineCard } from "@/lib/pipeline";
 import { applyMove } from "@/lib/pipeline-client";
@@ -161,7 +162,7 @@ function BoardContent() {
     const ctx = { company: row.company, role: row.role, url: row.url || undefined };
     return {
       onEdit: () => setEditing({ section: row.section, job: row.job }),
-      onAsk: () => assistant.ask(`Tell me about the ${row.role} role at ${row.company}: fit, red flags, and what to do next.`, { send: true, context: rowContext(row) }),
+      onAsk: () => assistant.ask(aboutJobPrompt(row), { send: true, context: rowContext(row) }),
       onGenerate: () => setGenerating(ctx),
       onExportResume: hasProfile ? () => exportResume(row.company, row.role) : undefined,
       onExportCoverLetter: hasProfile ? () => exportCoverLetter(row.company, row.role, row.url) : undefined,

@@ -7,6 +7,7 @@ import { AskAIButton } from "@/components/ai/ai";
 import { useAssistant } from "@/components/shell/assistant-context";
 import { jobDetailHref } from "@/lib/job-detail";
 import { jobContext, jobContextLabel } from "@/lib/job-context";
+import { historyPrompt } from "@/lib/assistant-prompts";
 import type { HistoryEntry } from "@/lib/company-history";
 import type { JobStatus } from "@/lib/jobs";
 
@@ -50,7 +51,7 @@ export default function CompanyHistory({ job, entries }: {
 }) {
   const assistant = useAssistant();
   const ask = () => assistant.ask(
-    `Have I applied to anything at ${job.company} before? Check my whole board, including passed jobs, and tell me whether the ${job.role} role is worth another look.`,
+    historyPrompt(job),
     { send: true, context: { label: jobContextLabel(job), text: jobContext({ ...job, section: "pending (inbox, not yet on the board)" }) } },
   );
   return (

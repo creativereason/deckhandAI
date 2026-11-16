@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import AppShell from "@/components/shell/AppShell";
-import { JOBS_CHANGED_EVENT } from "@/components/shell/assistant-context";
+import { JOBS_CHANGED_EVENT, useAssistant } from "@/components/shell/assistant-context";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 
@@ -40,5 +40,38 @@ describe("AppShell inbox badge", () => {
 
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     expect(screen.getAllByRole("link", { name: /inbox/i })[0]).not.toHaveTextContent(/\d/);
+  });
+});
+
+function Controls() {
+  const assistant = useAssistant();
+  return (
+    <>
+      <button onClick={() => assistant.ask("Should I pursue this?", { send: true })}>ask about job</button>
+      <button onClick={() => assistant.ask()}>open empty</button>
+      <button onClick={assistant.close}>close panel</button>
+    </>
+  );
+}
+
+describe("AppShell assistant", () => {
+  // B — the bug: closing and reopening the panel re-sent the last question
+  it("starts a fresh chat when the panel is reopened, instead of replaying the last question", async () => {
+    const chatCalls = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url) === "/api/chat") { chatCalls(); return { ok: true, body: new ReadableStream({ start(c) { c.close(); } }) }; }
+      return jobsWithPending(0);
+    }));
+    render(<AppShell><Controls /></AppShell>);
+
+    fireEvent.click(screen.getByText("ask about job"));
+    await waitFor(() => expect(chatCalls).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByText("close panel"));
+    fireEvent.click(screen.getByText("open empty"));
+
+    await screen.findByPlaceholderText("Message…");
+    await new Promise((r) => setTimeout(r, 100));
+    expect(chatCalls).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Should I pursue this?")).not.toBeInTheDocument();
   });
 });

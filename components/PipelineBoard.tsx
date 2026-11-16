@@ -11,6 +11,7 @@ import { useAssistant } from "@/components/shell/assistant-context";
 import type { ColumnId, MoveTarget, PipelineCard, PipelineColumn } from "@/lib/pipeline";
 import { cn } from "@/lib/utils";
 import { jobContext } from "@/lib/job-context";
+import { aboutJobPrompt } from "@/lib/assistant-prompts";
 
 interface PipelineBoardProps {
   columns: PipelineColumn[];
@@ -40,7 +41,7 @@ function MoveMenu({ card, columns, onMove }: { card: PipelineCard; columns: Pipe
 
 function JobCard({ card, columns, onMove, onOpen, contextFor }: { card: PipelineCard; columns: PipelineColumn[] } & Pick<PipelineBoardProps, "onMove" | "onOpen" | "contextFor">) {
   const assistant = useAssistant();
-  const ask = () => assistant.ask(`Tell me about the ${card.role} role at ${card.company}: fit, red flags, and what to do next.`, { send: true, context: contextFor?.(card) ?? { label: `${card.company} · ${card.role}`, text: jobContext({ company: card.company, role: card.role, fit: card.fit, salary: card.salary, aiSummary: card.summary }) } });
+  const ask = () => assistant.ask(aboutJobPrompt(card), { send: true, context: contextFor?.(card) ?? { label: `${card.company} · ${card.role}`, text: jobContext({ company: card.company, role: card.role, fit: card.fit, salary: card.salary, aiSummary: card.summary }) } });
   return (
     <article
       draggable

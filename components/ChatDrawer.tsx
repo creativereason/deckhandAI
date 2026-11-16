@@ -95,11 +95,13 @@ function formatScrapeResult(result: ScrapeApiResult): string {
 /** A prompt another part of the app wants the assistant to handle; `id` changes on every request so repeats still fire. */
 export type AssistantRequest = { id: number; text: string; send: boolean; context?: { text: string; label: string } };
 
-export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }: {
+export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request, onRequestHandled }: {
   onJobsChanged: () => void;
   onClose?: () => void;
   subtitle?: string;
   request?: AssistantRequest | null;
+  /** Called once the request has been taken, so the host can drop it and a later reopen starts empty. */
+  onRequestHandled?: () => void;
 }) {
   const [messages, setMessages] = useState<ClientMsg[]>([]);
   const [input, setInput] = useState("");
@@ -227,6 +229,7 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
   useEffect(() => {
     if (!request || handledRequest.current === request.id) return;
     handledRequest.current = request.id;
+    onRequestHandled?.();
     setSubject(request.context ?? null);
     // A request from another screen is an external event: sending it (or filling the composer) is the sync.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -235,7 +238,7 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
       setInput(request.text);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [request, send]);
+  }, [request, send, onRequestHandled]);
 
   async function addEvaluationToPending() {
     if (!evaluation || pending || evaluationMissingIdentity(evaluation)) return;
