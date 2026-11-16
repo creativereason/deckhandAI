@@ -48,7 +48,16 @@ export async function addJobOp(repo: JobRepository, input: unknown): Promise<OpR
   return ok({ job: agentJobView({ id: id ?? "", section: "pending", job }) }, 201);
 }
 
-/** Only notes, summary, score rationale and fit; the schema rejects every other field. */
+/**
+ * Another job that already has this URL (archived ones included), or undefined. A blank
+ * company and role never match a real job, so only the URL can collide.
+ */
+async function urlTakenElsewhere(repo: JobRepository, id: string, url: string) {
+  const match = url ? await repo.findExisting({ url, company: "", role: "" }) : undefined;
+  return match && match.id !== id ? match : undefined;
+}
+
+/** Only url, notes, summary, score rationale and fit; the schema rejects every other field. */
 export async function editJobOp(repo: JobRepository, rawId: unknown, input: unknown): Promise<OpResult> {
   const id = JobId.safeParse(rawId);
   if (!id.success) return notFound();
@@ -56,6 +65,8 @@ export async function editJobOp(repo: JobRepository, rawId: unknown, input: unkn
   if (!("value" in edit)) return edit;
   const found = await repo.get({ id: id.data });
   if (!found) return notFound();
+  const taken = edit.value.url && edit.value.url !== found.job.url ? await urlTakenElsewhere(repo, id.data, edit.value.url) : undefined;
+  if (taken) return { status: 409, body: { error: "Another job already has this URL", existing: taken } };
   const job = { ...found.job, ...edit.value };
   await repo.save({ id: id.data }, { section: found.section, job });
   return ok({ job: agentJobView({ ...found, job }) });

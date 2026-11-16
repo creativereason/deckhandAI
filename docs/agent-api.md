@@ -19,7 +19,7 @@ Each agent has scopes. A key without the scope an operation needs gets `403`. A 
 | List jobs | `GET /jobs?section=&limit=&offset=` (limit 1 to 500, default 100) | `jobs:read` |
 | Get a job | `GET /jobs/{id}` | `jobs:read` |
 | Add to the inbox | `POST /jobs` | `jobs:add_pending` |
-| Edit notes, `aiSummary`, `scoreRationale`, `fit` | `PATCH /jobs/{id}` | `jobs:edit` |
+| Edit `url`, `notes`, `aiSummary`, `scoreRationale`, `fit` | `PATCH /jobs/{id}` | `jobs:edit` |
 | Move between sections | `POST /jobs/{id}/move` with `{ "to": "prospect" }` | `jobs:triage` |
 | Archive (soft delete) | `POST /jobs/{id}/archive` | `jobs:archive` |
 
@@ -64,7 +64,7 @@ Every change an agent makes is recorded in `job_events` under the agent's name.
 | `list_jobs` | `jobs:read` | list jobs (`section`, `limit`, `offset`) |
 | `get_job` | `jobs:read` | one job by `id` |
 | `add_pending_job` | `jobs:add_pending` | add to the inbox only |
-| `update_job` | `jobs:edit` | `notes`, `aiSummary`, `scoreRationale`, `fit` |
+| `update_job` | `jobs:edit` | `url`, `notes`, `aiSummary`, `scoreRationale`, `fit` |
 | `move_job` | `jobs:triage` | move to another section |
 | `archive_job` | `jobs:archive` | soft delete |
 

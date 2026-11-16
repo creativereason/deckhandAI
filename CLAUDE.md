@@ -637,7 +637,7 @@ The browser never holds an agent key, and agents never hold the Supabase key.
 |-------|--------|
 | `jobs:read` | list and get jobs, read the board |
 | `jobs:add_pending` | create a job in `pending` only (never another section) |
-| `jobs:edit` | change notes, `aiSummary`, score rationale, fit |
+| `jobs:edit` | change `url` (http(s) only, not already used by another job), notes, `aiSummary`, score rationale, fit |
 | `jobs:triage` | move a job between sections, including out of `pending` |
 | `jobs:evaluate` | run URL evaluation / fit scoring (spends AI budget) |
 | `jobs:check_url` | run link checks and read their results (no AI spend) |

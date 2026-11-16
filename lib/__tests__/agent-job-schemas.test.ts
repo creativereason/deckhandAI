@@ -43,12 +43,17 @@ describe("AgentCreateJob", () => {
 });
 
 describe("AgentEditJob", () => {
-  // B — Boundary: edit is limited to the four fields the jobs:edit scope describes
-  it.each(["notes", "aiSummary", "scoreRationale", "fit"])("accepts a change to %s", (field) => {
-    expect(AgentEditJob.safeParse({ [field]: field === "fit" ? "strong" : "text" }).success).toBe(true);
+  // B — Boundary: edit is limited to the five fields the jobs:edit scope describes
+  it.each(["notes", "aiSummary", "scoreRationale", "fit", "url"])("accepts a change to %s", (field) => {
+    const value = field === "fit" ? "strong" : field === "url" ? "https://example.com/jobs/2" : "text";
+    expect(AgentEditJob.safeParse({ [field]: value }).success).toBe(true);
   });
 
-  it.each(["company", "role", "url", "status", "section", "id", "salary", "isGhost"])("rejects a change to %s", (field) => {
+  it.each(["javascript:alert(1)", "data:text/html,x", "file:///etc/passwd", "not a url"])("rejects the url %s", (url) => {
+    expect(AgentEditJob.safeParse({ url }).success).toBe(false);
+  });
+
+  it.each(["company", "role", "status", "section", "id", "salary", "isGhost"])("rejects a change to %s", (field) => {
     expect(AgentEditJob.safeParse({ notes: "n", [field]: "x" }).success).toBe(false);
   });
 
