@@ -1,12 +1,14 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import AssistantSlot from "@/components/AssistantSlot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useScorePending } from "@/components/use-score-pending";
 import { fitBadgeVariant, groupBadgeVariant } from "@/lib/job-badges";
 import type { PendingJob } from "@/lib/jobs";
 import { submitReview } from "@/lib/review-client";
+import { cn } from "@/lib/utils";
 import { rotateQueue, settleOffset, stepOffset, triageKeyAction, type TriageAction } from "@/lib/triage";
 
 const keyOf = (j: PendingJob) => j.id ?? `${j.company}|${j.role}`;
@@ -137,7 +139,7 @@ function ActionBar({ act, pressed }: { act: (action: TriageAction) => void; pres
 
 function UpNext({ jobs }: { jobs: PendingJob[] }) {
   return (
-    <aside className="space-y-2">
+    <aside className="min-h-0 space-y-2 lg:flex-1 lg:overflow-y-auto">
       <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Up next</h3>
       <ul aria-label="Up next" className="space-y-2">
         {jobs.map((j) => (
@@ -148,6 +150,15 @@ function UpNext({ jobs }: { jobs: PendingJob[] }) {
         ))}
       </ul>
     </aside>
+  );
+}
+
+function SidePane({ upNext, assistant }: { upNext: PendingJob[]; assistant?: ReactNode }) {
+  return (
+    <div data-testid="triage-side-pane" className={cn("flex flex-col gap-4", assistant && "lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]")}>
+      <UpNext jobs={upNext} />
+      {assistant && <AssistantSlot>{assistant}</AssistantSlot>}
+    </div>
   );
 }
 
@@ -163,29 +174,34 @@ function Progress({ reviewed, total }: { reviewed: number; total: number }) {
   );
 }
 
-export default function TriageView({ pending, onUpdate, onBackToBoard }: { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void }) {
+type TriageViewProps = { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void; assistant?: ReactNode };
+
+export default function TriageView({ pending, onUpdate, onBackToBoard, assistant }: TriageViewProps) {
   const { current, upNext, reviewed, total, act, pressed } = useTriage(pending, onUpdate);
   const scoring = useScorePending(pending, onUpdate);
   useTriageKeys(act);
 
   if (!current) {
     return (
-      <div className="space-y-3 rounded-xl border border-border bg-card px-6 py-10 text-center shadow-sm">
-        <p className="text-sm font-medium">All caught up</p>
-        <p className="text-xs text-muted-foreground">New finds from scrapes and agents show up here.</p>
-        <Button onClick={onBackToBoard} variant="outline" size="sm">Back to board</Button>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-3 rounded-xl border border-border bg-card px-6 py-10 text-center shadow-sm">
+          <p className="text-sm font-medium">All caught up</p>
+          <p className="text-xs text-muted-foreground">New finds from scrapes and agents show up here.</p>
+          <Button onClick={onBackToBoard} variant="outline" size="sm">Back to board</Button>
+        </div>
+        {assistant && <SidePane upNext={[]} assistant={assistant} />}
       </div>
     );
   }
   return (
     <div className="space-y-4">
       <Progress reviewed={reviewed} total={total} />
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <JobCard job={current} scoring={scoring} />
           <ActionBar act={act} pressed={pressed} />
         </section>
-        <UpNext jobs={upNext} />
+        <SidePane upNext={upNext} assistant={assistant} />
       </div>
     </div>
   );

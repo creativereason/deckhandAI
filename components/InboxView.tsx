@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import ScrapeReviewQueue from "@/components/ScrapeReviewQueue";
+import AssistantSlot from "@/components/AssistantSlot";
 import TriageView from "@/components/TriageView";
 import { Button } from "@/components/ui/button";
 import type { PendingJob } from "@/lib/jobs";
@@ -30,10 +31,12 @@ export default function InboxView({
   pending,
   onUpdate,
   onBackToBoard,
+  assistant,
 }: {
   pending: PendingJob[];
   onUpdate: () => void;
   onBackToBoard: () => void;
+  assistant?: ReactNode;
 }) {
   const [mode, setMode] = useState<InboxMode>("triage");
 
@@ -57,10 +60,13 @@ export default function InboxView({
 
   if (pending.length === 0) {
     return (
-      <div className="bg-card rounded-xl border border-border shadow-sm px-6 py-10 text-center space-y-3">
-        <p className="text-sm font-medium text-foreground">Your inbox is empty</p>
-        <p className="text-xs text-muted-foreground">New jobs from scrapes and agents show up here for you to approve or dismiss.</p>
-        <Button onClick={onBackToBoard} variant="outline" size="sm">Back to board</Button>
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="bg-card rounded-xl border border-border shadow-sm px-6 py-10 text-center space-y-3">
+          <p className="text-sm font-medium text-foreground">Your inbox is empty</p>
+          <p className="text-xs text-muted-foreground">New jobs from scrapes and agents show up here for you to approve or dismiss.</p>
+          <Button onClick={onBackToBoard} variant="outline" size="sm">Back to board</Button>
+        </div>
+        {assistant && <AssistantSlot>{assistant}</AssistantSlot>}
       </div>
     );
   }
@@ -68,9 +74,12 @@ export default function InboxView({
     <div className="space-y-4">
       <ModeSwitch mode={mode} onChange={choose} />
       {mode === "triage" ? (
-        <TriageView pending={pending} onUpdate={onUpdate} onBackToBoard={onBackToBoard} />
+        <TriageView pending={pending} onUpdate={onUpdate} onBackToBoard={onBackToBoard} assistant={assistant} />
       ) : (
-        <ScrapeReviewQueue pending={pending} onUpdate={onUpdate} />
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <ScrapeReviewQueue pending={pending} onUpdate={onUpdate} />
+          {assistant && <div className="lg:sticky lg:top-4"><AssistantSlot>{assistant}</AssistantSlot></div>}
+        </div>
       )}
     </div>
   );
