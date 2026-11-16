@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListGroup, ListRow } from "@/components/ui/list-row";
@@ -28,6 +29,8 @@ interface ScoreState {
 interface Props {
   pending: PendingJob[];
   onUpdate: () => void;
+  /** Opens this job in the one-at-a-time triage view. */
+  onOpen?: (job: PendingJob) => void;
 }
 
 function jobKey(j: PendingJob) {
@@ -47,7 +50,7 @@ function ActionButtons({ company, loading, onApprove, onReject }: { company: str
   );
 }
 
-export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
+export default function ScrapeReviewQueue({ pending, onUpdate, onOpen }: Props) {
   const [scores, setScores] = useState<Record<string, ScoreState>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -107,9 +110,10 @@ export default function ScrapeReviewQueue({ pending, onUpdate }: Props) {
           return (
             <ListRow
               key={jobKey(j)}
-              title={j.company}
+              title={onOpen ? <button type="button" onClick={() => onOpen(j)} aria-label={`Review ${j.company}, ${j.role}`} className="font-medium text-foreground underline-offset-4 hover:underline">{j.company}</button> : j.company}
               meta={j.role}
               trailing={<Badge variant={groupBadgeVariant(j.scrapeGroup)}>{j.scrapeGroup}</Badge>}
+              actions={onOpen ? <Button variant="outline" size="sm" onClick={() => onOpen(j)} aria-label={`Open ${j.company} in triage`}>Triage<ArrowRight aria-hidden /></Button> : undefined}
             >
               <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
                 {j.salary && <span>{j.salary}</span>}

@@ -6,11 +6,15 @@ import InboxView from "@/components/InboxView";
 import type { PendingJob } from "@/lib/jobs";
 
 vi.mock("@/components/ScrapeReviewQueue", () => ({
-  default: ({ pending }: { pending: PendingJob[] }) => <div data-testid="queue">{pending.length} in queue</div>,
+  default: ({ pending, onOpen }: { pending: PendingJob[]; onOpen?: (job: PendingJob) => void }) => (
+    <div data-testid="queue">{pending.length} in queue<button onClick={() => onOpen?.(pending[1])}>open second</button></div>
+  ),
 }));
 
 vi.mock("@/components/TriageView", () => ({
-  default: ({ pending }: { pending: PendingJob[] }) => <div data-testid="triage">{pending.length} to triage</div>,
+  default: ({ pending, startAt }: { pending: PendingJob[]; startAt?: PendingJob }) => (
+    <div data-testid="triage">{pending.length} to triage{startAt ? ` starting at ${startAt.role}` : ""}</div>
+  ),
 }));
 
 beforeEach(() => localStorage.clear());
@@ -74,5 +78,27 @@ describe("InboxView", () => {
     screen.getByRole("button", { name: /back to board/i }).click();
 
     expect(onBackToBoard).toHaveBeenCalled();
+  });
+
+  // I — Interface: a job picked in the list opens in triage, on that job
+  it("opens the triage view on the job chosen in the list", () => {
+    render(<InboxView pending={[job("A"), job("B"), job("C")]} onUpdate={() => {}} onBackToBoard={() => {}} />);
+    fireEvent.click(screen.getByRole("radio", { name: "List" }));
+
+    fireEvent.click(screen.getByText("open second"));
+
+    expect(screen.getByTestId("triage")).toHaveTextContent("starting at B");
+    expect(screen.getByRole("radio", { name: "Triage" })).toBeChecked();
+  });
+
+  it("starts triage from the top again when the user switches modes by hand", () => {
+    render(<InboxView pending={[job("A"), job("B")]} onUpdate={() => {}} onBackToBoard={() => {}} />);
+    fireEvent.click(screen.getByRole("radio", { name: "List" }));
+    fireEvent.click(screen.getByText("open second"));
+    fireEvent.click(screen.getByRole("radio", { name: "List" }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "Triage" }));
+
+    expect(screen.getByTestId("triage")).not.toHaveTextContent("starting at");
   });
 });

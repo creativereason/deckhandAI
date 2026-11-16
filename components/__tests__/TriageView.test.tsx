@@ -162,4 +162,18 @@ describe("TriageView", () => {
       expect(screen.getByRole("button", { name: /^pass/i })).not.toHaveAttribute("data-pressed");
     });
   });
+
+  // I — Interface: opening from the list lands on that job, with the rest still reachable
+  it("opens on the job it is told to start at, not the first in the queue", () => {
+    render(<TriageView pending={three} onUpdate={vi.fn()} onBackToBoard={() => {}} startAt={three[1]} />);
+
+    expect(screen.getByRole("heading", { name: "Bravo Role" })).toBeInTheDocument();
+    expect(screen.getByText("Reviewed 0 of 3")).toBeInTheDocument();
+  });
+
+  it("falls back to the first job when the start job is no longer in the queue", () => {
+    render(<TriageView pending={three} onUpdate={vi.fn()} onBackToBoard={() => {}} startAt={{ ...three[0], company: "Gone", role: "Gone Role", id: undefined }} />);
+
+    expect(screen.getByRole("heading", { name: "Alpha Role" })).toBeInTheDocument();
+  });
 });

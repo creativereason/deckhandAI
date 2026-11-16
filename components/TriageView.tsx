@@ -33,8 +33,8 @@ function usePressed() {
   return { pressed, flash };
 }
 
-function useTriage(pending: PendingJob[], onUpdate: () => void) {
-  const [offset, setOffset] = useState(0);
+function useTriage(pending: PendingJob[], onUpdate: () => void, startOffset = 0) {
+  const [offset, setOffset] = useState(startOffset);
   const [gone, setGone] = useState<Set<string>>(new Set());
   const saving = useRef(false);
   const { pressed, flash } = usePressed();
@@ -175,10 +175,13 @@ function Progress({ reviewed, total }: { reviewed: number; total: number }) {
   );
 }
 
-type TriageViewProps = { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void };
+/** `startAt` opens the triage on that job (from the list) instead of the first one in the queue. */
+type TriageViewProps = { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void; startAt?: PendingJob };
 
-export default function TriageView({ pending, onUpdate, onBackToBoard }: TriageViewProps) {
-  const { current, upNext, reviewed, total, act, pressed } = useTriage(pending, onUpdate);
+const sameJob = (a: PendingJob, b: PendingJob) => (a.id && b.id ? a.id === b.id : a.company === b.company && a.role === b.role);
+
+export default function TriageView({ pending, onUpdate, onBackToBoard, startAt }: TriageViewProps) {
+  const { current, upNext, reviewed, total, act, pressed } = useTriage(pending, onUpdate, startAt ? Math.max(0, pending.findIndex((j) => sameJob(j, startAt))) : 0);
   const scoring = useScorePending(pending, onUpdate);
   useTriageKeys(act);
 
