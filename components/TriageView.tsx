@@ -127,7 +127,7 @@ function ActionBar({ act, pressed }: { act: (action: TriageAction) => void; pres
     className: "transition-transform duration-150 data-[pressed=true]:scale-95 data-[pressed=true]:ring-2 data-[pressed=true]:ring-primary data-[pressed=true]:ring-offset-2",
   });
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="sticky bottom-0 -mx-6 -mb-6 grid grid-cols-3 gap-3 rounded-b-2xl border-t border-border bg-card px-6 py-4 sm:-mx-8 sm:-mb-8 sm:px-8">
       <Button variant="outline" size="lg" onClick={() => act("pass")} {...mark("pass")}>Pass <Kbd>P</Kbd></Button>
       <Button variant="outline" size="lg" onClick={() => act("skip")} {...mark("skip")}>Skip <Kbd>S</Kbd></Button>
       <Button size="lg" onClick={() => act("keep")} {...mark("keep")}>Keep <Kbd>K</Kbd></Button>
