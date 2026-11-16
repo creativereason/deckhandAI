@@ -1,6 +1,6 @@
 "use client";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Link2, Ghost, ListPlus, Send } from "lucide-react";
+import { Link2, Ghost, ListPlus, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { jobDetailHref } from "@/lib/job-detail";
 import { MarkdownContent } from "@/components/MarkdownContent";
@@ -93,13 +93,15 @@ function formatScrapeResult(result: ScrapeApiResult): string {
 
 
 /** A prompt another part of the app wants the assistant to handle; `id` changes on every request so repeats still fire. */
-export type AssistantRequest = { id: number; text: string; send: boolean };
+export type AssistantRequest = { id: number; text: string; send: boolean; context?: { text: string; label: string } };
 
-export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }: {
+export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request, onRequestHandled }: {
   onJobsChanged: () => void;
   onClose?: () => void;
   subtitle?: string;
   request?: AssistantRequest | null;
+  /** Called once the request has been taken, so the host can drop it and a later reopen starts empty. */
+  onRequestHandled?: () => void;
 }) {
   const [messages, setMessages] = useState<ClientMsg[]>([]);
   const [input, setInput] = useState("");
@@ -107,6 +109,7 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
   const [statusLines, setStatusLines] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [evaluation, setEvaluation] = useState<EvaluationPayload | null>(null);
+  const [subject, setSubject] = useState<{ text: string; label: string } | null>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const handledRequest = useRef<number | null>(null);
@@ -149,7 +152,7 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
     return formatScrapeResult(scrapeResult);
   }, [appendStatus, onJobsChanged]);
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, about: { text: string; label: string } | null = subject) => {
     if (!text.trim() || pending) return;
     setError("");
     setEvaluation(null);
@@ -179,7 +182,7 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages }),
+        body: JSON.stringify({ messages: nextMessages, ...(about ? { jobContext: about.text } : {}) }),
       });
       if (!res.body) throw new Error("No response body");
 
@@ -221,19 +224,21 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
       setPending(false);
       setStatusLines([]);
     }
-  }, [evaluateJobUrl, runScrapeNow, messages, pending, onJobsChanged, appendStatus]);
+  }, [evaluateJobUrl, runScrapeNow, messages, pending, onJobsChanged, appendStatus, subject]);
 
   useEffect(() => {
     if (!request || handledRequest.current === request.id) return;
     handledRequest.current = request.id;
+    onRequestHandled?.();
+    setSubject(request.context ?? null);
     // A request from another screen is an external event: sending it (or filling the composer) is the sync.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (request.send) void send(request.text);
+    if (request.send) void send(request.text, request.context ?? null);
     else {
       setInput(request.text);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [request, send]);
+  }, [request, send, onRequestHandled]);
 
   async function addEvaluationToPending() {
     if (!evaluation || pending || evaluationMissingIdentity(evaluation)) return;
@@ -267,6 +272,7 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
     setStatusLines([]);
     setError("");
     setEvaluation(null);
+    setSubject(null);
     setTimeout(() => inputRef.current?.focus(), 50);
   }
 
@@ -291,6 +297,13 @@ export default function ChatDrawer({ onJobsChanged, onClose, subtitle, request }
       headerActions={hasDraftOrThread ? <Button type="button" variant="ghost" size="sm" onClick={startOver} disabled={pending}>Start over</Button> : undefined}
       bodyRef={messagesRef}
     >
+      {subject && (
+        <div className="flex items-center justify-between gap-2 rounded-md bg-ai-subtle px-3 py-2 text-xs text-ai-subtle-foreground">
+          <p className="min-w-0 truncate"><span className="font-semibold">About:</span> {subject.label}</p>
+          <button type="button" onClick={() => setSubject(null)} aria-label={`Stop asking about ${subject.label}`} className="shrink-0 rounded-sm p-1 hover:bg-ai-subtle"><X className="size-4" aria-hidden /></button>
+        </div>
+      )}
+
       {messages.length === 0 && !pending && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col items-stretch gap-2">

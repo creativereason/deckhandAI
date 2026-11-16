@@ -14,12 +14,13 @@ import AppliedStatusFilter from "@/components/AppliedStatusFilter";
 import PipelineBoard from "@/components/PipelineBoard";
 import { BoardToolbar, FitFilterBar, SectionVisibilityBar, type FitFilter, type ToggleableSection } from "@/components/board/BoardToolbar";
 import { JobList, type RowHandlers } from "@/components/board/JobList";
-import { appliedRow, passedRow, prospectRow, type BoardRow } from "@/components/board/board-row";
+import { appliedRow, passedRow, prospectRow, rowContext, type BoardRow } from "@/components/board/board-row";
 import { PageHeader } from "@/components/ui/page-header";
 import { LoadingState } from "@/components/ui/states";
 import { exportCoverLetter, exportResume } from "@/lib/job-export-client";
 import type { AppliedJob, JobIdentity, JobsData, JobSection, JobStatus, JobType, PassedJob, ProspectJob } from "@/lib/jobs";
 import { jobDetailHref } from "@/lib/job-detail";
+import { aboutJobPrompt } from "@/lib/assistant-prompts";
 import { parseBoardLayout, type BoardLayout } from "@/lib/board-layout";
 import { buildPipeline, moveAction, type MoveTarget, type PipelineCard } from "@/lib/pipeline";
 import { applyMove } from "@/lib/pipeline-client";
@@ -111,6 +112,9 @@ function BoardContent() {
     return () => window.removeEventListener(JOBS_CHANGED_EVENT, load);
   }, [load]);
 
+  // Reloads this page and the nav badge together: both listen for this event.
+  const announceJobsChanged = () => window.dispatchEvent(new Event(JOBS_CHANGED_EVENT));
+
   async function moveJob(fromSection: JobSection, job: JobIdentity, toSection: JobSection) {
     await fetch(`/api/jobs`, {
       method: "DELETE",
@@ -158,7 +162,7 @@ function BoardContent() {
     const ctx = { company: row.company, role: row.role, url: row.url || undefined };
     return {
       onEdit: () => setEditing({ section: row.section, job: row.job }),
-      onAsk: () => assistant.ask(`Tell me about the ${row.role} role at ${row.company}: fit, red flags, and what to do next.`, { send: true }),
+      onAsk: () => assistant.ask(aboutJobPrompt(row), { send: true, context: rowContext(row) }),
       onGenerate: () => setGenerating(ctx),
       onExportResume: hasProfile ? () => exportResume(row.company, row.role) : undefined,
       onExportCoverLetter: hasProfile ? () => exportCoverLetter(row.company, row.role, row.url) : undefined,
@@ -176,6 +180,10 @@ function BoardContent() {
 
   const pipelineColumns = buildPipeline({ prospects: prospects, applied: jobs.applied.filter(matches) }, hiddenStatuses);
   const sectionToggles = visibleSections;
+  const pipelineContexts = new Map<string, { text: string; label: string }>([
+    ...prospects.map((j) => prospectRow(j, j._section)),
+    ...jobs.applied.map(appliedRow),
+  ].map((row) => [row.key, rowContext(row)]));
 
   return (
     <>
@@ -199,7 +207,7 @@ function BoardContent() {
       )}
 
       {view === "today" && <TodayView jobs={jobs} onOpenInbox={() => setView("inbox")} />}
-      {view === "inbox" && <InboxView pending={jobs.pending ?? []} onUpdate={load} onBackToBoard={() => setView("board")} />}
+      {view === "inbox" && <InboxView pending={jobs.pending ?? []} onUpdate={announceJobsChanged} onBackToBoard={() => setView("board")} board={jobs} />}
 
       {view === "board" && (
         <div className="flex flex-col gap-4">
@@ -215,6 +223,7 @@ function BoardContent() {
               columns={pipelineColumns}
               passedCount={jobs.passed.length}
               onMove={moveCard}
+              contextFor={(card) => pipelineContexts.get(card.key)}
               onOpen={(card) => router.push(jobDetailHref({ id: card.id, company: card.company, role: card.role, section: card.section }))}
             />
           )}

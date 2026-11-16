@@ -127,4 +127,43 @@ describe("ChatDrawer as the shared assistant panel", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/chat", expect.objectContaining({ method: "POST" })));
     expect(screen.getByText("What are the red flags?")).toBeInTheDocument();
   });
+
+  // I — Interface: a question about a job carries the job, and says so
+  it("sends the job's details with a request that has context, and shows what it is about", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, body: new ReadableStream({ start(c) { c.close(); } }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const context = { label: "Acme · Lead", text: "Company: Acme\nRole: Lead\nURL: https://x.test/j" };
+
+    render(<ChatDrawer onJobsChanged={vi.fn()} request={{ id: 3, text: "Should I pursue this?", send: true, context }} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string) as { jobContext?: string };
+    expect(body.jobContext).toBe(context.text);
+    expect(screen.getByText("Acme · Lead")).toBeInTheDocument();
+  });
+
+  it("stops sending the job once the user clears the About chip", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, body: new ReadableStream({ start(c) { c.close(); } }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const context = { label: "Acme · Lead", text: "Company: Acme" };
+    render(<ChatDrawer onJobsChanged={vi.fn()} request={{ id: 4, text: "Fill only", send: false, context }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /stop asking about acme/i }));
+    fireEvent.change(screen.getByPlaceholderText("Message…"), { target: { value: "General question" } });
+    fireEvent.click(screen.getByText("Send"));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).not.toHaveProperty("jobContext");
+  });
+
+  it("sends no job when the request has none", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, body: new ReadableStream({ start(c) { c.close(); } }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ChatDrawer onJobsChanged={vi.fn()} request={{ id: 5, text: "Where is my search stuck?", send: true }} />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).not.toHaveProperty("jobContext");
+    expect(screen.queryByText(/^About:/)).not.toBeInTheDocument();
+  });
 });

@@ -80,12 +80,14 @@ export default function AppShell({ children, width = "content" }: { children: Re
     try { localStorage.setItem(OPEN_KEY, String(next)); } catch { /* private mode */ }
   }, []);
 
+  const clearRequest = useCallback(() => setRequest(null), []);
+
   const api = useMemo<AssistantApi>(() => ({
     open,
     close: () => setOpenPersisted(false),
     ask: (text, options) => {
       setOpenPersisted(true);
-      if (text) setRequest({ id: Date.now(), text, send: !!options?.send });
+      if (text) setRequest({ id: Date.now(), text, send: !!options?.send, context: options?.context });
     },
   }), [open, setOpenPersisted]);
 
@@ -104,6 +106,7 @@ export default function AppShell({ children, width = "content" }: { children: Re
       onJobsChanged={() => window.dispatchEvent(new Event(JOBS_CHANGED_EVENT))}
       onClose={() => setOpenPersisted(false)}
       request={request}
+      onRequestHandled={clearRequest}
     />
   );
 

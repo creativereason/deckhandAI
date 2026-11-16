@@ -9,6 +9,7 @@ import { ListGroup, ListRow } from "@/components/ui/list-row";
 import { useAssistant } from "@/components/shell/assistant-context";
 import { buildFunnel, buildNeedsYou, type NeedsYouItem, type NeedsYouKind } from "@/lib/today";
 import { jobDetailHref } from "@/lib/job-detail";
+import { jobContext, jobContextLabel } from "@/lib/job-context";
 import type { JobsData } from "@/lib/jobs";
 
 const ICONS: Record<NeedsYouKind, React.ReactNode> = {
@@ -42,7 +43,16 @@ function Funnel({ jobs }: { jobs: JobsData }) {
   );
 }
 
-function NeedsYou({ items, onInbox }: { items: NeedsYouItem[]; onInbox: () => void }) {
+/** The stored job behind an item, so the assistant gets its notes and URL and not just a name. */
+function subjectFor(jobs: JobsData, item: NeedsYouItem): { text: string; label: string } | undefined {
+  if (!item.job) return undefined;
+  const { id, company, role, section } = item.job;
+  const found = (jobs[section] ?? []).find((j) => (id ? j.id === id : j.company === company && j.role === role));
+  const f = (found ?? {}) as { status?: string; date?: string; fit?: string; salary?: string; url?: string; aiSummary?: string; notes?: string; scoreRationale?: string };
+  return { label: jobContextLabel({ company, role }), text: jobContext({ company, role, section, status: f.status, applied: f.date, fit: f.fit, salary: f.salary, url: f.url, aiSummary: f.aiSummary, notes: f.notes, scoreRationale: f.scoreRationale }) };
+}
+
+function NeedsYou({ jobs, items, onInbox }: { jobs: JobsData; items: NeedsYouItem[]; onInbox: () => void }) {
   const assistant = useAssistant();
   return (
     <Card padding="none">
@@ -61,7 +71,7 @@ function NeedsYou({ items, onInbox }: { items: NeedsYouItem[]; onInbox: () => vo
               actions={
                 <>
                   {item.kind === "inbox" && <Button size="sm" variant="outline" onClick={onInbox}>Review</Button>}
-                  <Button size="sm" variant="ai" onClick={() => assistant.ask(item.prompt, { send: true })}><Sparkles aria-hidden />Ask</Button>
+                  <Button size="sm" variant="ai" onClick={() => assistant.ask(item.prompt, { send: true, context: subjectFor(jobs, item) })}><Sparkles aria-hidden />Ask</Button>
                 </>
               }
             />
@@ -83,7 +93,7 @@ export default function TodayView({ jobs, onOpenInbox }: { jobs: JobsData; onOpe
         <div className="mt-3 flex flex-wrap gap-2">{BRIEFING_PROMPTS.map((p) => <PromptChip key={p} onClick={() => assistant.ask(p, { send: true })}>{p}</PromptChip>)}</div>
       </AIInsight>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <NeedsYou items={items} onInbox={onOpenInbox} />
+        <NeedsYou jobs={jobs} items={items} onInbox={onOpenInbox} />
         <Funnel jobs={jobs} />
       </div>
     </div>

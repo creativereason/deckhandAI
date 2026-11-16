@@ -162,4 +162,35 @@ describe("TriageView", () => {
       expect(screen.getByRole("button", { name: /^pass/i })).not.toHaveAttribute("data-pressed");
     });
   });
+
+  // I — Interface: opening from the list lands on that job, with the rest still reachable
+  it("opens on the job it is told to start at, not the first in the queue", () => {
+    render(<TriageView pending={three} onUpdate={vi.fn()} onBackToBoard={() => {}} startAt={three[1]} />);
+
+    expect(screen.getByRole("heading", { name: "Bravo Role" })).toBeInTheDocument();
+    expect(screen.getByText("Reviewed 0 of 3")).toBeInTheDocument();
+  });
+
+  it("falls back to the first job when the start job is no longer in the queue", () => {
+    render(<TriageView pending={three} onUpdate={vi.fn()} onBackToBoard={() => {}} startAt={{ ...three[0], company: "Gone", role: "Gone Role", id: undefined }} />);
+
+    expect(screen.getByRole("heading", { name: "Alpha Role" })).toBeInTheDocument();
+  });
+
+  // I — Interface: a company seen before is flagged on the card
+  it("flags a company that is already on the board and lists the earlier role", () => {
+    const board = { applied: [{ company: "alpha inc", role: "Earlier Role", status: "screening", date: "2026-03-01", salary: "", notes: "", url: "" }], prospect: [], local: [], staffing: [], passed: [], pending: three } as never;
+    render(<TriageView pending={three} onUpdate={vi.fn()} onBackToBoard={() => {}} board={board} />);
+
+    expect(screen.getByText("Applied before")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Earlier Role/ })).toBeInTheDocument();
+  });
+
+  it("shows no flag for a company the board has not seen", () => {
+    const board = { applied: [], prospect: [], local: [], staffing: [], passed: [], pending: three } as never;
+    render(<TriageView pending={three} onUpdate={vi.fn()} onBackToBoard={() => {}} board={board} />);
+
+    expect(screen.queryByText("Applied before")).not.toBeInTheDocument();
+    expect(screen.getByText(/first time seeing alpha/i)).toBeInTheDocument();
+  });
 });

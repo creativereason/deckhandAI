@@ -10,9 +10,13 @@ import { Card } from "@/components/ui/card";
 import { useAssistant } from "@/components/shell/assistant-context";
 import { Inbox, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { jobContext, jobContextLabel } from "@/lib/job-context";
+import { pursuePrompt } from "@/lib/assistant-prompts";
 import { useScorePending } from "@/components/use-score-pending";
 import { groupBadgeVariant } from "@/lib/job-badges";
-import type { PendingJob } from "@/lib/jobs";
+import type { JobsData, PendingJob } from "@/lib/jobs";
+import CompanyHistory, { historyFlag } from "@/components/CompanyHistory";
+import { companyHistory, type HistoryEntry } from "@/lib/company-history";
 import { submitReview } from "@/lib/review-client";
 import { rotateQueue, settleOffset, stepOffset, triageKeyAction, type TriageAction } from "@/lib/triage";
 
@@ -32,8 +36,8 @@ function usePressed() {
   return { pressed, flash };
 }
 
-function useTriage(pending: PendingJob[], onUpdate: () => void) {
-  const [offset, setOffset] = useState(0);
+function useTriage(pending: PendingJob[], onUpdate: () => void, startOffset = 0) {
+  const [offset, setOffset] = useState(startOffset);
   const [gone, setGone] = useState<Set<string>>(new Set());
   const saving = useRef(false);
   const { pressed, flash } = usePressed();
@@ -100,14 +104,16 @@ function Verdict({ job, scoring }: { job: PendingJob; scoring: boolean }) {
   );
 }
 
-function JobCard({ job, scoring }: { job: PendingJob; scoring: boolean }) {
+function JobCard({ job, scoring, history }: { job: PendingJob; scoring: boolean; history: HistoryEntry[] }) {
   const assistant = useAssistant();
+  const flag = historyFlag(history);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           {job.company}
           <Badge variant={groupBadgeVariant(job.scrapeGroup)}>{job.scrapeGroup}</Badge>
+          {flag && <Badge variant={flag.variant}>{flag.label}</Badge>}
         </p>
         <h2 className="text-xl font-semibold text-balance">{job.role}</h2>
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -120,13 +126,14 @@ function JobCard({ job, scoring }: { job: PendingJob; scoring: boolean }) {
         <Section label="At a glance"><p className="text-sm">{job.aiSummary ?? "No summary yet."}</p></Section>
         <Section label="Fit"><Verdict job={job} scoring={scoring} /></Section>
       </div>
+      <CompanyHistory job={job} entries={history} />
       {job.notes && (
         <Section label="From the posting">
           <p tabIndex={0} role="region" aria-label="Posting text" className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{job.notes}</p>
         </Section>
       )}
       <div>
-        <AskAIButton onClick={() => assistant.ask(`Should I pursue the ${job.role} role at ${job.company}? Give me the strongest reasons for and against.`, { send: true })}>Ask about this job</AskAIButton>
+        <AskAIButton onClick={() => assistant.ask(pursuePrompt(job), { send: true, context: { label: jobContextLabel(job), text: jobContext({ company: job.company, role: job.role, section: "pending (inbox, not yet on the board)", fit: job.fit, type: job.scrapeGroup, salary: job.salary, url: job.url, aiSummary: job.aiSummary, notes: job.notes, scoreRationale: job.scoreRationale }) } })}>Ask about this job</AskAIButton>
       </div>
     </div>
   );
@@ -174,10 +181,13 @@ function Progress({ reviewed, total }: { reviewed: number; total: number }) {
   );
 }
 
-type TriageViewProps = { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void };
+/** `startAt` opens the triage on that job (from the list) instead of the first one in the queue. */
+type TriageViewProps = { pending: PendingJob[]; onUpdate: () => void; onBackToBoard: () => void; startAt?: PendingJob; board?: JobsData };
 
-export default function TriageView({ pending, onUpdate, onBackToBoard }: TriageViewProps) {
-  const { current, upNext, reviewed, total, act, pressed } = useTriage(pending, onUpdate);
+const sameJob = (a: PendingJob, b: PendingJob) => (a.id && b.id ? a.id === b.id : a.company === b.company && a.role === b.role);
+
+export default function TriageView({ pending, onUpdate, onBackToBoard, startAt, board }: TriageViewProps) {
+  const { current, upNext, reviewed, total, act, pressed } = useTriage(pending, onUpdate, startAt ? Math.max(0, pending.findIndex((j) => sameJob(j, startAt))) : 0);
   const scoring = useScorePending(pending, onUpdate);
   useTriageKeys(act);
 
@@ -193,7 +203,7 @@ export default function TriageView({ pending, onUpdate, onBackToBoard }: TriageV
       <Progress reviewed={reviewed} total={total} />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
         <Card variant="raised" padding="lg" className="gap-6">
-          <JobCard job={current} scoring={scoring} />
+          <JobCard job={current} scoring={scoring} history={board ? companyHistory(board, current) : []} />
           <ActionBar act={act} pressed={pressed} />
         </Card>
         <UpNext jobs={upNext} />
