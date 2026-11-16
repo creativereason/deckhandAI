@@ -1,12 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioItem } from "@/components/ui/radio-group";
+import { Code, SaveBar, SettingsLoading, SettingsSection, SettingsStack } from "@/components/settings/SettingsSection";
 import type { AppConfig } from "@/lib/config";
-
-const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
-const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
-const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 const SCHEDULE_PRESETS = [
   { label: "Weekdays at 8am", value: "0 8 * * 1-5" },
@@ -77,107 +76,36 @@ export default function ScrapingSettings() {
     }
   }
 
-  if (loading) {
-    return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
-  }
+  if (loading) return <SettingsLoading />;
 
   return (
-    <div className="space-y-6">
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
-          Local hub
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Used to qualify hybrid roles. The scraper checks if a listing&apos;s location matches
-          your hub city or state.
-        </p>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-1">
-            <label className={LABEL}>Hub city</label>
-            <input
-              className={INPUT}
-              placeholder="e.g. St. Louis"
-              value={loc.hub_city ?? ""}
-              onChange={(e) => updateLocation("hub_city", e.target.value)}
-            />
-          </div>
-          <div>
-            <label className={LABEL}>State</label>
-            <input
-              className={INPUT}
-              placeholder="MO"
-              maxLength={2}
-              value={loc.hub_state ?? ""}
-              onChange={(e) => updateLocation("hub_state", e.target.value.toUpperCase())}
-            />
-          </div>
-          <div>
-            <label className={LABEL}>ZIP</label>
-            <input
-              className={INPUT}
-              placeholder="00000"
-              maxLength={10}
-              value={loc.hub_zip ?? ""}
-              onChange={(e) => updateLocation("hub_zip", e.target.value)}
-            />
-          </div>
+    <SettingsStack>
+      <SettingsSection title="Local hub" description="Used to qualify hybrid roles. The scraper checks if a listing's location matches your hub city or state.">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Hub city">{(f) => <Input {...f} placeholder="e.g. St. Louis" value={loc.hub_city ?? ""} onChange={(e) => updateLocation("hub_city", e.target.value)} />}</Field>
+          <Field label="State">{(f) => <Input {...f} placeholder="MO" maxLength={2} value={loc.hub_state ?? ""} onChange={(e) => updateLocation("hub_state", e.target.value.toUpperCase())} />}</Field>
+          <Field label="ZIP">{(f) => <Input {...f} placeholder="00000" maxLength={10} value={loc.hub_zip ?? ""} onChange={(e) => updateLocation("hub_zip", e.target.value)} />}</Field>
         </div>
-        <div className="max-w-xs">
-          <label className={LABEL}>Hybrid radius (miles)</label>
-          <input
-            type="number"
-            className={INPUT}
-            value={loc.hub_radius_miles ?? 25}
-            onChange={(e) => updateLocation("hub_radius_miles", Number(e.target.value))}
-          />
-        </div>
-      </div>
+        <Field label="Hybrid radius (miles)" className="max-w-xs">
+          {(f) => <Input {...f} type="number" value={loc.hub_radius_miles ?? 25} onChange={(e) => updateLocation("hub_radius_miles", Number(e.target.value))} />}
+        </Field>
+      </SettingsSection>
 
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
-          Scrape schedule
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Used by the GitHub Actions workflow to run automated scrapes. Cron syntax, UTC.
-        </p>
-        <div className="space-y-3">
+      <SettingsSection title="Scrape schedule" description="Used by the GitHub Actions workflow to run automated scrapes. Cron syntax, UTC.">
+        <RadioGroup aria-label="Scrape schedule" value={scheduleMode} onValueChange={(v) => handlePresetChange(String(v))}>
           {SCHEDULE_PRESETS.map((preset) => (
-            <label key={preset.value} className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="schedule"
-                value={preset.value}
-                checked={scheduleMode === preset.value}
-                onChange={() => handlePresetChange(preset.value)}
-                className="accent-primary"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">{preset.label}</span>
-              {preset.value !== "custom" && (
-                <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                  {preset.value}
-                </code>
-              )}
-            </label>
+            <RadioItem key={preset.value} value={preset.value} label={preset.label} description={preset.value !== "custom" ? preset.value : undefined} />
           ))}
-        </div>
+        </RadioGroup>
         {scheduleMode === "custom" && (
-          <div>
-            <label className={LABEL}>Cron expression</label>
-            <input
-              className={INPUT}
-              placeholder="0 8 * * 1-5"
-              value={schedule}
-              onChange={(e) => updateSchedule(e.target.value)}
-            />
-          </div>
+          <Field label="Cron expression" hint="Five fields: minute, hour, day of month, month, weekday.">
+            {(f) => <Input {...f} className="font-mono" placeholder="0 8 * * 1-5" value={schedule} onChange={(e) => updateSchedule(e.target.value)} />}
+          </Field>
         )}
-      </div>
+        <p className="text-xs text-muted-foreground">Example: <Code>0 8 * * 1-5</Code> runs weekdays at 8:00 UTC.</p>
+      </SettingsSection>
 
-      <div className="flex justify-end">
-        <Button onClick={save} loading={saving} size="lg" className="px-6">
-          Save scraping settings
-        </Button>
-      </div>
-    </div>
+      <SaveBar onSave={save} saving={saving}>Save scraping settings</SaveBar>
+    </SettingsStack>
   );
 }

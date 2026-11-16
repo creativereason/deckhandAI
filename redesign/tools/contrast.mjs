@@ -11,7 +11,7 @@ const parse = (b) => Object.fromEntries([...b.matchAll(/--([a-z-]+):\s*oklch\(([
 const themes = { light: parse(block(":root")), dark: parse(block(".dark")) };
 
 function toRGB(spec) {
-  const [l, c, h, a] = spec.replace("/", " ").split(/\s+/).map(Number);
+  const [l, c, h] = spec.replace("/", " ").split(/\s+/).map(Number);
   const hr = (h * Math.PI) / 180, A = c * Math.cos(hr), B = c * Math.sin(hr);
   const l_ = l + 0.3963377774 * A + 0.2158037573 * B, m_ = l - 0.1055613458 * A - 0.0638541728 * B, s_ = l - 0.0894841775 * A - 1.291485548 * B;
   const [L, M, S] = [l_ ** 3, m_ ** 3, s_ ** 3];

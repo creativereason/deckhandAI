@@ -72,7 +72,7 @@ export default function AppShell({ children, width = "content" }: { children: Re
     let stored: string | null = null;
     try { stored = localStorage.getItem(OPEN_KEY); } catch { /* private mode */ }
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOpen(stored ? stored === "true" : window.matchMedia("(min-width: 1280px)").matches);
+    setOpen(stored ? stored === "true" : typeof window.matchMedia === "function" && window.matchMedia("(min-width: 1280px)").matches);
   }, []);
 
   const setOpenPersisted = useCallback((next: boolean) => {

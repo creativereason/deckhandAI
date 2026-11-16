@@ -55,7 +55,7 @@ describe("AgentsSettings", () => {
       render(<AgentsSettings />);
 
       // Assert
-      expect(await screen.findByText("No agents yet.")).toBeInTheDocument();
+      expect(await screen.findByText("No agents yet")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "New agent" })).toBeInTheDocument();
     });
   });
@@ -94,8 +94,8 @@ describe("AgentsSettings", () => {
       expect(screen.getByText("Muse")).toBeInTheDocument();
       expect(screen.getByText("Revoked")).toBeInTheDocument();
       await openAgent("Muse");
-      expect(screen.getByRole("checkbox", { name: "Muse: jobs:read" })).toBeDisabled();
-      fireEvent.click(screen.getByRole("button", { name: "← All agents" }));
+      expect(screen.getByRole("checkbox", { name: "Muse: jobs:read" })).toHaveAttribute("data-disabled");
+      fireEvent.click(screen.getByRole("button", { name: "All agents" }));
       await openAgent("Grokbot");
       expect(screen.getByRole("checkbox", { name: "Grokbot: jobs:archive" })).toBeEnabled();
     });

@@ -2,10 +2,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalContent } from "@/components/ui/modal";
+import { Textarea } from "@/components/ui/textarea";
 import type { AppConfig } from "@/lib/config";
-
-const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
-const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
 
 const TOTAL_STEPS = 4;
 
@@ -89,189 +91,87 @@ export default function OnboardingWizard({ onComplete }: Props) {
     }
   }
 
+  const titles = ["Welcome to deckhandAI", "Location", "Job preferences", "You're all set"];
+  const descriptions = [
+    "Let's get your profile set up. This takes about 2 minutes.",
+    "Used to filter hybrid and local roles by commute distance.",
+    "Used to filter scraped roles and personalize your tracker.",
+    "Your profile is ready. A couple of things to do next:",
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-lg">
-
-        {/* Header */}
-        <div className="px-8 pt-8 pb-4">
-          <div className="flex items-center gap-2 mb-1">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-1 flex-1 rounded-full transition-colors ${
-                  i < step ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            ))}
+    <Modal open onOpenChange={() => { /* setup is required: it cannot be dismissed */ }}>
+      <ModalContent
+        hideClose
+        title={titles[step - 1]}
+        description={`Step ${step} of ${TOTAL_STEPS}. ${descriptions[step - 1]}`}
+        footer={
+          <>
+            {step > 1 && <Button onClick={() => setStep((s) => s - 1)} variant="ghost" className="mr-auto">Back</Button>}
+            {step < TOTAL_STEPS
+              ? <Button onClick={() => setStep((s) => s + 1)} disabled={!canAdvance()}>Continue</Button>
+              : <Button onClick={finish} loading={saving}>Go to tracker</Button>}
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <div role="progressbar" aria-label="Setup progress" aria-valuemin={1} aria-valuemax={TOTAL_STEPS} aria-valuenow={step} className="flex gap-2">
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => <div key={i} className={`h-2 flex-1 rounded-sm ${i < step ? "bg-primary" : "bg-muted"}`} />)}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Step {step} of {TOTAL_STEPS}</p>
-        </div>
-
-        {/* Body */}
-        <div className="px-8 pb-8 space-y-5">
 
           {step === 1 && (
             <>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Welcome to deckhandAI</h2>
-                <p className="text-sm text-muted-foreground mt-1">Let&apos;s get your profile set up. This takes about 2 minutes.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="First name" required>{(p) => <Input {...p} value={firstName} onChange={(e) => setFirstName(e.target.value)} autoFocus />}</Field>
+                <Field label="Last name">{(p) => <Input {...p} value={lastName} onChange={(e) => setLastName(e.target.value)} />}</Field>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={LABEL}>First name <span className="text-destructive">*</span></label>
-                  <input className={INPUT} value={firstName} onChange={(e) => setFirstName(e.target.value)} autoFocus />
-                </div>
-                <div>
-                  <label className={LABEL}>Last name</label>
-                  <input className={INPUT} value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <label className={LABEL}>Email</label>
-                <input type="email" className={INPUT} value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div>
-                <label className={LABEL}>Phone</label>
-                <input className={INPUT} value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-              <div>
-                <label className={LABEL}>Website</label>
-                <input className={INPUT} placeholder="https://yoursite.com" value={website} onChange={(e) => setWebsite(e.target.value)} />
-              </div>
-              <div>
-                <label className={LABEL}>LinkedIn</label>
-                <input className={INPUT} placeholder="https://linkedin.com/in/yourhandle" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
-              </div>
+              <Field label="Email">{(p) => <Input {...p} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>
+              <Field label="Phone">{(p) => <Input {...p} value={phone} onChange={(e) => setPhone(e.target.value)} />}</Field>
+              <Field label="Website">{(p) => <Input {...p} placeholder="https://yoursite.com" value={website} onChange={(e) => setWebsite(e.target.value)} />}</Field>
+              <Field label="LinkedIn">{(p) => <Input {...p} placeholder="https://linkedin.com/in/yourhandle" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />}</Field>
             </>
           )}
 
           {step === 2 && (
             <>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Location</h2>
-                <p className="text-sm text-muted-foreground mt-1">Used to filter hybrid and local roles by commute distance.</p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="City">{(p) => <Input {...p} placeholder="St. Louis" value={hubCity} onChange={(e) => setHubCity(e.target.value)} />}</Field>
+                <Field label="State">{(p) => <Input {...p} placeholder="MO" maxLength={2} value={hubState} onChange={(e) => setHubState(e.target.value)} />}</Field>
+                <Field label="ZIP">{(p) => <Input {...p} placeholder="63101" value={hubZip} onChange={(e) => setHubZip(e.target.value)} />}</Field>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-3 sm:col-span-1">
-                  <label className={LABEL}>City</label>
-                  <input className={INPUT} placeholder="St. Louis" value={hubCity} onChange={(e) => setHubCity(e.target.value)} />
-                </div>
-                <div>
-                  <label className={LABEL}>State</label>
-                  <input className={INPUT} placeholder="MO" maxLength={2} value={hubState} onChange={(e) => setHubState(e.target.value)} />
-                </div>
-                <div>
-                  <label className={LABEL}>ZIP</label>
-                  <input className={INPUT} placeholder="63101" value={hubZip} onChange={(e) => setHubZip(e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <label className={LABEL}>Hybrid commute radius (miles)</label>
-                <input type="number" className={INPUT} value={hubRadius} onChange={(e) => setHubRadius(e.target.value)} />
-              </div>
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 accent-primary" checked={openToRemote} onChange={(e) => setOpenToRemote(e.target.checked)} />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Open to remote roles</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 accent-primary" checked={openToHybrid} onChange={(e) => setOpenToHybrid(e.target.checked)} />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Open to hybrid roles</span>
-                </label>
+              <Field label="Hybrid commute radius (miles)">{(p) => <Input {...p} type="number" value={hubRadius} onChange={(e) => setHubRadius(e.target.value)} />}</Field>
+              <div className="flex flex-col gap-2">
+                <Checkbox label="Open to remote roles" checked={openToRemote} onCheckedChange={setOpenToRemote} />
+                <Checkbox label="Open to hybrid roles" checked={openToHybrid} onCheckedChange={setOpenToHybrid} />
               </div>
             </>
           )}
 
           {step === 3 && (
             <>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Job preferences</h2>
-                <p className="text-sm text-muted-foreground mt-1">Used to filter scraped roles and personalize your tracker.</p>
+              <Field label="Target titles" hint="One per line.">
+                {(p) => <Textarea {...p} rows={4} placeholder={"Senior UX Designer\nDirector of Product Design\nHead of Design"} value={titlesRaw} onChange={(e) => setTitlesRaw(e.target.value)} />}
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Min salary, FTE ($/yr)">{(p) => <Input {...p} type="number" placeholder="150000" value={minFte} onChange={(e) => setMinFte(e.target.value)} />}</Field>
+                <Field label="Min rate, contract ($/hr)">{(p) => <Input {...p} type="number" placeholder="75" value={minHourly} onChange={(e) => setMinHourly(e.target.value)} />}</Field>
               </div>
-              <div>
-                <label className={LABEL}>Target titles (one per line)</label>
-                <textarea
-                  rows={4}
-                  className={INPUT}
-                  placeholder={"Senior UX Designer\nDirector of Product Design\nHead of Design"}
-                  value={titlesRaw}
-                  onChange={(e) => setTitlesRaw(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={LABEL}>Min salary — FTE ($/yr)</label>
-                  <input type="number" className={INPUT} placeholder="150000" value={minFte} onChange={(e) => setMinFte(e.target.value)} />
-                </div>
-                <div>
-                  <label className={LABEL}>Min rate — Contract ($/hr)</label>
-                  <input type="number" className={INPUT} placeholder="75" value={minHourly} onChange={(e) => setMinHourly(e.target.value)} />
-                </div>
-              </div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 accent-primary" checked={openToContract} onChange={(e) => setOpenToContract(e.target.checked)} />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Open to staffing / contract roles</span>
-              </label>
+              <Checkbox label="Open to staffing / contract roles" checked={openToContract} onCheckedChange={setOpenToContract} />
             </>
           )}
 
           {step === 4 && (
             <>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">You&apos;re all set</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Your profile is ready. A couple of things to do next:
-                </p>
-              </div>
-              <ul className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
-                <li className="flex gap-3">
-                  <span className="text-primary font-bold mt-0.5">1.</span>
-                  <span>
-                    Go to <strong>Settings → AI Model</strong> to configure your AI provider and API key.
-                    You can use Anthropic, OpenAI, Gemini, Grok, or a local Ollama model.
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-primary font-bold mt-0.5">2.</span>
-                  <span>
-                    Add your work history to <code className="text-xs bg-muted px-1.5 py-0.5 rounded">data/profile.json</code> — that&apos;s what the AI uses to write cover letters and tailoring notes.
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-primary font-bold mt-0.5">3.</span>
-                  <span>
-                    Add scrape targets to <code className="text-xs bg-muted px-1.5 py-0.5 rounded">scripts/scrape-careers.mjs</code> to automate finding new roles.
-                  </span>
-                </li>
-              </ul>
-              <p className="text-xs text-muted-foreground">
-                You can update your profile and preferences anytime in Settings.
-              </p>
+              <ol className="flex list-decimal flex-col gap-3 pl-5 text-sm">
+                <li>Go to <strong className="font-semibold">Settings → AI Model</strong> to configure your AI provider and API key. You can use Anthropic, OpenAI, Gemini, Grok, or a local Ollama model.</li>
+                <li>Add your work history to <code className="rounded-sm bg-muted px-1 font-mono text-xs">data/profile.json</code>. That is what the AI uses to write cover letters and tailoring notes.</li>
+                <li>Add scrape targets to <code className="rounded-sm bg-muted px-1 font-mono text-xs">scripts/scrape-careers.mjs</code> to automate finding new roles.</li>
+              </ol>
+              <p className="text-xs text-muted-foreground">You can update your profile and preferences anytime in Settings.</p>
             </>
           )}
-
-          {/* Footer */}
-          <div className="flex justify-between pt-2">
-            {step > 1 ? (
-              <Button onClick={() => setStep((s) => s - 1)} variant="ghost">
-                ← Back
-              </Button>
-            ) : (
-              <div />
-            )}
-            {step < TOTAL_STEPS ? (
-              <Button onClick={() => setStep((s) => s + 1)} disabled={!canAdvance()} size="lg" className="px-6">
-                Continue
-              </Button>
-            ) : (
-              <Button onClick={finish} loading={saving} size="lg" className="px-6">
-                Go to tracker
-              </Button>
-            )}
-          </div>
         </div>
-      </div>
-    </div>
+      </ModalContent>
+    </Modal>
   );
 }

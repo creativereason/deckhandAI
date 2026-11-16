@@ -1,14 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Field } from "@/components/ui/field";
+import { IconButton } from "@/components/ui/icon-button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/ui/states";
+import { Notice, SaveBar, SettingsLoading, SettingsSection, SettingsStack } from "@/components/settings/SettingsSection";
 import type { Profile, ExperienceEntry, EducationEntry, StrengthGroup } from "@/lib/profile";
 import { linesToBullets } from "@/lib/resume-format";
-
-const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
-const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
-const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
-const BTN_SM = "text-xs text-muted-foreground hover:text-foreground transition-colors";
 
 export default function ProfileAiSettings() {
   const [loading, setLoading] = useState(true);
@@ -132,179 +135,101 @@ export default function ProfileAiSettings() {
     }
   }
 
-  if (loading) return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
+  if (loading) return <SettingsLoading />;
+
+  const addButton = (label: string, onClick: () => void) => <Button onClick={onClick} variant="outline" size="sm"><Plus aria-hidden />{label}</Button>;
+  const removeIcon = (label: string, onClick: () => void) => <IconButton label={label} size="icon-sm" onClick={onClick}><X aria-hidden /></IconButton>;
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        This profile is used by the AI to generate cover letters and tailoring notes. It is never committed to your app repo — it lives in your private data repo.
-      </p>
+    <SettingsStack>
+      <Notice>
+        <p>This profile is used by the AI to generate cover letters and tailoring notes. It is never committed to your app repo; it lives in your private data repo.</p>
+      </Notice>
 
-      {/* Identity */}
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Identity</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={LABEL}>Full name</label>
-            <input className={INPUT} value={profile.name ?? ""} onChange={(e) => update({ name: e.target.value })} />
-          </div>
-          <div>
-            <label className={LABEL}>Title</label>
-            <input className={INPUT} placeholder="Senior UX Designer / Director" value={profile.title ?? ""} onChange={(e) => update({ title: e.target.value })} />
-          </div>
-          <div className="col-span-2">
-            <label className={LABEL}>Profile summary (bullet points, one per line)</label>
-            <textarea
-              rows={4}
-              className={INPUT}
-              placeholder={"20+ years leading enterprise UX, product strategy, and design systems\nProven track record building and scaling high-performing design orgs"}
-              value={(profile.summaryBullets ?? []).join("\n")}
-              onChange={(e) => update({ summaryBullets: linesToBullets(e.target.value) })}
-            />
-          </div>
-          <div>
-            <label className={LABEL}>Portfolio URL</label>
-            <input className={INPUT} value={profile.portfolio_url ?? ""} onChange={(e) => update({ portfolio_url: e.target.value })} />
-          </div>
-          <div>
-            <label className={LABEL}>Portfolio password</label>
-            <input className={INPUT} value={profile.portfolio_password ?? ""} onChange={(e) => update({ portfolio_password: e.target.value })} />
-          </div>
+      <SettingsSection title="Identity">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Full name">{(f) => <Input {...f} value={profile.name ?? ""} onChange={(e) => update({ name: e.target.value })} />}</Field>
+          <Field label="Title">{(f) => <Input {...f} placeholder="Senior UX Designer / Director" value={profile.title ?? ""} onChange={(e) => update({ title: e.target.value })} />}</Field>
+          <Field label="Profile summary" hint="Bullet points, one per line." className="sm:col-span-2">
+            {(f) => <Textarea {...f} rows={4} placeholder={"20+ years leading enterprise UX, product strategy, and design systems\nProven track record building and scaling high-performing design orgs"} value={(profile.summaryBullets ?? []).join("\n")} onChange={(e) => update({ summaryBullets: linesToBullets(e.target.value) })} />}
+          </Field>
+          <Field label="Portfolio URL">{(f) => <Input {...f} value={profile.portfolio_url ?? ""} onChange={(e) => update({ portfolio_url: e.target.value })} />}</Field>
+          <Field label="Portfolio password">{(f) => <Input {...f} value={profile.portfolio_password ?? ""} onChange={(e) => update({ portfolio_password: e.target.value })} />}</Field>
         </div>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className={LABEL}>Core strengths</label>
-            <Button onClick={addStrengthGroup} variant="link" size="sm" className="text-xs">+ Add skill group</Button>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-medium">Core strengths</h3>
+              <p className="text-xs text-muted-foreground">Optionally split strengths into labeled groups (e.g. UX &amp; Design, Tools, Technical). One group is fine too.</p>
+            </div>
+            {addButton("Add skill group", addStrengthGroup)}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Optionally split strengths into labeled groups (e.g. UX &amp; Design, Tools, Technical). One group is fine too.
-          </p>
           {(profile.strengthGroups ?? []).map((group, gi) => (
-            <div key={gi} className="border border-border rounded-xl p-3 space-y-2">
-              <div className="flex gap-2 items-center">
-                <input
-                  className={INPUT}
-                  placeholder="Group label, e.g. UX & Design"
-                  value={group.label}
-                  onChange={(e) => updateStrengthGroup(gi, { label: e.target.value })}
-                />
-                <button onClick={() => removeStrengthGroup(gi)} className={`${BTN_SM} shrink-0 hover:text-destructive`}>×</button>
+            <Card key={gi} variant="muted" className="gap-3">
+              <div className="flex items-end gap-2">
+                <Field label="Group label" className="flex-1">{(f) => <Input {...f} placeholder="e.g. UX & Design" value={group.label} onChange={(e) => updateStrengthGroup(gi, { label: e.target.value })} />}</Field>
+                {removeIcon(`Remove skill group ${group.label || gi + 1}`, () => removeStrengthGroup(gi))}
               </div>
-              <textarea
-                rows={2}
-                className={INPUT}
-                placeholder="Comma-separated items, e.g. Product Design, UX Research, Design Systems"
-                value={group.items.join(", ")}
-                onChange={(e) => updateStrengthGroup(gi, { items: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })}
-              />
-            </div>
+              <Field label="Items" hint="Comma-separated.">
+                {(f) => <Textarea {...f} rows={2} className="min-h-16" placeholder="Product Design, UX Research, Design Systems" value={group.items.join(", ")} onChange={(e) => updateStrengthGroup(gi, { items: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })} />}
+              </Field>
+            </Card>
           ))}
-          {(profile.strengthGroups ?? []).length === 0 && (
-            <p className="text-sm text-muted-foreground">No skill groups yet.</p>
-          )}
+          {(profile.strengthGroups ?? []).length === 0 && <Card variant="muted" padding="none"><EmptyState compact title="No skill groups yet" /></Card>}
         </div>
-      </div>
+      </SettingsSection>
 
-      {/* Experience */}
-      <div className={SECTION}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Work history</h2>
-          <Button onClick={addExp} variant="link" size="sm" className="text-xs">+ Add role</Button>
-        </div>
-        {(profile.experience ?? []).length === 0 && (
-          <p className="text-sm text-muted-foreground">No work history yet. Add your most recent roles.</p>
-        )}
+      <SettingsSection title="Work history" actions={addButton("Add role", addExp)}>
+        {(profile.experience ?? []).length === 0 && <Card variant="muted" padding="none"><EmptyState compact title="No work history yet" description="Add your most recent roles." /></Card>}
         {(profile.experience ?? []).map((exp, ei) => (
-          <div key={ei} className="border border-border rounded-xl p-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={LABEL}>Company</label>
-                <input className={INPUT} value={exp.company} onChange={(e) => updateExp(ei, { company: e.target.value })} />
-              </div>
-              <div>
-                <label className={LABEL}>Role</label>
-                <input className={INPUT} value={exp.role} onChange={(e) => updateExp(ei, { role: e.target.value })} />
-              </div>
-              <div>
-                <label className={LABEL}>Start (YYYY-MM)</label>
-                <input className={INPUT} placeholder="2022-03" value={exp.start} onChange={(e) => updateExp(ei, { start: e.target.value })} />
-              </div>
-              <div>
-                <label className={LABEL}>End (YYYY-MM or leave blank for present)</label>
-                <input className={INPUT} placeholder="2024-06" value={exp.end ?? ""} onChange={(e) => updateExp(ei, { end: e.target.value || null })} />
-              </div>
+          <Card key={ei} variant="muted" className="gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Company">{(f) => <Input {...f} value={exp.company} onChange={(e) => updateExp(ei, { company: e.target.value })} />}</Field>
+              <Field label="Role">{(f) => <Input {...f} value={exp.role} onChange={(e) => updateExp(ei, { role: e.target.value })} />}</Field>
+              <Field label="Start" hint="YYYY-MM">{(f) => <Input {...f} placeholder="2022-03" value={exp.start} onChange={(e) => updateExp(ei, { start: e.target.value })} />}</Field>
+              <Field label="End" hint="YYYY-MM, or leave blank for present">{(f) => <Input {...f} placeholder="2024-06" value={exp.end ?? ""} onChange={(e) => updateExp(ei, { end: e.target.value || null })} />}</Field>
             </div>
-            <div className="space-y-2">
-              <label className={LABEL}>Bullets</label>
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-2 text-sm font-medium">Bullets</legend>
               {exp.bullets.map((b, bi) => (
                 <div key={bi} className="flex gap-2">
-                  <input className={INPUT} value={b} onChange={(e) => updateExpBullet(ei, bi, e.target.value)} />
-                  <button onClick={() => removeExpBullet(ei, bi)} className={`${BTN_SM} shrink-0 hover:text-destructive`}>×</button>
+                  <Input aria-label={`Bullet ${bi + 1}`} value={b} onChange={(e) => updateExpBullet(ei, bi, e.target.value)} />
+                  {removeIcon(`Remove bullet ${bi + 1}`, () => removeExpBullet(ei, bi))}
                 </div>
               ))}
-              <Button onClick={() => addExpBullet(ei)} variant="link" size="sm" className="text-xs">+ bullet</Button>
-            </div>
-            <div className="flex justify-end">
-              <button onClick={() => removeExp(ei)} className="text-xs text-destructive hover:opacity-80 transition-colors">Remove role</button>
-            </div>
-          </div>
+              <div><Button onClick={() => addExpBullet(ei)} variant="outline" size="sm"><Plus aria-hidden />Add bullet</Button></div>
+            </fieldset>
+            <div className="flex justify-end"><Button onClick={() => removeExp(ei)} variant="ghost" size="sm" className="text-destructive">Remove role</Button></div>
+          </Card>
         ))}
-      </div>
+      </SettingsSection>
 
-      {/* Education */}
-      <div className={SECTION}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Education</h2>
-          <Button onClick={addEdu} variant="link" size="sm" className="text-xs">+ Add</Button>
-        </div>
+      <SettingsSection title="Education" actions={addButton("Add education", addEdu)}>
         {(profile.education ?? []).map((edu, i) => (
-          <div key={i} className="grid grid-cols-2 gap-3 border border-border rounded-xl p-4">
-            <div className="col-span-2">
-              <label className={LABEL}>Institution</label>
-              <input className={INPUT} value={edu.institution ?? ""} onChange={(e) => updateEdu(i, { institution: e.target.value })} />
+          <Card key={i} variant="muted" className="gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Institution" className="sm:col-span-2">{(f) => <Input {...f} value={edu.institution ?? ""} onChange={(e) => updateEdu(i, { institution: e.target.value })} />}</Field>
+              <Field label="Degree">{(f) => <Input {...f} value={edu.degree ?? ""} onChange={(e) => updateEdu(i, { degree: e.target.value })} />}</Field>
+              <Field label="Graduated">{(f) => <Input {...f} placeholder="2020-05" value={edu.graduated ?? ""} onChange={(e) => updateEdu(i, { graduated: e.target.value })} />}</Field>
+              <Field label="Honors" optional className="sm:col-span-2">{(f) => <Input {...f} value={edu.honors ?? ""} onChange={(e) => updateEdu(i, { honors: e.target.value })} />}</Field>
             </div>
-            <div>
-              <label className={LABEL}>Degree</label>
-              <input className={INPUT} value={edu.degree ?? ""} onChange={(e) => updateEdu(i, { degree: e.target.value })} />
-            </div>
-            <div>
-              <label className={LABEL}>Graduated</label>
-              <input className={INPUT} placeholder="2020-05" value={edu.graduated ?? ""} onChange={(e) => updateEdu(i, { graduated: e.target.value })} />
-            </div>
-            <div className="col-span-2 flex items-end justify-between gap-3">
-              <div className="flex-1">
-                <label className={LABEL}>Honors (optional)</label>
-                <input className={INPUT} value={edu.honors ?? ""} onChange={(e) => updateEdu(i, { honors: e.target.value })} />
-              </div>
-              <button onClick={() => removeEdu(i)} className="text-xs text-destructive hover:opacity-80 pb-2 shrink-0">Remove</button>
-            </div>
-          </div>
+            <div className="flex justify-end"><Button onClick={() => removeEdu(i)} variant="ghost" size="sm" className="text-destructive">Remove</Button></div>
+          </Card>
         ))}
-      </div>
+      </SettingsSection>
 
-      {/* Writing rules */}
-      <div className={SECTION}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Writing rules</h2>
-          <Button onClick={addRule} variant="link" size="sm" className="text-xs">+ Add rule</Button>
-        </div>
-        <p className="text-xs text-muted-foreground">Instructions the AI follows when generating documents. Describe tone, style, and anything to avoid.</p>
+      <SettingsSection title="Writing rules" description="Instructions the AI follows when generating documents. Describe tone, style, and anything to avoid." actions={addButton("Add rule", addRule)}>
         {(profile.writing_rules ?? []).map((rule, i) => (
           <div key={i} className="flex gap-2">
-            <input className={INPUT} value={rule} onChange={(e) => updateRule(i, e.target.value)} />
-            <button onClick={() => removeRule(i)} className={`${BTN_SM} shrink-0 hover:text-destructive`}>×</button>
+            <Input aria-label={`Rule ${i + 1}`} value={rule} onChange={(e) => updateRule(i, e.target.value)} />
+            {removeIcon(`Remove rule ${i + 1}`, () => removeRule(i))}
           </div>
         ))}
-        {(profile.writing_rules ?? []).length === 0 && (
-          <p className="text-sm text-muted-foreground">No rules yet.</p>
-        )}
-      </div>
+        {(profile.writing_rules ?? []).length === 0 && <Card variant="muted" padding="none"><EmptyState compact title="No rules yet" /></Card>}
+      </SettingsSection>
 
-      <div className="flex justify-end">
-        <Button onClick={save} loading={saving} size="lg" className="px-6">
-          Save profile
-        </Button>
-      </div>
-    </div>
+      <SaveBar onSave={save} saving={saving}>Save profile</SaveBar>
+    </SettingsStack>
   );
 }

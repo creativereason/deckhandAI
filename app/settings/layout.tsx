@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AppShell from "@/components/shell/AppShell";
+import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -17,44 +19,27 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
+    <AppShell width="prose">
+      <PageHeader title="Settings" description="Your profile, scraping, AI model and agent access." className="pb-4" />
+      <nav aria-label="Settings sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
+        {TABS.map((tab) => {
+          const active = tab.href === "/settings" ? pathname === "/settings" : pathname.startsWith(tab.href);
+          return (
             <Link
-              href="/"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              key={tab.href}
+              href={tab.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "inline-flex h-10 shrink-0 items-center border-b-2 px-3 text-sm font-medium transition-colors duration-(--duration-fast)",
+                active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
             >
-              ← Tracker
+              {tab.label}
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-1">Settings</h1>
-          </div>
-        </div>
-
-        <nav className="flex flex-nowrap gap-1 border-b border-border pb-0 overflow-x-auto">
-          {TABS.map((tab) => {
-            const active = tab.href === "/settings"
-              ? pathname === "/settings"
-              : pathname.startsWith(tab.href);
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={cn(
-                  "px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors whitespace-nowrap",
-                  active
-                    ? "border-primary text-primary bg-card"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {tab.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div>{children}</div>
-      </div>
-    </div>
+          );
+        })}
+      </nav>
+      {children}
+    </AppShell>
   );
 }

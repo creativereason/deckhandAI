@@ -35,3 +35,14 @@ export function BrandWordmark({ className }: { className?: string }) {
     </span>
   );
 }
+
+/** Mark + wordmark, stacked (login) or in a row. The accessible name is the product name. */
+export function BrandLogo({ variant = "stacked", markSize = 64, className }: { variant?: "stacked" | "horizontal"; markSize?: number; className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center", variant === "stacked" ? "flex-col gap-2" : "flex-row gap-2", className)}>
+      <BrandMark size={markSize} />
+      <span className="sr-only">DeckhandAI</span>
+      <BrandWordmark className="text-2xl" />
+    </span>
+  );
+}

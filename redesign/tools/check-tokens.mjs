@@ -16,12 +16,19 @@ const RULES = [
   ["off-scale text size", /\btext-(?:3xl|4xl|5xl|6xl|\[[^\]]+\])\b/],
   ["inline style", /style=\{\{/],
   ["legacy tone-* class", /\b(?:bg|text|border)-tone-[a-z]+/],
+  ["off-scale radius", /\brounded(?:-(?:[trblse]{1,2}-)?(?:2xl|3xl|4xl))?(?=[\s"'`])(?!-)/],
+  ["off-scale shadow", /\bshadow-(?:2xs|xs|xl|2xl|inner)\b|(?<![-\w])shadow(?=[\s"'`])/],
+  ["numeric z-index (use --z-* layers)", /\bz-(?:\d+|\[\d+\])\b/],
+  ["off-scale spacing step", /\b(?:-?m[trblxy]?|p[trblxy]?|gap(?:-[xy])?|space-[xy]|size|[hw])-(?:7|9|11|13|15|17|18|19)\b/],
   ["emoji as icon", /[\u{1F300}-\u{1FAFF}\u{2B50}\u{26A1}]/u],
 ];
 // file -> [rule names] allowed, with the reason.
 const ALLOW = {
   "components/ui/nav.tsx": { "inline style": "grid column count depends on the number of nav items" },
-  "lib/job-signal.ts": {},
+  "components/TodayView.tsx": { "inline style": "bar width is the data value (count / max)" },
+  "components/TriageView.tsx": { "inline style": "progress width is the data value (reviewed / total)" },
+  "app/settings/export/page.tsx": { "hex/rgb/hsl literal": "placeholders showing the hex format of the user's DOCX resume colors; document data, not UI colors" },
+  "components/AIGenerationCard.tsx": { "hex/rgb/hsl literal": "inline CSS of the print-to-PDF window, a separate document that cannot see the app's tokens" },
 };
 
 const files = [];
@@ -32,7 +39,8 @@ const files = [];
     if (statSync(p).isDirectory()) walk(p);
     else if (/\.tsx$/.test(f) && !p.includes("app/styleguide")) files.push(p);
   }
-})(join(ROOT, "app")), (() => walk2(join(ROOT, "components")))();
+})(join(ROOT, "app"));
+walk2(join(ROOT, "components"));
 function walk2(dir) {
   for (const f of readdirSync(dir)) {
     const p = join(dir, f);

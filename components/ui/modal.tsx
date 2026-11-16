@@ -14,8 +14,8 @@ const ModalClose = DialogPrimitive.Close
  * title/description are wired to aria-labelledby/describedby by the primitive.
  */
 function ModalContent({
-  title, description, footer, size = "md", className, children, ...props
-}: Omit<DialogPrimitive.Popup.Props, "title"> & { title: string; description?: string; footer?: React.ReactNode; size?: "sm" | "md" | "lg" }) {
+  title, description, footer, size = "md", hideClose, className, children, ...props
+}: Omit<DialogPrimitive.Popup.Props, "title"> & { title: string; description?: string; footer?: React.ReactNode; size?: "sm" | "md" | "lg"; hideClose?: boolean }) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Backdrop className="fixed inset-0 z-(--z-overlay) bg-overlay transition-opacity duration-(--duration-base) data-ending-style:opacity-0 data-starting-style:opacity-0" />
@@ -33,7 +33,7 @@ function ModalContent({
               <DialogPrimitive.Title className="text-lg font-semibold">{title}</DialogPrimitive.Title>
               {description && <DialogPrimitive.Description className="text-sm text-muted-foreground">{description}</DialogPrimitive.Description>}
             </div>
-            <DialogPrimitive.Close render={<IconButton label="Close" size="icon-sm" />}><X /></DialogPrimitive.Close>
+            {!hideClose && <DialogPrimitive.Close render={<IconButton label="Close" size="icon-sm" />}><X /></DialogPrimitive.Close>}
           </div>
           <div className="flex-1 overflow-y-auto p-4 sm:px-6">{children}</div>
           {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border p-4 sm:px-6">{footer}</div>}

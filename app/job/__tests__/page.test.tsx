@@ -5,6 +5,7 @@ import JobPage from "@/app/job/page";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/job",
   useSearchParams: () => new URLSearchParams({ company: "Acme", role: "Designer", section: "prospect" }),
 }));
 

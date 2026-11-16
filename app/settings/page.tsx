@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { SaveBar, SettingsLoading, SettingsSection, SettingsStack } from "@/components/settings/SettingsSection";
 import type { AppConfig } from "@/lib/config";
-
-const INPUT = "w-full border border-border rounded-lg px-3 py-2 text-sm bg-card dark:text-white focus:outline-none focus:ring-2 focus:ring-primary";
-const LABEL = "block text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1";
-const SECTION = "bg-card rounded-xl p-5 space-y-4 shadow-sm";
 
 export default function ProfileSettings() {
   const [loading, setLoading] = useState(true);
@@ -81,128 +81,37 @@ export default function ProfileSettings() {
     }
   }
 
-  if (loading) {
-    return <div className="text-sm text-muted-foreground py-8">Loading…</div>;
-  }
+  if (loading) return <SettingsLoading />;
 
   return (
-    <div className="space-y-6">
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
-          Contact
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <label className={LABEL}>Name</label>
-            <input className={INPUT} value={c.name ?? ""} onChange={(e) => updateCandidate("name", e.target.value)} />
-          </div>
-          <div>
-            <label className={LABEL}>Email</label>
-            <input type="email" className={INPUT} value={c.email ?? ""} onChange={(e) => updateCandidate("email", e.target.value)} />
-          </div>
-          <div>
-            <label className={LABEL}>Phone</label>
-            <input className={INPUT} value={c.phone ?? ""} onChange={(e) => updateCandidate("phone", e.target.value)} />
-          </div>
-          <div>
-            <label className={LABEL}>Website</label>
-            <input className={INPUT} value={c.website ?? ""} onChange={(e) => updateCandidate("website", e.target.value)} />
-          </div>
-          <div>
-            <label className={LABEL}>LinkedIn</label>
-            <input className={INPUT} value={c.linkedin ?? ""} onChange={(e) => updateCandidate("linkedin", e.target.value)} />
-          </div>
+    <SettingsStack>
+      <SettingsSection title="Contact" description="Used on cover letters and resumes.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Name" className="sm:col-span-2">{(f) => <Input {...f} value={c.name ?? ""} onChange={(e) => updateCandidate("name", e.target.value)} />}</Field>
+          <Field label="Email">{(f) => <Input {...f} type="email" value={c.email ?? ""} onChange={(e) => updateCandidate("email", e.target.value)} />}</Field>
+          <Field label="Phone">{(f) => <Input {...f} value={c.phone ?? ""} onChange={(e) => updateCandidate("phone", e.target.value)} />}</Field>
+          <Field label="Website">{(f) => <Input {...f} value={c.website ?? ""} onChange={(e) => updateCandidate("website", e.target.value)} />}</Field>
+          <Field label="LinkedIn">{(f) => <Input {...f} value={c.linkedin ?? ""} onChange={(e) => updateCandidate("linkedin", e.target.value)} />}</Field>
         </div>
-      </div>
+      </SettingsSection>
 
-      <div className={SECTION}>
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
-          Job Preferences
-        </h2>
-        <div>
-          <label className={LABEL}>Target titles (one per line)</label>
-          <textarea
-            rows={4}
-            className={INPUT}
-            value={(p.titles ?? []).join("\n")}
-            onChange={(e) => updateTitles(e.target.value)}
-          />
+      <SettingsSection title="Job preferences" description="Filters scraped roles and tunes AI fit scoring.">
+        <Field label="Target titles" hint="One per line.">
+          {(f) => <Textarea {...f} rows={4} value={(p.titles ?? []).join("\n")} onChange={(e) => updateTitles(e.target.value)} />}
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Min salary, FTE ($/yr)">{(f) => <Input {...f} type="number" value={sal.min_fte ?? ""} onChange={(e) => updateSalary("min_fte", Number(e.target.value))} />}</Field>
+          <Field label="Min rate, contract ($/hr)">{(f) => <Input {...f} type="number" value={sal.min_contract_hourly ?? ""} onChange={(e) => updateSalary("min_contract_hourly", Number(e.target.value))} />}</Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={LABEL}>Min salary — FTE ($/yr)</label>
-            <input
-              type="number"
-              className={INPUT}
-              value={sal.min_fte ?? ""}
-              onChange={(e) => updateSalary("min_fte", Number(e.target.value))}
-            />
-          </div>
-          <div>
-            <label className={LABEL}>Min rate — Contract ($/hr)</label>
-            <input
-              type="number"
-              className={INPUT}
-              value={sal.min_contract_hourly ?? ""}
-              onChange={(e) => updateSalary("min_contract_hourly", Number(e.target.value))}
-            />
-          </div>
+        <div className="flex flex-col gap-3">
+          <Checkbox label="Open to remote roles" checked={loc.remote ?? true} onCheckedChange={(v) => updateLocation("remote", v)} />
+          <Checkbox label="Open to hybrid roles (shows the Local / Hybrid section in the tracker)" checked={loc.hybrid ?? true} onCheckedChange={(v) => updateLocation("hybrid", v)} />
+          <Checkbox label="Open to staffing / contract roles (shows the Staffing section in the tracker)" checked={p.open_to_contract ?? true} onCheckedChange={(v) => updatePreference("open_to_contract", v)} />
+          <Checkbox label="Hide the Passed / Skipped section (it still prevents duplicate imports)" checked={p.hide_passed ?? false} onCheckedChange={(v) => updatePreference("hide_passed", v)} />
         </div>
-        <div className="flex items-center gap-3">
-          <input
-            id="remote"
-            type="checkbox"
-            className="w-4 h-4 accent-primary"
-            checked={loc.remote ?? true}
-            onChange={(e) => updateLocation("remote", e.target.checked)}
-          />
-          <label htmlFor="remote" className="text-sm text-gray-700 dark:text-gray-300">
-            Open to remote roles
-          </label>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            id="hybrid"
-            type="checkbox"
-            className="w-4 h-4 accent-primary"
-            checked={loc.hybrid ?? true}
-            onChange={(e) => updateLocation("hybrid", e.target.checked)}
-          />
-          <label htmlFor="hybrid" className="text-sm text-gray-700 dark:text-gray-300">
-            Open to hybrid roles — shows the Local / Hybrid section in the tracker
-          </label>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            id="contract"
-            type="checkbox"
-            className="w-4 h-4 accent-primary"
-            checked={p.open_to_contract ?? true}
-            onChange={(e) => updatePreference("open_to_contract", e.target.checked)}
-          />
-          <label htmlFor="contract" className="text-sm text-gray-700 dark:text-gray-300">
-            Open to staffing / contract roles — shows the Staffing section in the tracker
-          </label>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            id="hide_passed"
-            type="checkbox"
-            className="w-4 h-4 accent-primary"
-            checked={p.hide_passed ?? false}
-            onChange={(e) => updatePreference("hide_passed", e.target.checked)}
-          />
-          <label htmlFor="hide_passed" className="text-sm text-gray-700 dark:text-gray-300">
-            Hide the Passed / Skipped section — it will still be used to prevent duplicate imports
-          </label>
-        </div>
-      </div>
+      </SettingsSection>
 
-      <div className="flex justify-end">
-        <Button onClick={save} loading={saving} size="lg" className="px-6">
-          Save profile
-        </Button>
-      </div>
-    </div>
+      <SaveBar onSave={save} saving={saving}>Save profile</SaveBar>
+    </SettingsStack>
   );
 }
