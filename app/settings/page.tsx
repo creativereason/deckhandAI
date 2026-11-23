@@ -12,6 +12,8 @@ export default function ProfileSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState<AppConfig>({});
+  // Raw text, not derived from config: parsing drops blank lines, which would erase each Enter as it is typed.
+  const [titlesText, setTitlesText] = useState("");
 
   const c = config.candidate ?? {};
   const p = config.preferences ?? {};
@@ -21,7 +23,11 @@ export default function ProfileSettings() {
   useEffect(() => {
     fetch("/api/config")
       .then((r) => r.json())
-      .then((data) => { setConfig(data); setLoading(false); })
+      .then((data) => {
+        setConfig(data);
+        setTitlesText((data.preferences?.titles ?? []).join("\n"));
+        setLoading(false);
+      })
       .catch(() => { toast.error("Failed to load config"); setLoading(false); });
   }, []);
 
@@ -57,6 +63,7 @@ export default function ProfileSettings() {
   }
 
   function updateTitles(raw: string) {
+    setTitlesText(raw);
     const titles = raw.split("\n").map((t) => t.trim()).filter(Boolean);
     setConfig((prev) => ({
       ...prev,
@@ -97,7 +104,7 @@ export default function ProfileSettings() {
 
       <SettingsSection title="Job preferences" description="Filters scraped roles and tunes AI fit scoring.">
         <Field label="Target titles" hint="One per line.">
-          {(f) => <Textarea {...f} rows={4} value={(p.titles ?? []).join("\n")} onChange={(e) => updateTitles(e.target.value)} />}
+          {(f) => <Textarea {...f} rows={4} value={titlesText} onChange={(e) => updateTitles(e.target.value)} />}
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Min salary, FTE ($/yr)">{(f) => <Input {...f} type="number" value={sal.min_fte ?? ""} onChange={(e) => updateSalary("min_fte", Number(e.target.value))} />}</Field>
