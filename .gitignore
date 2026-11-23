@@ -57,3 +57,7 @@ npm-debug.log*
 DEPLOY.md
 scripts/deploy.sh
 .next-redesign/
+
+# Playwright output
+test-results/
+playwright-report/
