@@ -128,6 +128,7 @@ function BoardContent() {
   async function moveCard(card: PipelineCard, to: MoveTarget) {
     const result = await applyMove(card, moveAction(card, to));
     if (!result.ok) toast.error(`Move failed: ${result.message}`);
+    else if (to === "passed") toast.success(`Passed on ${card.company}`);
     load();
   }
 
