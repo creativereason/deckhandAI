@@ -5,6 +5,12 @@ import { fetchGenerate } from "@/lib/model";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { fetchJdText } from "@/lib/fetch-jd";
 import type { Profile } from "@/lib/profile";
+import { parseTailoredResume } from "@/lib/parse-tailored-resume";
+
+/** Generating a long JSON answer can take over a minute; give the function room instead of the platform default. */
+export const maxDuration = 120;
+
+const TAILOR_MAX_TOKENS = 8192;
 
 export interface TailoredResume {
   title: string;
@@ -63,16 +69,13 @@ Rules:
 - Apply all writing style rules from the system prompt
 - Return only the JSON object, nothing else`;
 
+    // A tailored resume is a long JSON document; the default 2048-token limit cut it off mid-structure.
     const raw = await fetchGenerate(config.ai ?? {}, [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
-    ]);
+    ], { maxTokens: TAILOR_MAX_TOKENS });
 
-    // Strip any accidental markdown fences
-    const cleaned = raw.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim();
-    const tailored = JSON.parse(cleaned) as TailoredResume;
-
-    return NextResponse.json(tailored);
+    return NextResponse.json(parseTailoredResume(raw));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeTool } from "@/lib/chat-tools";
 import { addJob, archiveJob, getJob, readJobs, saveJob, updateJobs } from "@/lib/jobs-repository";
+import { searchWeb } from "@/lib/web-search";
+import { fetchJobDetails } from "@/lib/job-fetcher";
 import { generateAiSummary } from "@/lib/job-summary-server";
 import type { JobsData } from "@/lib/jobs";
 
@@ -16,6 +18,10 @@ vi.mock("@/lib/jobs-repository", () => ({
 
 vi.mock("@/lib/profile-server", () => ({
   readProfile: vi.fn(),
+}));
+
+vi.mock("@/lib/web-search", () => ({
+  searchWeb: vi.fn(),
 }));
 
 vi.mock("@/lib/job-fetcher", () => ({
@@ -212,5 +218,22 @@ describe("delete_job tool description", () => {
 
     expect(description).not.toMatch(/permanent/i);
     expect(description).toMatch(/archived/i);
+  });
+});
+
+describe("executeTool web_search and fetch_job_description", () => {
+  it("returns the web search results as JSON", async () => {
+    vi.mocked(searchWeb).mockResolvedValue({ results: [{ title: "T", url: "https://x.test/1", snippet: "s" }] });
+    const out = JSON.parse(await executeTool("web_search", { query: "Thrivent design director job" }));
+    expect(searchWeb).toHaveBeenCalledWith({ query: "Thrivent design director job" });
+    expect(out.results[0].url).toBe("https://x.test/1");
+  });
+
+  it("passes the role to the fetcher so blocked pages can be searched by title and company", async () => {
+    vi.mocked(fetchJobDetails).mockResolvedValue({
+      text: "", source_url: "", retrieval_method: "fetch_only", retrieval_limited: true,
+    } as never);
+    await executeTool("fetch_job_description", { url: "https://x.test/j", company: "Thrivent", role: "Director" });
+    expect(fetchJobDetails).toHaveBeenCalledWith({ url: "https://x.test/j", company: "Thrivent", role: "Director" });
   });
 });

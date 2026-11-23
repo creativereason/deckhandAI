@@ -44,7 +44,12 @@ function isGeminiEndpoint(config: AiConfig): boolean {
   return provider === "gemini" || baseUrl.includes("generativelanguage.googleapis.com");
 }
 
-export function buildBody(config: AiConfig, messages: GenerateRequest["messages"], stream: boolean): string {
+const DEFAULT_MAX_TOKENS = 2048;
+
+/** `maxTokens` is the output limit; raise it for long structured answers such as a tailored resume. */
+export interface GenerateOptions { stream?: boolean; maxTokens?: number }
+
+export function buildBody(config: AiConfig, messages: GenerateRequest["messages"], { stream = false, maxTokens = DEFAULT_MAX_TOKENS }: GenerateOptions = {}): string {
   const model = process.env.AI_MODEL ?? config.model ?? "claude-sonnet-4-6";
   const provider = (process.env.AI_PROVIDER as AiConfig["provider"]) ?? config.provider ?? "anthropic";
 
@@ -53,7 +58,7 @@ export function buildBody(config: AiConfig, messages: GenerateRequest["messages"
     const userMsgs = messages.filter((m) => m.role !== "system");
     return JSON.stringify({
       model,
-      max_tokens: 2048,
+      max_tokens: maxTokens,
       stream,
       system: systemMsg?.content ?? "",
       messages: userMsgs,
@@ -67,15 +72,16 @@ export function buildBody(config: AiConfig, messages: GenerateRequest["messages"
     ? { extra_body: { google: { thinking_config: { thinking_budget: 0 } } } }
     : {};
 
-  return JSON.stringify({ model, messages, stream, max_tokens: 2048, ...extraBody });
+  return JSON.stringify({ model, messages, stream, max_tokens: maxTokens, ...extraBody });
 }
 
 export async function fetchGenerate(
   config: AiConfig,
-  messages: GenerateRequest["messages"]
+  messages: GenerateRequest["messages"],
+  options: Pick<GenerateOptions, "maxTokens"> = {}
 ): Promise<string> {
   const { url, headers } = resolveEndpoint(config);
-  const body = buildBody(config, messages, false);
+  const body = buildBody(config, messages, { stream: false, ...options });
 
   const res = await fetch(url, { method: "POST", headers, body });
   if (!res.ok) {
@@ -100,7 +106,7 @@ export async function streamGenerate(
   messages: GenerateRequest["messages"]
 ): Promise<ReadableStream<Uint8Array>> {
   const { url, headers } = resolveEndpoint(config);
-  const body = buildBody(config, messages, true);
+  const body = buildBody(config, messages, { stream: true });
 
   const res = await fetch(url, { method: "POST", headers, body });
   if (!res.ok) {

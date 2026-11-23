@@ -288,12 +288,22 @@ For notes:
 - Do not write fit assessment in notes; fit belongs only in scoreRationale.
 - Notes will be generated separately from the retrieved company and role sections.
 
+For details:
+- Short "- Label: value" lines, one per line, only for facts stated in the job text. Never guess or fill from general knowledge.
+- Cover, when present: Work model and location; Comp; Team size and reporting line; Scope; Key responsibilities; Must-have requirements (years, tools, domain); Anything notable for negotiation.
+- Empty string if the job text has none of these.
+
 For aiSummary:
 - A 1–2 sentence at-a-glance summary: what the role is (scope, team, key responsibilities) and what the company does.
 - No fit assessment, no markdown, no quotes.
 
 Return only valid JSON:
-{"company":"","role":"","salary":"","notes":"","fit":"strong|good|caution|weak","scoreRationale":"","aiSummary":""}`;
+{"company":"","role":"","salary":"","notes":"","details":"","fit":"strong|good|caution|weak","scoreRationale":"","aiSummary":""}`;
+}
+
+function withDetails(notes: string, details: string, retrieval: JobFetchResult): string {
+  if (!details || retrieval.retrieval_limited) return notes;
+  return `${notes}\n\nDetails:\n${details}`;
 }
 
 async function evaluateWithAI(
@@ -310,7 +320,7 @@ async function evaluateWithAI(
     { role: "user", content: buildEvaluationPrompt(request, retrieval) },
   ]);
   const parsed = extractJsonObject(raw);
-  const notes = request.notes || buildTrackerNotes(request, retrieval);
+  const notes = request.notes || withDetails(buildTrackerNotes(request, retrieval), textValue(parsed.details), retrieval);
   return {
     company: textValue(parsed.company) || request.company || "",
     role: textValue(parsed.role) || request.role || "",

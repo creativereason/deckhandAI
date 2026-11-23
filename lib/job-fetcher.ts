@@ -196,7 +196,7 @@ async function fetchMarkdownAlternate({
     });
     if (!response.ok) return null;
     const mdText = (await response.text()).slice(0, MAX_JOB_TEXT_LENGTH);
-    if (!hasEnoughText(mdText)) return null;
+    if (!hasRoleDetail(mdText)) return null;
     return successfulResult({ url, sourceUrl: mdUrl, text: mdText, method: "fetch_only" });
   } catch {
     return null;
@@ -225,43 +225,93 @@ function hasEnoughText(text: string): boolean {
   return true;
 }
 
-function companyFromUrl(url: string): string {
+const MIN_WORDS_WITHOUT_SIGNAL = 150;
+
+// A page can be long enough and not be navigation, yet still be only a title,
+// location and apply button. Role detail means real JD phrasing or a lot of prose.
+function hasRoleDetail(text: string): boolean {
+  if (!hasEnoughText(text)) return false;
+  return JD_SIGNAL_RE.test(text) || text.split(/\s+/).length >= MIN_WORDS_WITHOUT_SIGNAL;
+}
+
+const GENERIC_SUBDOMAINS = new Set(["www", "careers", "career", "jobs", "job", "apply", "hire", "boards", "job-boards", "secure", "talent", "recruiting", "work"]);
+const SHARED_ATS_HOSTS = ["lever.co", "greenhouse.io", "ashbyhq.com", "smartrecruiters.com", "jobvite.com", "workable.com", "recruitee.com", "bamboohr.com"];
+const GENERIC_PATH_SEGMENTS = new Set(["jobs", "job", "careers", "career", "en-us", "en", "external", "positions", "position", "opening", "openings", "view", "details"]);
+
+function roleFromSlug(segment: string): string {
+  const words = decodeURIComponent(segment)
+    .replace(/\.[a-z]{2,4}$/i, "")
+    .split(/[-_+\s]+/)
+    .filter((w) => w && !/^[a-z]?\d{3,}$/i.test(w) && !/\d/.test(w));
+  return words.length >= 2 ? words.join(" ") : "";
+}
+
+// Company and role as far as the URL itself reveals them, so a bare pasted link
+// can still be searched for by title and company when the page is blocked.
+export function deriveJobHints(url: string): { company: string; role: string } {
+  let parsed: URL;
   try {
-    return new URL(url).hostname.split(".")[0].replace(/[-_]+/g, " ");
+    parsed = new URL(url);
   } catch {
-    return "";
+    return { company: "", role: "" };
   }
+  const host = parsed.hostname.toLowerCase();
+  const segments = parsed.pathname.split("/").filter(Boolean);
+  const labels = host.split(".").filter((l) => !GENERIC_SUBDOMAINS.has(l));
+  const onSharedAts = SHARED_ATS_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+  const company = onSharedAts
+    ? (segments.find((s) => !GENERIC_PATH_SEGMENTS.has(s.toLowerCase())) ?? "")
+    : (labels[0] ?? "");
+  const slug = [...segments].reverse().find((s) => roleFromSlug(s)) ?? "";
+  return { company: company.replace(/[-_]+/g, " "), role: slug ? roleFromSlug(slug) : "" };
 }
 
-function buildSearchQuery(options: FetchJobDetailsOptions): string {
-  const company = options.company ?? companyFromUrl(options.url);
-  const role = options.role ?? "";
-  // "site:..." terms focus Brave on job board domains rather than marketing/comparison pages
-  return `${company} ${role} job (site:jobs.lever.co OR site:jobs.ashbyhq.com OR site:greenhouse.io OR site:jobs.smartrecruiters.com)`.replace(/\s+/g, " ").trim();
+function buildSearchQueries(options: FetchJobDetailsOptions): string[] {
+  const hints = deriveJobHints(options.url);
+  const company = options.company || hints.company;
+  const role = options.role || hints.role;
+  const base = `${company} ${role}`.replace(/\s+/g, " ").trim();
+  return [
+    // "site:..." terms focus Brave on job board domains rather than marketing/comparison pages
+    `${base} job (site:jobs.lever.co OR site:jobs.ashbyhq.com OR site:greenhouse.io OR site:jobs.smartrecruiters.com)`,
+    // Open search catches the employer's own careers site, Workday and other boards
+    `"${company}" ${role} job description responsibilities qualifications`,
+  ].map((query) => query.replace(/\s+/g, " ").trim());
 }
 
-async function searchBraveAlternates({
-  options,
+async function searchBrave({
+  query,
   fetchImpl,
   timeoutMs,
 }: {
-  options: FetchJobDetailsOptions;
+  query: string;
   fetchImpl: typeof fetch;
   timeoutMs: number;
-}): Promise<string[]> {
+}): Promise<BraveResult[]> {
   const token = process.env.BRAVE_SEARCH_API_KEY;
   if (!token) return [];
-  const endpoint = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(buildSearchQuery(options))}&count=8`;
+  const endpoint = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=8`;
   const response = await fetchImpl(endpoint, {
     headers: { Accept: "application/json", "X-Subscription-Token": token },
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) return [];
   const data = await response.json() as { web?: { results?: BraveResult[] } };
-  return (data.web?.results ?? [])
-    .filter(isLikelyJobSearchResult)
-    .map((result) => result.url)
-    .filter((url): url is string => !!url);
+  return data.web?.results ?? [];
+}
+
+function isOpenJobResult(result: BraveResult, options: FetchJobDetailsOptions): boolean {
+  if (!result.url) return false;
+  let hostname = "";
+  try {
+    hostname = new URL(result.url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  if (NON_JOB_HOSTS.some((host) => hostname.includes(host))) return false;
+  const company = (options.company || deriveJobHints(options.url).company).toLowerCase();
+  const haystack = `${result.title ?? ""} ${result.url}`.toLowerCase();
+  return !company || haystack.includes(company.replace(/\s+/g, "")) || haystack.includes(company);
 }
 
 function isLikelyJobSearchResult(result: BraveResult): boolean {
@@ -278,28 +328,51 @@ function isLikelyJobSearchResult(result: BraveResult): boolean {
   return FETCHABLE_JOB_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`));
 }
 
+const MAX_ALTERNATES_PER_QUERY = 4;
+
+async function firstDetailedAlternate({
+  urls,
+  options,
+  fetchImpl,
+  timeoutMs,
+  remainingMs,
+}: Omit<FetchPageTextOptions, "url"> & {
+  urls: string[];
+  options: FetchJobDetailsOptions;
+  remainingMs: () => number;
+}): Promise<JobFetchResult | null> {
+  for (const alternateUrl of urls.filter((u) => u !== options.url).slice(0, MAX_ALTERNATES_PER_QUERY)) {
+    if (remainingMs() <= 0) break;
+    const legTimeout = Math.max(0, Math.min(timeoutMs, remainingMs()));
+    const text = await fetchPageText({ url: alternateUrl, fetchImpl, timeoutMs: legTimeout }).catch(() => "");
+    if (hasRoleDetail(text)) {
+      return successfulResult({ url: options.url, sourceUrl: alternateUrl, text, method: "brave_search" });
+    }
+  }
+  return null;
+}
+
 async function fetchFromBraveAlternate({
   options,
   fetchImpl,
   timeoutMs,
   remainingMs,
-}: FetchPageTextOptions & {
+}: Omit<FetchPageTextOptions, "url"> & {
   options: FetchJobDetailsOptions;
   remainingMs: () => number;
 }): Promise<JobFetchResult | null> {
-  const alternates = await searchBraveAlternates({
-    options,
-    fetchImpl,
-    timeoutMs: Math.max(0, Math.min(timeoutMs, remainingMs())),
-  }).catch(() => []);
-  for (const alternateUrl of alternates) {
-    if (alternateUrl === options.url) continue;
+  const [atsQuery, openQuery] = buildSearchQueries(options);
+  const legTimeout = () => Math.max(0, Math.min(timeoutMs, remainingMs()));
+  const attempts: { query: string; keep: (r: BraveResult) => boolean }[] = [
+    { query: atsQuery, keep: isLikelyJobSearchResult },
+    { query: openQuery, keep: (r) => isOpenJobResult(r, options) },
+  ];
+  for (const { query, keep } of attempts) {
     if (remainingMs() <= 0) break;
-    const legTimeout = Math.max(0, Math.min(timeoutMs, remainingMs()));
-    const text = await fetchPageText({ url: alternateUrl, fetchImpl, timeoutMs: legTimeout }).catch(() => "");
-    if (hasEnoughText(text)) {
-      return successfulResult({ url: options.url, sourceUrl: alternateUrl, text, method: "brave_search" });
-    }
+    const results = await searchBrave({ query, fetchImpl, timeoutMs: legTimeout() }).catch(() => []);
+    const urls = results.filter(keep).map((r) => r.url as string);
+    const found = await firstDetailedAlternate({ urls, options, fetchImpl, timeoutMs, remainingMs });
+    if (found) return found;
   }
   return null;
 }
@@ -381,7 +454,7 @@ export async function fetchJobDetails({
   const legTimeoutMs = () => Math.max(0, Math.min(timeoutMs, remainingMs()));
 
   const { text, raw } = await fetchRaw({ url, fetchImpl, timeoutMs: legTimeoutMs() }).catch(() => ({ text: "", raw: "" }));
-  if (hasEnoughText(text)) return successfulResult({ url, text, method: "fetch_only" });
+  if (hasRoleDetail(text)) return successfulResult({ url, text, method: "fetch_only" });
   if (remainingMs() <= 0) return limitedResult(url);
 
   // Many SPAs advertise a machine-readable alternate in <head> (Workable .md, etc.)
@@ -390,13 +463,13 @@ export async function fetchJobDetails({
   if (remainingMs() <= 0) return limitedResult(url);
 
   const options = { url, company, role };
-  const braveResult = await fetchFromBraveAlternate({ options, url, fetchImpl, timeoutMs: legTimeoutMs(), remainingMs });
+  const braveResult = await fetchFromBraveAlternate({ options, fetchImpl, timeoutMs: legTimeoutMs(), remainingMs });
   if (braveResult) return braveResult;
   if (remainingMs() <= 0) return limitedResult(url);
 
   if (isPlaywrightFallbackEnabled()) {
     const browserText = await fetchWithPlaywright({ url, loadPlaywrightImpl }).catch(() => "");
-    if (hasEnoughText(browserText)) return successfulResult({ url, text: browserText, method: "playwright" });
+    if (hasRoleDetail(browserText)) return successfulResult({ url, text: browserText, method: "playwright" });
     if (remainingMs() <= 0) return limitedResult(url);
   }
 

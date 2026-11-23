@@ -1,4 +1,5 @@
 "use client";
+import { LinkifiedText } from "@/components/LinkifiedText";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -129,7 +130,7 @@ function JobCard({ job, scoring, history }: { job: PendingJob; scoring: boolean;
       <CompanyHistory job={job} entries={history} />
       {job.notes && (
         <Section label="From the posting">
-          <p tabIndex={0} role="region" aria-label="Posting text" className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{job.notes}</p>
+          <p tabIndex={0} role="region" aria-label="Posting text" className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap"><LinkifiedText text={job.notes} /></p>
         </Section>
       )}
       <div>
@@ -155,7 +156,7 @@ function ActionBar({ act, pressed }: { act: (action: TriageAction) => void; pres
 
 function UpNext({ jobs }: { jobs: PendingJob[] }) {
   return (
-    <aside className="flex flex-col gap-2">
+    <aside className="hidden flex-col gap-2 xl:flex">
       <h3 className="text-xs font-medium text-muted-foreground">Up next</h3>
       <ul aria-label="Up next" className="flex flex-col gap-2">
         {jobs.map((j) => (
@@ -201,7 +202,7 @@ export default function TriageView({ pending, onUpdate, onBackToBoard, startAt, 
   return (
     <div className="flex flex-col gap-4">
       <Progress reviewed={reviewed} total={total} />
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_16rem]">
         <Card variant="raised" padding="lg" className="gap-6">
           <JobCard job={current} scoring={scoring} history={board ? companyHistory(board, current) : []} />
           <ActionBar act={act} pressed={pressed} />

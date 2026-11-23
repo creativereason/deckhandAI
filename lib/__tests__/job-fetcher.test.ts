@@ -69,7 +69,7 @@ describe("fetchJobDetails", () => {
   // B — Boundary: HTML entities in the body (not just the meta description) must decode too.
   it("decodes HTML entities in the page body, not just the meta description", async () => {
     const html = `<html><body><h1>Staff Product Designer (Experience &amp; Engagement)</h1>
-      <p>Own end-to-end design vision and execution across the customer experience product surface. Partner with product, engineering, and operations to ship measurable improvements every quarter.&nbsp; The role requires 7+ years of product design experience with a strong portfolio demonstrating systems thinking and cross-functional leadership on consumer-facing products. Compensation: $190k&#8211;$230k. Fully remote.</p>
+      <p>Responsibilities: own end-to-end design vision and execution across the customer experience product surface. Partner with product, engineering, and operations to ship measurable improvements every quarter.&nbsp; The role requires 7+ years of product design experience with a strong portfolio demonstrating systems thinking and cross-functional leadership on consumer-facing products. Compensation: $190k&#8211;$230k. Fully remote.</p>
       </body></html>`;
     const fetchImpl = vi.fn().mockResolvedValue(response(html));
 
@@ -183,6 +183,31 @@ describe("fetchJobDetails", () => {
     expect(result.text).toContain("Own design strategy for Acme teams");
   });
 
+  it("keeps looking when a found source loads but has no role detail", async () => {
+    vi.stubEnv("BRAVE_SEARCH_API_KEY", "brave-key");
+    const thin = "<main><h1>Director, Design Systems Operations</h1><p>" + "Thrivent Minneapolis MN Full-time Design ".repeat(14) + "</p></main>";
+    const full = "<main><h1>Director, Design Systems Operations</h1><p>Responsibilities: lead the design systems operations team, govern the component library, and partner with engineering. Qualifications: 10+ years of experience leading design teams in financial services. You will set the roadmap for bank design across web and mobile products and manage a team of eight designers and program managers across the organization, including budget, hiring, vendor relationships, and quarterly planning with senior leadership.</p></main>";
+    const search = (urls: string[]) => Response.json({ web: { results: urls.map((url) => ({ title: "Director Design Systems Operations Thrivent", url })) } });
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("api.search.brave.com")) {
+        return url.includes("site%3A") ? search(["https://jobs.lever.co/thrivent/thin"]) : search(["https://careers.thrivent.com/job/full"]);
+      }
+      if (url.includes("thin") || url.includes("blocked")) return response(url.includes("blocked") ? "" : thin);
+      return response(full);
+    });
+
+    const result = await fetchJobDetails({
+      url: "https://jobs.lever.co/thrivent/blocked",
+      company: "Thrivent",
+      role: "Director, Design Systems Operations",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(result.source_url).toBe("https://careers.thrivent.com/job/full");
+    expect(result.retrieval_limited).toBe(false);
+  });
+
   // B — Boundary: Chromium is only attempted when explicitly enabled.
   it("returns readable text from Playwright when search fails and browser fallback is enabled", async () => {
     vi.stubEnv("ENABLE_PLAYWRIGHT_FALLBACK", "true");
@@ -252,7 +277,8 @@ describe("fetchJobDetails", () => {
 
     expect(result.retrieval_method).toBe("playwright");
     expect(result.text).toContain("LifeMD Senior Product Designer");
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    // raw page, ATS-limited search, then the open search, before the browser is tried
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
   describe("time budget", () => {
