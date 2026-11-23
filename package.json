@@ -11,10 +11,12 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
+    "e2e": "playwright test",
     "backfill:summaries": "node scripts/backfill-ai-summaries.mjs",
     "migrate:supabase": "tsx --env-file-if-exists=.env.local scripts/migrate-to-supabase.ts",
     "check:tokens": "node redesign/tools/check-tokens.mjs",
-    "check:contrast": "node redesign/tools/contrast.mjs"
+    "check:contrast": "node redesign/tools/contrast.mjs",
+    "verify": "pnpm tsc --noEmit && pnpm lint && pnpm check:tokens && pnpm check:contrast && pnpm test:coverage && pnpm e2e"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -35,6 +37,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -46,7 +49,7 @@
     "eslint-config-next": "16.2.6",
     "eslint-plugin-vitest": "^0.5.4",
     "jsdom": "^29.1.1",
-    "playwright": "^1.60.0",
+    "playwright": "^1.65.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
