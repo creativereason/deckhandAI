@@ -132,6 +132,24 @@ describe("/api/evaluate-job", () => {
     });
   });
 
+  it("appends AI-extracted role details (location, comp, scope, requirements) to the notes", async () => {
+    vi.stubEnv("AI_API_KEY", "test-key");
+    vi.mocked(fetchGenerate).mockResolvedValue(JSON.stringify({
+      company: "Thrivent", role: "Director, Design Systems", salary: "", fit: "good", scoreRationale: "Fits.",
+      details: "- Work model: Remote (US)\n- Comp: $150k-$190k\n- Requirements: 10+ years leading design teams",
+    }));
+    vi.mocked(fetchJobDetails).mockResolvedValue({
+      ok: true, url: "https://careers.thrivent.com/jobs/1", retrieval_method: "brave_search", retrieval_limited: false,
+      text: "About the Role Thrivent is hiring a Director to lead design systems operations across the bank and enterprise. Responsibilities include governing the component library. Requirements: 10+ years of experience.",
+    });
+
+    const response = await POST(request("POST", { url: "https://careers.thrivent.com/jobs/1", company: "Thrivent", role: "Director, Design Systems" }));
+    const result = resultEventData(await streamText(response));
+
+    expect(result.notes).toContain("Work model: Remote (US)");
+    expect(result.notes).toContain("Comp: $150k-$190k");
+  });
+
   it("stores notes as scrape date, company summary, and role summary instead of fit assessment", async () => {
     vi.stubEnv("AI_API_KEY", "test-key");
     vi.mocked(fetchGenerate).mockResolvedValue(JSON.stringify({
