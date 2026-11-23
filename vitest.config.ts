@@ -6,7 +6,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: [],
-    exclude: [...configDefaults.exclude, ".claude/**", "coverage/**"],
+    exclude: [...configDefaults.exclude, ".claude/**", "coverage/**", "e2e/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
