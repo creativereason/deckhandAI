@@ -33,5 +33,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test
-        run: pnpm test
+      - name: Design token check
+        run: pnpm check:tokens
+
+      - name: Contrast check
+        run: pnpm check:contrast
+
+      - name: Test with coverage
+        run: pnpm test:coverage

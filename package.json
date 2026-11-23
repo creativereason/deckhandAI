@@ -14,7 +14,8 @@
     "backfill:summaries": "node scripts/backfill-ai-summaries.mjs",
     "migrate:supabase": "tsx --env-file-if-exists=.env.local scripts/migrate-to-supabase.ts",
     "check:tokens": "node redesign/tools/check-tokens.mjs",
-    "check:contrast": "node redesign/tools/contrast.mjs"
+    "check:contrast": "node redesign/tools/contrast.mjs",
+    "verify": "pnpm tsc --noEmit && pnpm lint && pnpm check:tokens && pnpm check:contrast && pnpm test:coverage"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
