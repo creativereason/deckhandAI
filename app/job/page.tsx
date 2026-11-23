@@ -13,6 +13,7 @@ import {
   resolveJobType,
 } from "@/lib/jobs";
 import { MarkdownContent } from "@/components/MarkdownContent";
+import { LinkifiedText } from "@/components/LinkifiedText";
 import AIGenerationCard from "@/components/AIGenerationCard";
 import AppShell from "@/components/shell/AppShell";
 import { AIInsight, AssistantPanel, PromptChip } from "@/components/ai/ai";
@@ -638,7 +639,7 @@ function JobDetailContent() {
               {foundJob.notes && (
                 <Card>
                   <CardHeader><CardTitle as="h2">Notes</CardTitle></CardHeader>
-                  <CardContent><p className="text-sm whitespace-pre-wrap">{foundJob.notes}</p></CardContent>
+                  <CardContent><p className="text-sm whitespace-pre-wrap"><LinkifiedText text={foundJob.notes} /></p></CardContent>
                 </Card>
               )}
               {prospectJob?.scoreRationale && <AIInsight label="AI fit assessment">{prospectJob.scoreRationale}</AIInsight>}

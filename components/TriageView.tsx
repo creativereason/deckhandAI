@@ -1,4 +1,5 @@
 "use client";
+import { LinkifiedText } from "@/components/LinkifiedText";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -129,7 +130,7 @@ function JobCard({ job, scoring, history }: { job: PendingJob; scoring: boolean;
       <CompanyHistory job={job} entries={history} />
       {job.notes && (
         <Section label="From the posting">
-          <p tabIndex={0} role="region" aria-label="Posting text" className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">{job.notes}</p>
+          <p tabIndex={0} role="region" aria-label="Posting text" className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap"><LinkifiedText text={job.notes} /></p>
         </Section>
       )}
       <div>
