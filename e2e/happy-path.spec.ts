@@ -71,6 +71,32 @@ test.describe("board", () => {
   });
 });
 
+test.describe("moving a card to Passed", () => {
+  test.beforeEach(async ({ page }) => {
+    await useStorage(page, { "board-filters": JSON.stringify(BOARD_PIPELINE) });
+  });
+
+  test("shows a toast naming the company when the move succeeds", async ({ page }) => {
+    // Demo mode refuses writes, so the move request is answered here.
+    await page.route("**/api/jobs", (route) =>
+      route.request().method() === "DELETE" ? route.fulfill({ json: {} }) : route.continue(),
+    );
+    await page.goto("/");
+    await page.getByLabel("Move Anthropic to").selectOption("passed");
+    await expect(page.getByText("Passed on Anthropic")).toBeVisible();
+  });
+
+  test("shows the failure and no success toast when the move fails", async ({ page }) => {
+    await page.route("**/api/jobs", (route) =>
+      route.request().method() === "DELETE" ? route.fulfill({ status: 500, json: { error: "boom" } }) : route.continue(),
+    );
+    await page.goto("/");
+    await page.getByLabel("Move Anthropic to").selectOption("passed");
+    await expect(page.getByText("Move failed: boom")).toBeVisible();
+    await expect(page.getByText("Passed on Anthropic")).toHaveCount(0);
+  });
+});
+
 test.describe("triage", () => {
   test("skipping with S keeps the reviewed count and shows the triage actions", async ({ page }) => {
     await useStorage(page, {});
@@ -93,6 +119,24 @@ test.describe("job detail", () => {
     await expect(page.getByLabel("Company", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Cancel edit" }).click();
     await expect(page.getByLabel("Company", { exact: true })).toHaveCount(0);
+  });
+});
+
+test.describe("job notes", () => {
+  test("turn URLs in notes into links that open in a new tab", async ({ page }) => {
+    await useStorage(page, {});
+    const notes = "Other copies:\n- Glassdoor: https://www.glassdoor.com/job-listing/x_KO0,30_KE31,43.htm?jl=1";
+    await page.route("**/api/jobs", async (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+      const board = await (await route.fetch()).json();
+      const stripe = board.applied.find((j: { company: string }) => j.company === "Stripe");
+      stripe.notes = notes;
+      return route.fulfill({ json: board });
+    });
+    await page.goto("/job?section=applied&company=Stripe&role=Creative%20Director%2C%20Brand%20Experiences");
+    const link = page.getByRole("link", { name: /glassdoor\.com\/job-listing/ });
+    await expect(link).toHaveAttribute("href", "https://www.glassdoor.com/job-listing/x_KO0,30_KE31,43.htm?jl=1");
+    await expect(link).toHaveAttribute("target", "_blank");
   });
 });
 
