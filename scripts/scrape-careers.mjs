@@ -261,7 +261,7 @@ async function scrapeTarget(browser, target) {
           target.titleFromUrlParam
         );
         allListings.push(...listings);
-        const nextBtn = listingPage.getByRole("button", { name: `Page ${pageNum + 1}` });
+        const nextBtn = listingPage.getByRole("button", { name: `Page ${pageNum + 1}`, exact: true });
         if (await nextBtn.count() === 0) break;
         await nextBtn.evaluate((el) => el.click());
         await listingPage.waitForTimeout(4000);

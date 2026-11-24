@@ -189,7 +189,7 @@ export async function runScrape(
             usedSelector = selector;
             allListings.push(...pageListings);
 
-            const nextBtn = listingPage.getByRole("button", { name: `Page ${pageNum + 1}` });
+            const nextBtn = listingPage.getByRole("button", { name: `Page ${pageNum + 1}`, exact: true });
             if (await nextBtn.count() === 0) break;
             await nextBtn.evaluate((el: HTMLElement) => el.click());
             await listingPage.waitForTimeout(4000);
